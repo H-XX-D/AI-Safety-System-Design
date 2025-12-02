@@ -320,7 +320,7 @@ Agents **CAN** propose changes to:
 # jetson_nano_agent.py
 from research_system import ResearchSystem, SystemSpecialization
 from llm_adapters import GeminiAdapter
-from paperqa_client import PaperQAClient  # Lightweight PaperQA client
+from paperqa_client import PaperQAClient  # Lightweight PaperQA & Research API client
 import os
 
 # Initialize LLM adapter
@@ -336,30 +336,64 @@ agent = ResearchSystem(
     llm_adapter=gemini
 )
 
-# Initialize PaperQA client (connects to main ORKASTRATOR server)
-paperqa = PaperQAClient(
+# Initialize client (connects to main ORKASTRATOR server)
+client = PaperQAClient(
     server_url=os.getenv("ORKASTRATOR_URL", "http://orka-host:5001")
 )
 
-# Generate proposal
-proposal = agent.propose_improvement(
-    component="data_analysis_module",
-    motivation="Improve statistical accuracy",
-    research_context={"current_method": "basic_regression"}
+# =========================================================================
+# PHASE 1: PROPOSAL BUILDING - Direct Research API Access
+# =========================================================================
+# Researcher AI can freely query databases to gather information
+
+# Search arXiv for relevant papers
+arxiv_papers = client.research_arxiv("statistical regression optimization", limit=10)
+
+# Search Semantic Scholar for citations
+semantic_papers = client.research_semantic_scholar("machine learning accuracy")
+
+# Search for any relevant vulnerabilities
+cves = client.research_cve("data validation")
+
+# Multi-source search
+all_research = client.research_search(
+    "statistical accuracy improvement",
+    sources=['arxiv', 'semantic_scholar', 'papers_with_code'],
+    limit_per_source=5
 )
 
-# Get evidence for the proposal using main ORKASTRATOR's PaperQA
-evidence = paperqa.get_evidence(
+# Use gathered research to build proposal
+proposal = agent.propose_improvement(
+    component="data_analysis_module",
+    motivation="Improve statistical accuracy using modern regression techniques",
+    research_context={
+        "current_method": "basic_regression",
+        "related_papers": [p['title'] for p in arxiv_papers[:3]],
+        "research_sources": all_research
+    }
+)
+
+# =========================================================================
+# PHASE 2: PROPOSAL SUBMISSION - Must go through PaperQA
+# =========================================================================
+# All evidence claims MUST be validated by PaperQA before submission
+
+# Validate evidence through PaperQA (REQUIRED for submission)
+evidence = client.get_evidence(
     claim=proposal['motivation'],
     sources=['arxiv', 'semantic_scholar', 'papers_with_code']
 )
 
-# Add evidence to proposal
+# Add VALIDATED evidence to proposal
 if evidence.get('success'):
     proposal['evidence'] = evidence.get('evidence', '')
     proposal['supporting_sources'] = evidence.get('sources', [])
+    proposal['evidence_validated'] = True  # Mark as validated by PaperQA
+else:
+    # Cannot submit without validated evidence
+    raise ValueError("Evidence validation failed - cannot submit proposal")
 
-# Submit to ORKASTRATOR
+# Submit to ORKASTRATOR (only with validated evidence)
 import requests
 response = requests.post(
     "http://orka-host:5001/api/proposals",
@@ -367,9 +401,51 @@ response = requests.post(
 )
 ```
 
-## Lightweight PaperQA Client
+## Lightweight PaperQA & Research API Client
 
-The `paperqa_client.py` provides a lightweight way to access ORKASTRATOR's PaperQA system without requiring heavy dependencies on the Jetson Nano.
+The `paperqa_client.py` provides a lightweight way to access ORKASTRATOR's PaperQA system AND direct research database APIs without requiring heavy dependencies on the Jetson Nano.
+
+### Two Access Modes
+
+1. **Direct Research API Mode** (for proposal building): Raw database queries for gathering research
+2. **PaperQA Mode** (for proposal submission): AI-processed evidence validation
+
+### Access Rules
+
+| Phase | Access Method | Purpose |
+|-------|---------------|---------|
+| **Proposal Building** | Direct Research APIs | Researcher AIs freely query databases (arXiv, Semantic Scholar, CVE, etc.) to gather information |
+| **Proposal Submission** | PaperQA Only | All evidence claims must be validated through PaperQA before submission |
+
+### Design Rationale: Separation of Concerns
+
+> **"Researchers research. Validators validate."**
+
+This architecture prevents researcher AIs from gaming the proposal system:
+
+| Role | Researcher AIs | PaperQA |
+|------|----------------|---------|
+| **Specialization** | Research & Innovation | Evidence Validation |
+| **Focus** | Explore ideas, form hypotheses, build proposals | Verify claims, cross-reference sources, detect inconsistencies |
+| **NOT their job** | Validate their own claims | Generate proposals |
+
+**Why this prevents gaming:**
+
+| Attack Vector | Prevention |
+|---------------|------------|
+| Fabricated citations | PaperQA independently verifies sources exist |
+| Cherry-picked evidence | PaperQA finds contradicting evidence too |
+| Exaggerated claims | PaperQA cross-references actual paper content |
+| Self-validation bias | Researcher cannot validate their own work |
+| Optimizing for approval | Researcher focuses on research quality, not gaming validation |
+
+**Benefits:**
+- **Researchers stay honest** - They know claims will be independently verified
+- **No incentive to game** - Gaming research phase doesn't help if validation catches it
+- **Better proposals** - Focus on genuine evidence, not what might slip through
+- **Specialized optimization** - Each AI optimizes for its actual job
+
+This mirrors academic peer review - researchers don't validate their own papers!
 
 ### Features
 
@@ -377,8 +453,9 @@ The `paperqa_client.py` provides a lightweight way to access ORKASTRATOR's Paper
 - **Remote Access**: Connects to main ORKASTRATOR server
 - **Source Selection**: Can specify which research APIs to use
 - **Health Checking**: Verify server connectivity
+- **Direct Database Access**: Query research APIs without PaperQA processing
 
-### Usage
+### Python Usage
 
 ```python
 from paperqa_client import PaperQAClient
@@ -386,7 +463,11 @@ from paperqa_client import PaperQAClient
 # Connect to ORKASTRATOR
 client = PaperQAClient(server_url='http://orka-host:5001')
 
-# Search for evidence
+# =========================================
+# PaperQA Mode (AI-processed evidence)
+# =========================================
+
+# Search for evidence with AI processing
 result = client.search("What is machine learning?")
 print(result['answer'])
 
@@ -395,20 +476,106 @@ evidence = client.get_evidence(
     claim="Machine learning improves accuracy",
     sources=['arxiv', 'semantic_scholar']
 )
+
+# =========================================
+# Direct Research API Mode (raw database access)
+# =========================================
+
+# Check which APIs are available
+status = client.research_status()
+print(status)
+
+# Search multiple databases at once
+results = client.research_search(
+    "transformer attention mechanism",
+    sources=['arxiv', 'semantic_scholar', 'papers_with_code'],
+    limit_per_source=5
+)
+
+# Search arXiv directly
+papers = client.research_arxiv("neural network optimization", limit=10)
+for paper in papers:
+    print(f"{paper['title']} - {paper['url']}")
+
+# Search Semantic Scholar directly
+papers = client.research_semantic_scholar("deep learning safety")
+
+# Search Papers with Code
+papers = client.research_papers_with_code("reinforcement learning")
+
+# Search CVE vulnerabilities
+cves = client.research_cve("buffer overflow")
+for cve in cves:
+    print(f"{cve['id']}: {cve['severity']}")
+
+# Search IETF RFCs
+rfcs = client.research_ietf("TLS 1.3")
+
+# Search IEEE Xplore (requires API key on server)
+papers = client.research_ieee("quantum computing")
 ```
 
 ### CLI Usage
 
 ```bash
-# Search
+# =========================================
+# PaperQA Mode (AI-processed)
+# =========================================
+
+# Search with AI processing
 python3 paperqa_client.py search "What is neural networks?"
 
-# Get evidence
+# Get evidence for a claim
 python3 paperqa_client.py evidence "Machine learning is safe"
 
-# Check health
+# =========================================
+# Direct Research API Mode
+# =========================================
+
+# Check available research APIs
+python3 paperqa_client.py research-status
+
+# Multi-source search
+python3 paperqa_client.py research "transformer attention" --sources arxiv,semantic_scholar
+
+# Search arXiv directly
+python3 paperqa_client.py arxiv "neural network optimization" --limit 10
+
+# Search Semantic Scholar directly
+python3 paperqa_client.py semantic-scholar "deep learning safety"
+
+# Search Papers with Code
+python3 paperqa_client.py papers-with-code "reinforcement learning"
+
+# Search CVE vulnerabilities
+python3 paperqa_client.py cve "buffer overflow"
+
+# Search IETF RFCs
+python3 paperqa_client.py ietf "TLS 1.3"
+
+# Search IEEE Xplore
+python3 paperqa_client.py ieee "quantum computing"
+
+# =========================================
+# Other
+# =========================================
+
+# Check server health
 python3 paperqa_client.py health
 ```
+
+### Available Research Sources
+
+| Source | Method | Description |
+|--------|--------|-------------|
+| arXiv | `research_arxiv()` | Scientific papers (physics, CS, math, etc.) |
+| Semantic Scholar | `research_semantic_scholar()` | Academic papers with citations |
+| Papers with Code | `research_papers_with_code()` | Papers with code repositories |
+| CVE/NVD | `research_cve()` | Security vulnerabilities |
+| IETF | `research_ietf()` | Internet standards (RFCs) |
+| IEEE Xplore | `research_ieee()` | Engineering papers (requires API key) |
+| Digi-Key | `research_digikey()` | Electronic components (requires API key) |
+| Octopart | `research_octopart()` | Electronic parts search (requires API key) |
 
 ---
 

@@ -95,6 +95,40 @@ Comprehensive event system for live updates.
 - `collusion:attempt` - Collusion detected
 - `notifications:new` - New notification
 
+### Research API (CLI/Database Access)
+Direct API access to research databases (in addition to PaperQA integration).
+
+- **Endpoints**:
+  - `GET /api/research/status` - Check API availability
+  - `GET /api/research/search?q=<query>&sources=arxiv,semantic_scholar` - Multi-source search
+  - `GET /api/research/arxiv?q=<query>` - arXiv papers
+  - `GET /api/research/semantic-scholar?q=<query>` - Semantic Scholar
+  - `GET /api/research/papers-with-code?q=<query>` - Papers with Code
+  - `GET /api/research/cve?q=<query>` - CVE/NVD vulnerabilities
+  - `GET /api/research/ietf?q=<query>` - IETF RFCs
+  - `GET /api/research/ieee?q=<query>` - IEEE Xplore (requires API key)
+  - `GET /api/research/digikey?q=<query>` - Digi-Key components (requires API key)
+  - `GET /api/research/octopart?q=<query>` - Octopart components (requires API key)
+
+**CLI Usage**:
+```bash
+# Search arXiv
+curl "http://localhost:5001/api/research/arxiv?q=transformer+attention&limit=5"
+
+# Multi-source search
+curl "http://localhost:5001/api/research/search?q=neural+network&sources=arxiv,semantic_scholar"
+
+# Check available sources
+curl "http://localhost:5001/api/research/status"
+```
+
+**API Keys** (optional, for premium sources):
+- `SEMANTIC_SCHOLAR_API_KEY` - Semantic Scholar (higher rate limits)
+- `IEEE_API_KEY` - IEEE Xplore access
+- `DIGIKEY_API_KEY` - Digi-Key component search
+- `OCTOPART_API_KEY` - Octopart component search
+- `NVD_API_KEY` - NVD/CVE (higher rate limits)
+
 ## Features
 
 ### Evidence Engine

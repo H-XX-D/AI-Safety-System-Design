@@ -373,7 +373,7 @@ def log_request(action: str, resource_type: str = None):
 if not STANDALONE_MODE:
     try:
         sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-        from models.orka_penalty_tracker import models.orka_penalty_tracker
+        from models.orka_penalty_tracker import orka_penalty_tracker
         from communication.translator import Translator
         from infrastructure.reward_engine import calculate_reward
         from utilities.core_values import verify_core_values
@@ -4568,6 +4568,321 @@ except ImportError:
     _research_api_manager = None
     RESEARCH_APIS_AVAILABLE = False
     logger.warning("Research APIs not available. Install required packages: pip install arxiv requests")
+
+
+# ===== RESEARCH API ENDPOINTS =====
+
+@app.route('/api/research/status')
+def api_research_status():
+    """Get research API availability status."""
+    return jsonify({
+        'available': RESEARCH_APIS_AVAILABLE,
+        'sources': [
+            {'name': 'arxiv', 'available': True, 'requires_key': False},
+            {'name': 'semantic_scholar', 'available': True, 'requires_key': False},
+            {'name': 'papers_with_code', 'available': True, 'requires_key': False},
+            {'name': 'cve', 'available': True, 'requires_key': False},
+            {'name': 'ietf', 'available': True, 'requires_key': False},
+            {'name': 'digikey', 'available': bool(os.environ.get('DIGIKEY_API_KEY')), 'requires_key': True},
+            {'name': 'octopart', 'available': bool(os.environ.get('OCTOPART_API_KEY')), 'requires_key': True},
+            {'name': 'ieee', 'available': bool(os.environ.get('IEEE_API_KEY')), 'requires_key': True},
+            {'name': 'uspto', 'available': False, 'requires_key': True},
+            {'name': 'google_patents', 'available': False, 'requires_key': True},
+            {'name': 'epo', 'available': False, 'requires_key': True},
+            {'name': 'wipo', 'available': False, 'requires_key': True},
+        ]
+    })
+
+
+@app.route('/api/research/search')
+def api_research_search():
+    """Search across research databases."""
+    if not RESEARCH_APIS_AVAILABLE or not _research_api_manager:
+        return jsonify({'error': 'Research APIs not available'}), 503
+    
+    try:
+        query = request.args.get('q', '').strip()
+        if not query:
+            return jsonify({'error': 'Query parameter "q" is required'}), 400
+        
+        # Get sources from request or use defaults
+        sources_param = request.args.get('sources', '')
+        if sources_param:
+            sources = [s.strip() for s in sources_param.split(',') if s.strip()]
+        else:
+            sources = ['arxiv', 'semantic_scholar', 'papers_with_code']
+        
+        limit = request.args.get('limit', 10, type=int)
+        limit = max(1, min(50, limit))  # Limit between 1-50
+        
+        # Perform search
+        results = _research_api_manager.search_all(query, sources=sources, limit_per_source=limit)
+        
+        return jsonify({
+            'success': True,
+            'query': query,
+            'sources': sources,
+            'results': results,
+            'total': len(results)
+        })
+        
+    except Exception as e:
+        logger.error(f"Research search error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/research/arxiv')
+def api_research_arxiv():
+    """Search arXiv papers."""
+    if not RESEARCH_APIS_AVAILABLE or not _research_api_manager:
+        return jsonify({'error': 'Research APIs not available'}), 503
+    
+    try:
+        query = request.args.get('q', '').strip()
+        if not query:
+            return jsonify({'error': 'Query parameter "q" is required'}), 400
+        
+        limit = request.args.get('limit', 10, type=int)
+        limit = max(1, min(50, limit))
+        
+        results = _research_api_manager.arxiv.search(query, max_results=limit)
+        
+        return jsonify({
+            'success': True,
+            'query': query,
+            'source': 'arxiv',
+            'results': results,
+            'total': len(results)
+        })
+        
+    except Exception as e:
+        logger.error(f"arXiv search error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/research/semantic-scholar')
+def api_research_semantic_scholar():
+    """Search Semantic Scholar papers."""
+    if not RESEARCH_APIS_AVAILABLE or not _research_api_manager:
+        return jsonify({'error': 'Research APIs not available'}), 503
+    
+    try:
+        query = request.args.get('q', '').strip()
+        if not query:
+            return jsonify({'error': 'Query parameter "q" is required'}), 400
+        
+        limit = request.args.get('limit', 10, type=int)
+        limit = max(1, min(50, limit))
+        
+        results = _research_api_manager.semantic_scholar.search(query, limit=limit)
+        
+        return jsonify({
+            'success': True,
+            'query': query,
+            'source': 'semantic_scholar',
+            'results': results,
+            'total': len(results)
+        })
+        
+    except Exception as e:
+        logger.error(f"Semantic Scholar search error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/research/papers-with-code')
+def api_research_papers_with_code():
+    """Search Papers with Code."""
+    if not RESEARCH_APIS_AVAILABLE or not _research_api_manager:
+        return jsonify({'error': 'Research APIs not available'}), 503
+    
+    try:
+        query = request.args.get('q', '').strip()
+        if not query:
+            return jsonify({'error': 'Query parameter "q" is required'}), 400
+        
+        limit = request.args.get('limit', 10, type=int)
+        limit = max(1, min(50, limit))
+        
+        results = _research_api_manager.papers_with_code.search(query, limit=limit)
+        
+        return jsonify({
+            'success': True,
+            'query': query,
+            'source': 'papers_with_code',
+            'results': results,
+            'total': len(results)
+        })
+        
+    except Exception as e:
+        logger.error(f"Papers with Code search error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/research/cve')
+def api_research_cve():
+    """Search CVE/NVD database."""
+    if not RESEARCH_APIS_AVAILABLE or not _research_api_manager:
+        return jsonify({'error': 'Research APIs not available'}), 503
+    
+    try:
+        query = request.args.get('q', '').strip()
+        if not query:
+            return jsonify({'error': 'Query parameter "q" is required'}), 400
+        
+        limit = request.args.get('limit', 10, type=int)
+        limit = max(1, min(20, limit))  # NVD has lower limits
+        
+        results = _research_api_manager.cve.search(query, limit=limit)
+        
+        return jsonify({
+            'success': True,
+            'query': query,
+            'source': 'cve',
+            'results': results,
+            'total': len(results)
+        })
+        
+    except Exception as e:
+        logger.error(f"CVE search error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/research/ietf')
+def api_research_ietf():
+    """Search IETF RFCs and internet drafts."""
+    if not RESEARCH_APIS_AVAILABLE or not _research_api_manager:
+        return jsonify({'error': 'Research APIs not available'}), 503
+    
+    try:
+        query = request.args.get('q', '').strip()
+        if not query:
+            return jsonify({'error': 'Query parameter "q" is required'}), 400
+        
+        limit = request.args.get('limit', 10, type=int)
+        limit = max(1, min(50, limit))
+        
+        results = _research_api_manager.ietf.search(query, limit=limit)
+        
+        return jsonify({
+            'success': True,
+            'query': query,
+            'source': 'ietf',
+            'results': results,
+            'total': len(results)
+        })
+        
+    except Exception as e:
+        logger.error(f"IETF search error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/research/ieee')
+def api_research_ieee():
+    """Search IEEE Xplore (requires API key)."""
+    if not RESEARCH_APIS_AVAILABLE or not _research_api_manager:
+        return jsonify({'error': 'Research APIs not available'}), 503
+    
+    try:
+        query = request.args.get('q', '').strip()
+        if not query:
+            return jsonify({'error': 'Query parameter "q" is required'}), 400
+        
+        limit = request.args.get('limit', 10, type=int)
+        limit = max(1, min(25, limit))
+        
+        results = _research_api_manager.ieee.search(query, limit=limit)
+        
+        if not results and not os.environ.get('IEEE_API_KEY'):
+            return jsonify({
+                'success': False,
+                'error': 'IEEE API key not configured',
+                'message': 'Set IEEE_API_KEY environment variable to enable IEEE Xplore search'
+            }), 503
+        
+        return jsonify({
+            'success': True,
+            'query': query,
+            'source': 'ieee',
+            'results': results,
+            'total': len(results)
+        })
+        
+    except Exception as e:
+        logger.error(f"IEEE search error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/research/digikey')
+def api_research_digikey():
+    """Search Digi-Key electronics components (requires API key)."""
+    if not RESEARCH_APIS_AVAILABLE or not _research_api_manager:
+        return jsonify({'error': 'Research APIs not available'}), 503
+    
+    try:
+        query = request.args.get('q', '').strip()
+        if not query:
+            return jsonify({'error': 'Query parameter "q" is required'}), 400
+        
+        limit = request.args.get('limit', 10, type=int)
+        limit = max(1, min(20, limit))
+        
+        results = _research_api_manager.digikey.search(query, limit=limit)
+        
+        if not results and not os.environ.get('DIGIKEY_API_KEY'):
+            return jsonify({
+                'success': False,
+                'error': 'Digi-Key API key not configured',
+                'message': 'Set DIGIKEY_API_KEY environment variable to enable Digi-Key search'
+            }), 503
+        
+        return jsonify({
+            'success': True,
+            'query': query,
+            'source': 'digikey',
+            'results': results,
+            'total': len(results)
+        })
+        
+    except Exception as e:
+        logger.error(f"Digi-Key search error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/research/octopart')
+def api_research_octopart():
+    """Search Octopart component database (requires API key)."""
+    if not RESEARCH_APIS_AVAILABLE or not _research_api_manager:
+        return jsonify({'error': 'Research APIs not available'}), 503
+    
+    try:
+        query = request.args.get('q', '').strip()
+        if not query:
+            return jsonify({'error': 'Query parameter "q" is required'}), 400
+        
+        limit = request.args.get('limit', 10, type=int)
+        limit = max(1, min(20, limit))
+        
+        results = _research_api_manager.octopart.search(query, limit=limit)
+        
+        if not results and not os.environ.get('OCTOPART_API_KEY'):
+            return jsonify({
+                'success': False,
+                'error': 'Octopart API key not configured',
+                'message': 'Set OCTOPART_API_KEY environment variable to enable Octopart search'
+            }), 503
+        
+        return jsonify({
+            'success': True,
+            'query': query,
+            'source': 'octopart',
+            'results': results,
+            'total': len(results)
+        })
+        
+    except Exception as e:
+        logger.error(f"Octopart search error: {e}")
+        return jsonify({'error': str(e)}), 500
+
 
 def _init_evidence_engine():
     """Initialize Evidence Engine with system documentation (cached, background indexing)."""
