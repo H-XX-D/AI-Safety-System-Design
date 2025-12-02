@@ -25,9 +25,9 @@ python-dotenv==1.0.0
 # Research API integrations
 requests==2.31.0
 
-# Data handling
-pandas==2.0.3  # Compatible with Python 3.13, avoids build errors
-numpy==1.24.3  # Stable with pandas 2.0.3
+# Data handling (Python 3.13 compatible wheels)
+pandas==2.2.3
+numpy==2.1.3
 
 # Testing
 pytest==7.4.3

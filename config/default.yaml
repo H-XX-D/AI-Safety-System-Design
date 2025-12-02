@@ -26,7 +26,7 @@ system:
 
 llm:
   # LLM adapter configuration for research agents
-  adapter_type: gemini  # gemini|template|openai|claude
+  adapter_type: gemini  # gemini|template|openai|claude|thirdlm
 
   # OpenAI configuration (disabled)
   # openai:
@@ -52,6 +52,17 @@ llm:
     timeout: 60.0
     endpoint: https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent
     # api_key loaded from GOOGLE_GEMINI_API_KEY env var
+
+  # ThirdLM (3dlm) local on-device inference configuration
+  # Uses GPU-accelerated inference on Apple Silicon via Metal
+  thirdlm:
+    model_path: 3Dlm/TinyLlama.btern  # Path to .btern, .tmc5, or .gguf model
+    tokenizer_path: null  # Auto-detected if null
+    cli_path: null  # Auto-detected if null (uses swift run)
+    temperature: 0.7
+    max_tokens: 512
+    timeout: 120.0
+    swift_package_dir: null  # Auto-detected if null (3Dlm/macos)
 
   # Guardrails applied to all LLM proposals
   guardrails:

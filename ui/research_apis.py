@@ -385,6 +385,51 @@ class IEEEAPI:
             return []
 
 
+class USPTOAPI:
+    """Placeholder USPTO patent search API integration."""
+
+    def __init__(self):
+        self.base_url = os.environ.get('USPTO_API_URL', 'https://developer.uspto.gov/ds-api')
+
+    def search(self, query: str, limit: int = 10) -> List[Dict[str, Any]]:
+        """Return empty results with a warning until USPTO integration is configured."""
+        logger.warning("USPTO API integration not configured; returning no results.")
+        return []
+
+
+class GooglePatentsAPI:
+    """Placeholder Google Patents integration."""
+
+    def __init__(self):
+        self.base_url = os.environ.get('GOOGLE_PATENTS_API_URL', 'https://patents.google.com')
+
+    def search(self, query: str, limit: int = 10) -> List[Dict[str, Any]]:
+        logger.warning("Google Patents API integration not configured; returning no results.")
+        return []
+
+
+class EPOAPI:
+    """Placeholder European Patent Office search integration."""
+
+    def __init__(self):
+        self.base_url = os.environ.get('EPO_API_URL', 'https://ops.epo.org')
+
+    def search(self, query: str, limit: int = 10) -> List[Dict[str, Any]]:
+        logger.warning("EPO API integration not configured; returning no results.")
+        return []
+
+
+class WIPOAPI:
+    """Placeholder World Intellectual Property Organization search integration."""
+
+    def __init__(self):
+        self.base_url = os.environ.get('WIPO_API_URL', 'https://patentscope.wipo.int')
+
+    def search(self, query: str, limit: int = 10) -> List[Dict[str, Any]]:
+        logger.warning("WIPO API integration not configured; returning no results.")
+        return []
+
+
 class ResearchAPIManager:
     """Manages multiple research API integrations"""
     

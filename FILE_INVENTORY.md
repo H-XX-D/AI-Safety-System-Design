@@ -1,8 +1,17 @@
 # AI Safety System - Complete File Inventory
 
-**Generated:** 2025-11-13
+**Generated:** 2025-11-13 (Updated: 2025-12-02)
 **Purpose:** Comprehensive reference manual for understanding and refactoring the AI Safety System codebase
-**Total Python Files:** 157 (excluding venv, __pycache__)
+**Total Python Files:** ~180 (excluding venv, __pycache__, Archive Files)
+**Repository Status:** Cleaned and organized (Dec 2025)
+
+### 📦 Repository Organization (December 2025)
+- **Archive Files/**: Contains ~130+ archived files for better organization
+  - External Libraries: Agent0, EasyR1, ldp, paper-qa, verl, etc.
+  - Old Versions: ORKA-v2, orka-v2-main
+  - Demo Outputs: logs, training outputs, forensics snapshots
+  - Research Artifacts: patent searches, analysis scripts
+  - Hardware Specific: ESP32, Jetson Nano, Edison docs
 
 ---
 

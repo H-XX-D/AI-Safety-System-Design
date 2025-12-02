@@ -59,6 +59,16 @@ except ImportError:
     GEMINI_AVAILABLE = False
     logger.warning("google-generativeai package not installed. Run: pip install google-generativeai")
 
+# Try importing subprocess for 3dlm CLI
+try:
+    import subprocess
+    import shutil
+    from pathlib import Path
+    SUBPROCESS_AVAILABLE = True
+except ImportError:
+    SUBPROCESS_AVAILABLE = False
+    logger.warning("subprocess not available")
+
 
 class OpenAIAdapter(BaseLLMAdapter):
     """
@@ -710,3 +720,380 @@ Remember:
             for banned in guardrails["banned_imports"]:
                 if f"import {banned}" in code or f"from {banned}" in code:
                     raise ValueError(f"Proposal violates guardrail: banned import '{banned}' detected")
+
+
+class ThirdLMAdapter(BaseLLMAdapter):
+    """
+    Local on-device LLM adapter using 3dlm (ThirdLM) inference engine.
+    
+    Uses the 3dlm Swift CLI for GPU-accelerated inference on Apple Silicon.
+    Provides privacy, offline operation, and no API costs.
+    
+    Features:
+    - On-device inference with Metal GPU acceleration
+    - Supports .btern, .tmc5, and .gguf model formats
+    - Automatic fallback to template adapter if 3dlm unavailable
+    - Structured output parsing with JSON extraction
+    """
+    
+    def __init__(
+        self,
+        model_path: str,
+        tokenizer_path: Optional[str] = None,
+        cli_path: Optional[str] = None,
+        temperature: float = 0.7,
+        max_tokens: int = 512,
+        timeout: float = 120.0,
+        swift_package_dir: Optional[str] = None
+    ):
+        """
+        Initialize 3dlm adapter.
+        
+        Args:
+            model_path: Path to model file (.btern, .tmc5, or .gguf)
+            tokenizer_path: Path to tokenizer.json (optional, auto-detected if None)
+            cli_path: Path to thirdlm-cli executable (auto-detected if None)
+            temperature: Sampling temperature (0.0-2.0)
+            max_tokens: Maximum tokens to generate
+            timeout: Request timeout in seconds
+            swift_package_dir: Path to 3Dlm/macos directory (auto-detected if None)
+        """
+        if not SUBPROCESS_AVAILABLE:
+            raise ImportError("subprocess module required for ThirdLMAdapter")
+        
+        self.model_path = Path(model_path).expanduser().resolve()
+        if not self.model_path.exists():
+            raise ValueError(f"Model file not found: {self.model_path}")
+        
+        # Auto-detect tokenizer if not provided
+        if tokenizer_path:
+            self.tokenizer_path: Optional[Path] = Path(tokenizer_path).expanduser().resolve()
+        else:
+            # Try common locations
+            possible_tokenizers = [
+                self.model_path.parent / "tokenizer.json",
+                Path("3Dlm/tinyllama_tokenizer/tokenizer.json"),
+                Path.home() / "3Dlm/models/tokenizer.json"
+            ]
+            self.tokenizer_path = None
+            for path in possible_tokenizers:
+                if path.exists():
+                    self.tokenizer_path = path
+                    break
+            
+            if not self.tokenizer_path:
+                logger.warning("Tokenizer not found. Some models may work without it.")
+        
+        # Auto-detect CLI path
+        if cli_path:
+            self.cli_path: Optional[Path] = Path(cli_path).expanduser().resolve()
+            self.swift_package_dir: Optional[Path] = None
+            self.use_swift_run = False
+        else:
+            # Try to find built executable or use swift run
+            if swift_package_dir:
+                swift_dir = Path(swift_package_dir)
+            else:
+                # Auto-detect 3Dlm directory
+                project_root = Path(__file__).parent
+                swift_dir = project_root / "3Dlm" / "macos"
+            
+            # Check for built executable
+            possible_clis = [
+                swift_dir / ".build" / "arm64-apple-macosx" / "debug" / "thirdlm-app",
+                swift_dir / ".build" / "arm64-apple-macosx" / "release" / "thirdlm-app",
+                Path("/usr/local/bin/thirdlm-cli"),
+            ]
+            
+            self.cli_path = None
+            for path in possible_clis:
+                if path.exists() and path.is_file():
+                    self.cli_path = path
+                    break
+            
+            # If no executable found, use swift run
+            if not self.cli_path:
+                self.swift_package_dir = swift_dir
+                self.use_swift_run = True
+                logger.info(f"Using 'swift run' from {swift_dir}")
+            else:
+                self.swift_package_dir = None
+                self.use_swift_run = False
+                logger.info(f"Using CLI executable: {self.cli_path}")
+        
+        self.temperature = max(0.0, min(2.0, temperature))
+        self.max_tokens = max(1, max_tokens)
+        self.timeout = timeout
+        
+        logger.info(
+            f"Initialized ThirdLMAdapter: model={self.model_path.name}, "
+            f"temperature={self.temperature}, max_tokens={self.max_tokens}"
+        )
+    
+    def generate_improvement(
+        self,
+        prompt: str,
+        *,
+        specialization: SystemSpecialization,
+        research_params: Dict[str, Any],
+        guardrails: Optional[Dict[str, Any]] = None,
+    ) -> LLMAdapterResult:
+        """Generate improvement proposal using 3dlm local inference."""
+        
+        # Build system prompt
+        system_prompt = self._build_system_prompt(specialization, guardrails)
+        
+        # Build full prompt
+        full_prompt = self._build_user_prompt(prompt, specialization, guardrails)
+        
+        # Combine system and user prompts
+        combined_prompt = f"{system_prompt}\n\n{full_prompt}"
+        
+        # Call 3dlm CLI
+        try:
+            response_text = self._call_3dlm(combined_prompt, research_params)
+        except Exception as e:
+            logger.error(f"3dlm inference failed: {e}")
+            # Fallback to template adapter behavior
+            from research_system import TemplateLLMAdapter
+            template = TemplateLLMAdapter()
+            return template.generate_improvement(
+                prompt=prompt,
+                specialization=specialization,
+                research_params=research_params,
+                guardrails=guardrails
+            )
+        
+        # Parse response
+        return self._parse_response(response_text, specialization, guardrails)
+    
+    def _call_3dlm(self, prompt: str, research_params: Dict[str, Any]) -> str:
+        """Call 3dlm CLI and return generated text."""
+        
+        # Override params from research_params if provided
+        temperature = research_params.get("temperature", self.temperature)
+        max_tokens = research_params.get("max_tokens", self.max_tokens)
+        
+        # Build command
+        if self.use_swift_run:
+            cmd = [
+                "swift", "run", "-c", "release",
+                "thirdlm-app",
+                str(self.model_path),
+                prompt
+            ]
+            cwd = self.swift_package_dir
+        else:
+            cmd = [
+                str(self.cli_path),
+                str(self.model_path),
+                prompt
+            ]
+            cwd = None
+        
+        # Add tokenizer if available
+        if self.tokenizer_path:
+            cmd.extend(["--tokenizer", str(self.tokenizer_path)])
+        
+        # Add generation parameters
+        cmd.extend([
+            "--tokens", str(max_tokens),
+            "--temperature", str(temperature),
+            "--top-p", "0.95"
+        ])
+        
+        logger.debug(f"Calling 3dlm: {' '.join(cmd)}")
+        
+        # Execute
+        try:
+            result = subprocess.run(
+                cmd,
+                cwd=cwd,
+                capture_output=True,
+                text=True,
+                timeout=self.timeout,
+                check=True
+            )
+            
+            # Extract generated text (skip header lines)
+            output_lines = result.stdout.strip().split('\n')
+            
+            # Find where generation starts (after "Generated:" or similar)
+            generated_start = 0
+            for i, line in enumerate(output_lines):
+                if "Generated:" in line or "Output:" in line or i > 5:
+                    generated_start = i + 1
+                    break
+            
+            generated_text = '\n'.join(output_lines[generated_start:]).strip()
+            
+            if not generated_text:
+                # Fallback: use entire output
+                generated_text = result.stdout.strip()
+            
+            logger.debug(f"3dlm generated {len(generated_text)} characters")
+            return generated_text
+            
+        except subprocess.TimeoutExpired:
+            logger.error(f"3dlm inference timed out after {self.timeout}s")
+            raise TimeoutError(f"3dlm inference exceeded {self.timeout}s timeout")
+        
+        except subprocess.CalledProcessError as e:
+            logger.error(f"3dlm CLI failed: {e.stderr}")
+            raise RuntimeError(f"3dlm inference failed: {e.stderr}")
+        
+        except FileNotFoundError:
+            logger.error("3dlm CLI not found. Is Swift installed?")
+            raise RuntimeError("3dlm CLI not found. Install Swift and build 3dlm.")
+    
+    def _build_system_prompt(
+        self,
+        specialization: SystemSpecialization,
+        guardrails: Optional[Dict[str, Any]]
+    ) -> str:
+        """Build system prompt for structured output."""
+        # Use same system prompt logic as GeminiAdapter
+        prompt = f"""You are an AI safety research assistant specializing in {specialization.value}.
+Your task is to generate a structured improvement proposal in JSON format.
+
+CRITICAL CONSTRAINTS:
+1. Follow immutable alignment constraints
+2. Enumerate all risks honestly
+3. Produce reversible plans with clear rollback procedures
+4. Admit uncertainties explicitly
+5. Provide testable predictions
+
+OUTPUT FORMAT (JSON):
+{{
+    "title": "Short descriptive title (10-50 chars)",
+    "motivation": "Why this improvement is needed (min 20 chars)",
+    "changes": {{"description": "...", "code": "..."}},
+    "expected_benefits": "What improvements we expect (min 10 chars)",
+    "testable_predictions": ["prediction 1", "prediction 2", ...] (min 2),
+    "rollback_plan": "Step-by-step rollback procedure (min 10 chars)",
+    "identified_risks": ["risk 1", "risk 2", ...] (min 2 risks),
+    "admitted_uncertainties": ["uncertainty 1", ...] (min 1 uncertainty),
+    "confidence": 0.0-1.0 (be conservative, typical: 0.5-0.8)
+}}"""
+
+        # Add guardrail constraints
+        if guardrails:
+            prompt += "\n\nGUARDRAILS:\n"
+
+            if "max_risk" in guardrails:
+                prompt += f"- Maximum acceptable risk level: {guardrails['max_risk']}\n"
+
+            if "banned_imports" in guardrails:
+                banned = ", ".join(guardrails["banned_imports"])
+                prompt += f"- BANNED imports: {banned}\n"
+
+            if "allowed_modules" in guardrails:
+                allowed = ", ".join(guardrails["allowed_modules"])
+                prompt += f"- ONLY these modules allowed: {allowed}\n"
+
+            if "required_tests" in guardrails:
+                tests = ", ".join(guardrails["required_tests"])
+                prompt += f"- Required test types: {tests}\n"
+
+        return prompt
+    
+    def _build_user_prompt(
+        self,
+        prompt: str,
+        specialization: SystemSpecialization,
+        guardrails: Optional[Dict[str, Any]]
+    ) -> str:
+        """Build user prompt with research request."""
+        user_prompt = f"""Research Request: {prompt}
+
+Specialization: {specialization.value}
+
+Generate a detailed improvement proposal following the JSON format specified in the system prompt.
+
+Remember:
+- Be honest about risks and uncertainties
+- Provide concrete, testable predictions
+- Include clear rollback procedures
+- Stay within safety guardrails
+- Code must be production-quality if included
+"""
+        return user_prompt
+    
+    def _parse_response(
+        self,
+        response_text: str,
+        specialization: SystemSpecialization,
+        guardrails: Optional[Dict[str, Any]]
+    ) -> LLMAdapterResult:
+        """Parse and validate LLM response into structured result."""
+        # Try to extract JSON from response
+        try:
+            # Look for JSON block (might be wrapped in markdown code blocks)
+            json_match = re.search(r'```json\s*(.*?)\s*```', response_text, re.DOTALL)
+            if json_match:
+                json_str = json_match.group(1)
+            else:
+                # Try to find JSON object directly
+                json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
+                if json_match:
+                    json_str = json_match.group(0)
+                else:
+                    json_str = response_text
+
+            data = json.loads(json_str)
+
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse JSON from response: {e}")
+            # Fallback: create minimal structure
+            data = {
+                "title": "Unparsed proposal",
+                "motivation": response_text[:200],
+                "changes": {"description": response_text},
+                "expected_benefits": "Unknown",
+                "testable_predictions": ["Manual review required"],
+                "rollback_plan": "Manual rollback",
+                "identified_risks": ["Unparsed response"],
+                "admitted_uncertainties": ["Parsing failed"],
+                "confidence": 0.3
+            }
+
+        # Validate required fields (same as GeminiAdapter)
+        motivation = data.get("motivation", "")
+        if len(motivation) < 20:
+            logger.warning(f"Motivation too short: {len(motivation)} chars (min 20)")
+
+        risks = data.get("identified_risks", [])
+        if len(risks) < 2:
+            logger.warning(f"Insufficient risks identified: {len(risks)} (min 2)")
+
+        uncertainties = data.get("admitted_uncertainties", [])
+        if len(uncertainties) < 1:
+            logger.warning(f"No uncertainties admitted (min 1)")
+
+        confidence = data.get("confidence")
+        if confidence is not None and not (0.0 <= confidence <= 1.0):
+            logger.warning(f"Confidence out of range: {confidence} (must be 0.0-1.0)")
+
+        rollback = data.get("rollback_plan", "")
+        if len(rollback) < 10:
+            logger.warning(f"Rollback plan too short: {len(rollback)} chars (min 10)")
+
+        # Check guardrails
+        if guardrails and "banned_imports" in guardrails:
+            code = str(data.get("changes", {}).get("code", ""))
+            for banned in guardrails["banned_imports"]:
+                if f"import {banned}" in code or f"from {banned}" in code:
+                    raise ValueError(f"Proposal violates guardrail: banned import '{banned}' detected")
+
+        # Build LLMAdapterResult
+        return LLMAdapterResult(
+            title=data.get("title", "Untitled"),
+            motivation=data.get("motivation", ""),
+            changes=data.get("changes", {}),
+            expected_benefits=data.get("expected_benefits", ""),
+            testable_predictions=data.get("testable_predictions", []),
+            rollback_plan=data.get("rollback_plan", ""),
+            identified_risks=data.get("identified_risks"),
+            admitted_uncertainties=data.get("admitted_uncertainties"),
+            confidence=data.get("confidence")
+        )
