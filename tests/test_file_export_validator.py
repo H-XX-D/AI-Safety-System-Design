@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from file_export_validator import FileExportValidator, ExportMethod
+from infrastructure.file_export_validator import FileExportValidator, ExportMethod
 
 
 def _roots(tmp_path: Path) -> dict:

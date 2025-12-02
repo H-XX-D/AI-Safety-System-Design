@@ -13,7 +13,7 @@ from unittest.mock import patch, MagicMock
 # Add project root to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from research_system import ResearchSystem, SystemSpecialization
+from research.research_system import ResearchSystem, SystemSpecialization
 from integrations.ai_memory_system import AIMemorySystem
 from integrations.rl_trainer import RLTrainer
 
@@ -108,6 +108,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 

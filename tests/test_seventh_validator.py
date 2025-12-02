@@ -1,4 +1,4 @@
-from seventh_validator import SeventhValidator
+from ai_safety.seventh_validator import SeventhValidator
 from typing import Dict, Any
 
 def test_seventh_validator_pass_and_fail():

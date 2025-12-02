@@ -18,7 +18,7 @@ def test_ed25519_sign_and_verify_roundtrip():
     ed25519_mod, serialization = _import_crypto()
     Ed25519PrivateKey = getattr(ed25519_mod, 'Ed25519PrivateKey')
 
-    from worm_usb_builder import sign_manifest_ed25519, verify_signature_ed25519
+    from security.worm_usb_builder import sign_manifest_ed25519, verify_signature_ed25519
 
     with tempfile.TemporaryDirectory() as tmp:
         manifest_path = os.path.join(tmp, "manifest.json")

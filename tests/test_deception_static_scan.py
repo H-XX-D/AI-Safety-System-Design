@@ -1,6 +1,6 @@
 from types import SimpleNamespace
 
-from deception_detector import DeceptionDetector
+from ai_safety.deception_detector import DeceptionDetector
 
 
 def test_static_scan_flags_subprocess_and_raises_confidence():

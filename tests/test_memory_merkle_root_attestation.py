@@ -1,4 +1,4 @@
-from memory_merkle import MemoryStorage, MemoryType
+from infrastructure.memory_merkle import MemoryStorage, MemoryType
 
 
 def test_signed_root_attestation_and_tamper():

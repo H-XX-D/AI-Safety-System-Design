@@ -1,4 +1,4 @@
-from translator import Translation, TranslationVerifier
+from communication.translator import Translation, TranslationVerifier
 
 def make_t(text: str, conf: float) -> Translation:
     return Translation(

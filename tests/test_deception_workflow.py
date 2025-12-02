@@ -1,8 +1,8 @@
 """Pytest tests for deception workflow rewards & penalties."""
 from datetime import datetime
-from worm_usb_verifier import ImprovementProposal, ImprovementType, AlignedGoalStructure
-from worm_manifest import worm_manifest
-from deception_incident import DeceptionType, Severity
+from security.worm_usb_verifier import ImprovementProposal, ImprovementType, AlignedGoalStructure
+from security.worm_manifest import worm_manifest
+from ai_safety.deception_incident import DeceptionType, Severity
 
 
 def _make_base_proposal():

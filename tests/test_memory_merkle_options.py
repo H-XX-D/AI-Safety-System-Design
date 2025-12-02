@@ -1,6 +1,6 @@
 import re
-from ai_safety_system_core import *  # If needed; not used here
-from memory_merkle import MemoryStorage, MemoryType
+from core.ai_safety_system_core import *  # If needed; not used here
+from infrastructure.memory_merkle import MemoryStorage, MemoryType
 
 
 def test_memory_storage_hash_alg_and_entry_hash_metadata():

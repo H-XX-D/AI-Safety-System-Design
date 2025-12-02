@@ -1,4 +1,4 @@
-from semantic_deception_classifier import (
+from ai_safety.semantic_deception_classifier import (
     build_training_bundle,
     classifier_from_bundle,
     apply_calibration,

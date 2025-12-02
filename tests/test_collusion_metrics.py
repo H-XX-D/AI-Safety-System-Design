@@ -1,4 +1,4 @@
-from orchestrator_v2 import CollusionDetector, DebateMessage
+from core.orchestrator_v2 import CollusionDetector, DebateMessage
 
 def test_collusion_score_increases_with_duplicate_content():
     det = CollusionDetector()

@@ -1,5 +1,5 @@
-from interpretability_monitor import interpretability_monitor
-from deception_detector import DeceptionDetector
+from ai_safety.interpretability_monitor import interpretability_monitor
+from ai_safety.deception_detector import DeceptionDetector
 from types import SimpleNamespace
 
 def test_high_drift_increases_confidence():

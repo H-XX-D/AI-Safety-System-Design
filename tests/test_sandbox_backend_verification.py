@@ -106,7 +106,7 @@ class TestSandboxBackendVerification:
         - Should raise error if container unavailable
         - Should not fall back to host execution
         """
-        from config_loader import load_config
+        from utilities.config_loader import load_config
 
         config = load_config()
         sandbox_config = config.get("sandbox", {})
@@ -128,7 +128,7 @@ class TestSandboxBackendVerification:
         - Should log which backend was used
         - Should warn if host fallback occurred
         """
-        from config_loader import load_config
+        from utilities.config_loader import load_config
 
         config = load_config()
         sandbox_config = config.get("sandbox", {})
@@ -168,14 +168,14 @@ class TestProductionControlHooks:
     def test_control_hooks_importable(self):
         """Test that production control hooks can be imported."""
         try:
-            from production_control_hooks import ProductionControlHooks
+            from infrastructure.production_control_hooks import ProductionControlHooks
             assert ProductionControlHooks is not None
         except ImportError as e:
             pytest.fail(f"Could not import ProductionControlHooks: {e}")
 
     def test_dry_run_mode_safe(self):
         """Test that dry-run mode doesn't execute real actions."""
-        from production_control_hooks import ProductionControlHooks
+        from infrastructure.production_control_hooks import ProductionControlHooks
 
         hooks = ProductionControlHooks(dry_run=True)
 
@@ -185,7 +185,7 @@ class TestProductionControlHooks:
 
     def test_halt_outputs_requires_allowlist(self):
         """Test that halt_outputs validates against allowlist."""
-        from production_control_hooks import ProductionControlHooks
+        from infrastructure.production_control_hooks import ProductionControlHooks
 
         hooks = ProductionControlHooks(
             allowed_processes=["allowed-process"],
@@ -198,7 +198,7 @@ class TestProductionControlHooks:
 
     def test_docker_halt_with_mock(self):
         """Test Docker container halt with mocked Docker client."""
-        from production_control_hooks import ProductionControlHooks
+        from infrastructure.production_control_hooks import ProductionControlHooks
 
         # Mock Docker client
         mock_client = MagicMock()
@@ -219,7 +219,7 @@ class TestProductionControlHooks:
 
     def test_isolate_networks_signature(self):
         """Test that isolate_networks method exists and runs in dry-run mode."""
-        from production_control_hooks import ProductionControlHooks
+        from infrastructure.production_control_hooks import ProductionControlHooks
 
         hooks = ProductionControlHooks(dry_run=True)
         result = hooks.isolate_networks()
@@ -227,7 +227,7 @@ class TestProductionControlHooks:
 
     def test_snapshot_forensics_signature(self):
         """Test that snapshot_forensics accepts seconds and returns success in dry-run."""
-        from production_control_hooks import ProductionControlHooks
+        from infrastructure.production_control_hooks import ProductionControlHooks
 
         hooks = ProductionControlHooks(dry_run=True)
         result = hooks.snapshot_forensics(1)
@@ -235,7 +235,7 @@ class TestProductionControlHooks:
 
     def test_halt_outputs_records_last_systems(self):
         """Verify that halt_outputs records the last systems for downstream actions."""
-        from production_control_hooks import ProductionControlHooks
+        from infrastructure.production_control_hooks import ProductionControlHooks
 
         hooks = ProductionControlHooks(dry_run=True)
         assert hooks._last_systems == []
@@ -244,7 +244,7 @@ class TestProductionControlHooks:
 
     def test_isolate_networks_with_docker_mock(self):
         """Test that isolate_networks disconnects container networks with a mocked Docker SDK."""
-        from production_control_hooks import ProductionControlHooks
+        from infrastructure.production_control_hooks import ProductionControlHooks
 
         mock_client = MagicMock()
         mock_container = MagicMock()
@@ -266,7 +266,7 @@ class TestUSBPathConfiguration:
 
     def test_usb_path_in_config(self):
         """Test that USB path is configurable in config."""
-        from config_loader import load_config
+        from utilities.config_loader import load_config
 
         config = load_config()
         worm_config = config.get("worm", {})
@@ -281,7 +281,7 @@ class TestUSBPathConfiguration:
 
     def test_usb_path_cross_platform(self):
         """Test that USB path can be configured for different platforms."""
-        from config_loader import load_config
+        from utilities.config_loader import load_config
         import platform
 
         config = load_config()

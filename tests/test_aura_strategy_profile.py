@@ -1,4 +1,4 @@
-from aura_strategy_profile import classify_message, AURAStrategyProfile
+from communication.aura_strategy_profile import classify_message, AURAStrategyProfile
 
 
 def test_ranges_and_methods():

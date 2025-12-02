@@ -2,9 +2,9 @@ import logging
 import time
 from datetime import timedelta
 
-from orchestrator import Orchestrator
-from memory_merkle import MemoryStorage
-from logging_config import init_logging
+from core.orchestrator import Orchestrator
+from infrastructure.memory_merkle import MemoryStorage
+from utilities.logging_config import init_logging
 
 
 def test_penalty_schedule_log_and_audit_cycle(caplog):

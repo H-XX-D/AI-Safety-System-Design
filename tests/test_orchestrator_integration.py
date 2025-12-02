@@ -3,21 +3,21 @@ from typing import Dict
 
 import pytest
 
-import worm_manifest
-from core_values import CoreValues
-from debate_engine import Argument, Claim, DebateResult, DebateTurn
-from memory_merkle import MemoryStorage
-from orchestrator import Orchestrator
-from orchestrator_sandbox import SandboxEnvironmentManager
+import security.worm_manifest
+from utilities.core_values import CoreValues
+from research.debate_engine import Argument, Claim, DebateResult, DebateTurn
+from infrastructure.memory_merkle import MemoryStorage
+from core.orchestrator import Orchestrator
+from core.orchestrator_sandbox import SandboxEnvironmentManager
 
 
 @pytest.fixture(autouse=True)
 def configure_core_values(monkeypatch: pytest.MonkeyPatch):
-    import worm_manifest
+    import security.worm_manifest
     worm_manifest.enable_software_equivalence_mode(justification='test')
     monkeypatch.setenv('CORE_VALUES_KNOWN_HASH', CoreValues.compute_hash())
     # Set alignment filter hash to the actual locally computed hash so integrity checks pass
-    import bulletproof_alignment_filter
+    import ai_safety.bulletproof_alignment_filter
     monkeypatch.setenv('CORE_ALIGNMENT_FILTER_HASH', bulletproof_alignment_filter.BulletproofAlignmentFilter.get_own_code_hash())
     monkeypatch.delenv('WORM_MOCK_MANIFEST', raising=False)
     if hasattr(worm_manifest, '_manifest_cache'):

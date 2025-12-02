@@ -1,5 +1,5 @@
 import pytest
-from reputation_system import ReputationMatrix, ReputationRating
+from infrastructure.reputation_system import ReputationMatrix, ReputationRating
 from datetime import datetime, timedelta
 
 

@@ -1,6 +1,6 @@
 import dataclasses
 import os
-from audit_seed_chain import build_record, verify_record, compute_hour_epoch, random_nonce
+from security.audit_seed_chain import build_record, verify_record, compute_hour_epoch, random_nonce
 
 
 def test_audit_seed_record_with_ed25519_vrf(monkeypatch):

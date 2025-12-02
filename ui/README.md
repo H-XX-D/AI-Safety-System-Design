@@ -2,12 +2,98 @@
 
 ## Overview
 
-The Web Monitoring Dashboard provides real-time visualization and control for the AI Safety System. It includes four major feature areas:
+The Web Monitoring Dashboard provides real-time visualization and control for the AI Safety System. It includes comprehensive features for proposal management, monitoring, and human oversight.
 
-1. **Evidence Engine** - Search system documentation with citations
-2. **Decision Trajectories** - Visualize agent decision paths and state transitions
-3. **Training Metrics** - Monitor self-play training progress and adversarial bypasses
-4. **Workflow Orchestration** - Track multi-agent collaboration across proposal lifecycle stages
+## Core Features
+
+1. **ORKA Oversight** - Complete proposal lifecycle management with 9-phase workflow
+2. **Evidence Engine** - Search system documentation with citations
+3. **Decision Trajectories** - Visualize agent decision paths and state transitions
+4. **Training Metrics** - Monitor self-play training progress and adversarial bypasses
+5. **Workflow Orchestration** - Track multi-agent collaboration across proposal lifecycle stages
+
+## New Features (Complete Implementation)
+
+### PDF Export
+Export comprehensive proposal reports as PDF documents with all 16 sections.
+
+- **Endpoint**: `GET /api/proposals/<id>/export`
+- **Features**: Full proposal data, risk visualizations, peer reviews, code sections
+- **Dependency**: `reportlab>=4.0.0`
+
+### Code Download
+Download proposal code artifacts as tar.gz packages.
+
+- **Endpoint**: `GET /api/proposals/<id>/code`
+- **Contents**: metadata.json, proposed_code.py, test_results.json, peer_reviews.json, README.md
+
+### USB Transfer System
+Real USB writing for VAL offline validation.
+
+- **Endpoints**:
+  - `GET /api/usb/detect` - Detect mounted USB drives
+  - `POST /api/usb/write` - Write proposals to USB
+  - `GET /api/usb/verify` - Verify transfer integrity
+- **Features**: Cross-platform detection (macOS/Linux/Windows), SHA-256 hashing, manifest generation
+
+### 9-Phase Workflow Visualization
+Complete workflow tracking for proposals.
+
+- **Endpoint**: `GET /api/proposals/<id>/phases`
+- **Phases**:
+  1. Submission
+  2. Agent Testing
+  3. Peer Review
+  4. ORKA Counterpoint
+  5. Agent Defense
+  6. Final Testing
+  7. Human Notification
+  8. VAL Validation
+  9. Deployment
+
+### Notifications API
+Real-time notification system.
+
+- **Endpoints**:
+  - `GET /api/notifications` - Get all notifications
+  - `GET /api/notifications/unread` - Get unread count
+  - `POST /api/notifications/<id>/read` - Mark as read
+  - `POST /api/notifications/read-all` - Mark all as read
+  - `DELETE /api/notifications/<id>` - Delete notification
+  - `DELETE /api/notifications` - Clear all
+
+### Activity Log
+Comprehensive activity tracking.
+
+- **Endpoint**: `GET /api/activity`
+- **Page**: `/activity`
+- **Filters**: user, action, resource_type, pagination
+
+### Advanced Search
+Full-text search across proposals.
+
+- **Endpoint**: `GET /api/proposals/search`
+- **Parameters**: q, agent, status, component, min_risk, max_risk, date_from, date_to, phase
+- **Features**: Highlighting, suggestions, pagination
+
+### Proposal Comparison
+Side-by-side proposal comparison.
+
+- **Endpoint**: `GET /api/proposals/compare?ids=prop1,prop2`
+- **Features**: Risk score comparison, differences detection, similarities analysis
+
+### Real-Time Socket.IO Events
+Comprehensive event system for live updates.
+
+- `proposals:new` - New proposal submitted
+- `proposals:update` - Proposal status changed
+- `proposals:phase_transition` - Phase transition
+- `orka:challenge` - ORKA counterpoint generated
+- `val:validation` - VAL validation complete
+- `deployment:complete` - Deployment finished
+- `deception:alert` - Deception detected
+- `collusion:attempt` - Collusion detected
+- `notifications:new` - New notification
 
 ## Features
 

@@ -1,10 +1,10 @@
 import logging
 
-from control_actions import DryRunHooks, SystemControlHooks
-from deception_incident import Severity as IncidentSeverity
-from improvement_policy import Severity as PolicySeverity
+from utilities.control_actions import DryRunHooks, SystemControlHooks
+from ai_safety.deception_incident import Severity as IncidentSeverity
+from research.improvement_policy import Severity as PolicySeverity
 
-from orchestrator import _map_deception_to_policy_severity, _build_control_hooks
+from core.orchestrator import _map_deception_to_policy_severity, _build_control_hooks
 
 
 def test_map_deception_to_policy_severity():

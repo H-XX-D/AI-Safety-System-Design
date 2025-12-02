@@ -1,4 +1,4 @@
-from research_system import ResearchSystem, SystemSpecialization
+from research.research_system import ResearchSystem, SystemSpecialization
 
 
 def test_perform_research_deterministic_output_fixed():

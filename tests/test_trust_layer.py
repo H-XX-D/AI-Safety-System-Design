@@ -8,10 +8,10 @@ Verifies:
 from datetime import datetime
 from typing import Dict, Any
 
-from orchestrator import Orchestrator
-from orchestrator_sandbox import SandboxEnvironmentManager
-from memory_merkle import MemoryStorage
-from human_review import sign_human_decision, verify_human_signature
+from core.orchestrator import Orchestrator
+from core.orchestrator_sandbox import SandboxEnvironmentManager
+from infrastructure.memory_merkle import MemoryStorage
+from research.human_review import sign_human_decision, verify_human_signature
 
 
 def _make_demo_proposal(pid: str) -> Dict[str, Any]:

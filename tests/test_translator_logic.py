@@ -1,4 +1,4 @@
-from translator import AirGappedTranslator
+from communication.translator import AirGappedTranslator
 
 
 def test_translator_handles_alert_message():

@@ -6,9 +6,9 @@ from typing import Dict
 
 import pytest
 
-from core_values import CoreValues
-from memory_merkle import MemoryStorage
-from orchestrator import Orchestrator
+from utilities.core_values import CoreValues
+from infrastructure.memory_merkle import MemoryStorage
+from core.orchestrator import Orchestrator
 
 
 def _make_proposal(proposal_id: str = 'deploy-001') -> Dict[str, object]:
@@ -35,7 +35,7 @@ def test_deploy_blocked_in_strict_mode(monkeypatch, tmp_path):
     # Ensure no WORM manifest present and no software equivalence
     monkeypatch.delenv('WORM_MOCK_MANIFEST', raising=False)
     try:
-        from worm_manifest import disable_software_equivalence_mode
+        from security.worm_manifest import disable_software_equivalence_mode
 
         disable_software_equivalence_mode()
     except Exception:
@@ -68,9 +68,9 @@ def test_deploy_allowed_with_signed_manifest(monkeypatch):
     orchestrator._config['worm']['guard_mode'] = 'strict'
     orchestrator._config['worm']['require_manifest_signature'] = True
     # Build a temporary signed manifest with correct hashes
-    import attestation
-    import worm_manifest
-    from bulletproof_alignment_filter import BulletproofAlignmentFilter
+    import security.attestation
+    import security.worm_manifest
+    from ai_safety.bulletproof_alignment_filter import BulletproofAlignmentFilter
 
     cv_hash = CoreValues.compute_hash()
     align_hash = BulletproofAlignmentFilter.get_own_code_hash()

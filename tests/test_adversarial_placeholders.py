@@ -5,8 +5,8 @@ implement. Filling them in will strengthen assurance around invariants.
 """
 
 import pytest
-from aura_bitpacked_extension import BitPackedCompressor
-from message_codec import MessageCodec, _last_sequence_by_sender, _seen_sequences_by_sender
+from communication.aura_bitpacked_extension import BitPackedCompressor
+from communication.message_codec import MessageCodec, _last_sequence_by_sender, _seen_sequences_by_sender
 
 
 def test_replay_attack_should_be_rejected():

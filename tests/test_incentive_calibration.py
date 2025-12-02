@@ -1,4 +1,4 @@
-from incentive_calibration import run_calibration, CalibrationParams, sweep_detection_probabilities
+from infrastructure.incentive_calibration import run_calibration, CalibrationParams, sweep_detection_probabilities
 
 
 def test_honesty_has_higher_cumulative_reward_default():

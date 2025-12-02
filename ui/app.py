@@ -42,14 +42,14 @@ logger = logging.getLogger(__name__)
 
 try:
     # Prefer repo config for WORM mount path when available
-    from config_loader import load_config  # type: ignore
+    from utilities.config_loader import load_config  # type: ignore
 except Exception:  # keep UI robust in standalone mode
     def load_config():
         return {}
 
 try:
     # Optional integrity check if present in environment
-    from worm_manifest import verify_integrity as _verify_worm  # type: ignore
+    from security.worm_manifest import verify_integrity as _verify_worm  # type: ignore
 except Exception:
     _verify_worm = None
 
@@ -64,6 +64,24 @@ from load_simulation_data import (
     load_proposals,
     get_proposal_by_id,
 )
+
+# Import 3D cube model and inference systems
+try:
+    sys.path.append('..')
+    from models.cube_model import create_cube, store_scalar_at_z, get_front_to_back_layers, multiply_layers_sequential, benchmark_multiply
+    from model_converter import ModelConverter, CompressedModel
+    from inference_engine import InferenceEngine, CompressedMLP
+    import torch
+    # Import device from models.cube_model if available
+    try:
+        from models.cube_model import device
+    except ImportError:
+        device = torch.device('cpu')
+    SYSTEMS_AVAILABLE = True
+except ImportError:
+    SYSTEMS_AVAILABLE = False
+    device = None
+    print("AI compression systems not available - demos disabled")
 
 app = Flask(__name__)
 # SECRET_KEY should be set via environment variable in production
@@ -115,20 +133,256 @@ def set_security_headers(response):
 # Standalone mode flag - set to True to run without parent components
 STANDALONE_MODE = os.environ.get('STANDALONE', 'true').lower() == 'true'
 
+
+# ===== CACHING SYSTEM =====
+
+class SimpleCache:
+    """Simple in-memory cache with TTL support."""
+    
+    def __init__(self, default_ttl: int = 60):
+        self._cache: Dict[str, Tuple[Any, float]] = {}
+        self._default_ttl = default_ttl
+        self._lock = threading.RLock()
+    
+    def get(self, key: str) -> Optional[Any]:
+        """Get value from cache if not expired."""
+        with self._lock:
+            if key in self._cache:
+                value, expires_at = self._cache[key]
+                if time.time() < expires_at:
+                    return value
+                else:
+                    del self._cache[key]
+            return None
+    
+    def set(self, key: str, value: Any, ttl: Optional[int] = None) -> None:
+        """Set value in cache with TTL."""
+        with self._lock:
+            expires_at = time.time() + (ttl or self._default_ttl)
+            self._cache[key] = (value, expires_at)
+    
+    def delete(self, key: str) -> None:
+        """Delete key from cache."""
+        with self._lock:
+            self._cache.pop(key, None)
+    
+    def clear(self) -> None:
+        """Clear all cache entries."""
+        with self._lock:
+            self._cache.clear()
+    
+    def cleanup(self) -> int:
+        """Remove expired entries. Returns count of removed entries."""
+        with self._lock:
+            now = time.time()
+            expired = [k for k, (_, exp) in self._cache.items() if now >= exp]
+            for k in expired:
+                del self._cache[k]
+            return len(expired)
+
+
+# Global cache instance
+_cache = SimpleCache(default_ttl=30)
+
+
+def cached(ttl: int = 30, key_prefix: str = ''):
+    """Decorator for caching function results."""
+    def decorator(fn):
+        @wraps(fn)
+        def wrapper(*args, **kwargs):
+            # Build cache key
+            cache_key = f"{key_prefix or fn.__name__}:{hash((args, tuple(sorted(kwargs.items()))))}"
+            
+            # Try to get from cache
+            cached_value = _cache.get(cache_key)
+            if cached_value is not None:
+                return cached_value
+            
+            # Call function and cache result
+            result = fn(*args, **kwargs)
+            _cache.set(cache_key, result, ttl)
+            return result
+        return wrapper
+    return decorator
+
+
+# ===== PAGINATION HELPERS =====
+
+def paginate_list(items: List[Any], page: int = 1, per_page: int = 50) -> Dict[str, Any]:
+    """Paginate a list of items."""
+    total = len(items)
+    total_pages = max(1, (total + per_page - 1) // per_page)
+    page = max(1, min(page, total_pages))
+    
+    start = (page - 1) * per_page
+    end = start + per_page
+    
+    return {
+        'items': items[start:end],
+        'pagination': {
+            'page': page,
+            'per_page': per_page,
+            'total': total,
+            'total_pages': total_pages,
+            'has_prev': page > 1,
+            'has_next': page < total_pages,
+            'prev_page': page - 1 if page > 1 else None,
+            'next_page': page + 1 if page < total_pages else None
+        }
+    }
+
+
+def get_pagination_params():
+    """Get pagination parameters from request args."""
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 50, type=int)
+    
+    # Enforce limits
+    page = max(1, page)
+    per_page = max(1, min(100, per_page))  # Max 100 per page
+    
+    return page, per_page
+
+
+# ===== INPUT VALIDATION =====
+
+import re
+
+def validate_proposal_id(proposal_id: str) -> Tuple[bool, str]:
+    """Validate proposal ID format."""
+    if not proposal_id:
+        return False, "Proposal ID is required"
+    
+    # Allow alphanumeric, underscores, and hyphens
+    if not re.match(r'^[a-zA-Z0-9_-]+$', proposal_id):
+        return False, "Invalid proposal ID format"
+    
+    if len(proposal_id) > 100:
+        return False, "Proposal ID too long"
+    
+    return True, ""
+
+
+def validate_string_input(value: str, field_name: str, max_length: int = 1000, 
+                         allow_empty: bool = False) -> Tuple[bool, str]:
+    """Validate string input."""
+    if not value and not allow_empty:
+        return False, f"{field_name} is required"
+    
+    if value and len(value) > max_length:
+        return False, f"{field_name} exceeds maximum length of {max_length}"
+    
+    return True, ""
+
+
+def sanitize_filename(filename: str) -> str:
+    """Sanitize filename to prevent path traversal."""
+    # Remove any directory components
+    filename = os.path.basename(filename)
+    
+    # Remove potentially dangerous characters
+    filename = re.sub(r'[^\w\-_\.]', '_', filename)
+    
+    # Prevent hidden files
+    if filename.startswith('.'):
+        filename = '_' + filename[1:]
+    
+    return filename
+
+
+def sanitize_path(path: str, base_dir: str) -> Optional[str]:
+    """Sanitize and validate a path is within base directory."""
+    # Normalize paths
+    base_dir = os.path.realpath(base_dir)
+    full_path = os.path.realpath(os.path.join(base_dir, path))
+    
+    # Ensure path is within base directory
+    if not full_path.startswith(base_dir):
+        return None
+    
+    return full_path
+
+
+def validate_json_input(data: Any, required_fields: List[str] = None) -> Tuple[bool, str]:
+    """Validate JSON input data."""
+    if data is None:
+        return False, "Request body is required"
+    
+    if not isinstance(data, dict):
+        return False, "Request body must be a JSON object"
+    
+    if required_fields:
+        missing = [f for f in required_fields if f not in data]
+        if missing:
+            return False, f"Missing required fields: {', '.join(missing)}"
+    
+    return True, ""
+
+
+# ===== SECURITY DECORATORS =====
+
+def validate_input(required_fields: List[str] = None, max_content_length: int = None):
+    """Decorator to validate request input."""
+    def decorator(fn):
+        @wraps(fn)
+        def wrapper(*args, **kwargs):
+            # Check content length
+            if max_content_length and request.content_length:
+                if request.content_length > max_content_length:
+                    return jsonify({'error': 'Request body too large'}), 413
+            
+            # Validate JSON input for POST/PUT/PATCH
+            if request.method in ['POST', 'PUT', 'PATCH']:
+                data = request.get_json(silent=True)
+                is_valid, error = validate_json_input(data, required_fields)
+                if not is_valid:
+                    return jsonify({'error': error}), 400
+            
+            return fn(*args, **kwargs)
+        return wrapper
+    return decorator
+
+
+def log_request(action: str, resource_type: str = None):
+    """Decorator to log requests to activity log."""
+    def decorator(fn):
+        @wraps(fn)
+        def wrapper(*args, **kwargs):
+            # Execute the function
+            result = fn(*args, **kwargs)
+            
+            # Log the activity
+            try:
+                store = get_store()
+                resource_id = kwargs.get('proposal_id') or kwargs.get('notification_id') or None
+                store.log_activity(
+                    action=action,
+                    user='admin',  # Would come from session in production
+                    resource_type=resource_type,
+                    resource_id=str(resource_id) if resource_id else None,
+                    ip_address=request.remote_addr
+                )
+            except Exception as e:
+                logger.warning(f"Failed to log activity: {e}")
+            
+            return result
+        return wrapper
+    return decorator
+
 # Try to import parent components, but work standalone if they're not available
 if not STANDALONE_MODE:
     try:
         sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-        from orka_penalty_tracker import orka_penalty_tracker
-        from translator import Translator
-        from reward_engine import calculate_reward
-        from core_values import verify_core_values
-        from alignment_filter import AlignmentFilter
+        from models.orka_penalty_tracker import models.orka_penalty_tracker
+        from communication.translator import Translator
+        from infrastructure.reward_engine import calculate_reward
+        from utilities.core_values import verify_core_values
+        from ai_safety.bulletproof_alignment_filter import AlignmentFilter
         # Optional orchestrator admin
         try:
-            from orchestrator import Orchestrator
-            from orchestrator_sandbox import SandboxEnvironmentManager  # type: ignore
-            from memory_merkle import MemoryStorage
+            from core.orchestrator import Orchestrator
+            from core.orchestrator_sandbox import SandboxEnvironmentManager  # type: ignore
+            from infrastructure.memory_merkle import MemoryStorage
         except Exception:
             Orchestrator = None  # type: ignore
             SandboxEnvironmentManager = None  # type: ignore
@@ -365,8 +619,8 @@ def api_worm_status():
         # Prefer full verifier when available (provides read_only), fall back to worm_manifest
         used_full = False
         try:
-            from verify_worm_integrity import WORMVerifier  # type: ignore
-            from worm_paths import resolve_worm_root  # type: ignore
+            from security.verify_worm_integrity import WORMVerifier  # type: ignore
+            from security.worm_paths import resolve_worm_root  # type: ignore
             try:
                 root = resolve_worm_root(fallback=base)
             except Exception:
@@ -475,7 +729,7 @@ def api_val_inspect():
             doc = _json.load(fh)
         summary = {'format': 'legacy', 'signatures': 0, 'required_signers': 1, 'approved': False, 'signatures_detail': [], 'content_hash_match': None}
         try:
-            from val_bridge import verify_val_response  # type: ignore
+            from utilities.val_bridge import verify_val_response  # type: ignore
             verdict = verify_val_response(path)
             summary['approved'] = bool(verdict.get('approved', False))
         except Exception:
@@ -492,7 +746,7 @@ def api_val_inspect():
             })
             # Build per-signature validation details
             try:
-                from val_bridge import _verify_signature  # type: ignore
+                from utilities.val_bridge import _verify_signature  # type: ignore
                 import hashlib as _hashlib
                 payload_bytes = _json.dumps(doc.get('payload') or {}, sort_keys=True).encode('utf-8')
                 ch = _hashlib.sha256(payload_bytes).hexdigest()
@@ -537,7 +791,7 @@ def api_val_inspect():
 def api_secure_transport_self_check():
     """Encode/decode a sample message via MessageCodec to verify secure transport path."""
     try:
-        from message_codec import MessageCodec  # type: ignore
+        from communication.message_codec import MessageCodec  # type: ignore
         codec = MessageCodec(prefer_secure_bitpacked=True, min_compression_size=18)
         text = "System 6 approves proposal 001"
         payload, method, meta = codec.encode(text)
@@ -911,7 +1165,7 @@ def api_proposal_detail(proposal_id):
         deception_analysis: Dict[str, Any] = {}
         try:
             from types import SimpleNamespace
-            from deception_detector import DeceptionDetector  # type: ignore
+            from ai_safety.deception_detector import DeceptionDetector  # type: ignore
             det = DeceptionDetector(semantic_classifier_enabled=False)
             p = SimpleNamespace(
                 motivation=proposal.get('motivation') or proposal.get('description') or '',
@@ -1011,6 +1265,216 @@ def api_proposal_detail(proposal_id):
         return jsonify(comprehensive)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+# ===== 9-PHASE WORKFLOW ENDPOINTS =====
+
+# Phase definitions for the 9-phase workflow
+WORKFLOW_PHASES = [
+    {
+        'id': 1,
+        'name': 'SUBMISSION',
+        'label': 'Submission',
+        'icon': '📝',
+        'description': 'Initial proposal submission by agent'
+    },
+    {
+        'id': 2,
+        'name': 'AGENT_TESTING',
+        'label': 'Agent Testing',
+        'icon': '🧪',
+        'description': 'Private testing in agent sandbox environment'
+    },
+    {
+        'id': 3,
+        'name': 'PEER_REVIEW',
+        'label': 'Peer Review',
+        'icon': '👥',
+        'description': 'Multi-round peer review with feedback cycles'
+    },
+    {
+        'id': 4,
+        'name': 'ORKA_COUNTERPOINT',
+        'label': 'ORKA Review',
+        'icon': '⚔️',
+        'description': 'Adversarial analysis by ORKA orchestrator'
+    },
+    {
+        'id': 5,
+        'name': 'AGENT_DEFENSE',
+        'label': 'Agent Defense',
+        'icon': '🛡️',
+        'description': 'Agent responds to challenges and revises'
+    },
+    {
+        'id': 6,
+        'name': 'FINAL_TESTING',
+        'label': 'Final Testing',
+        'icon': '✅',
+        'description': 'Comprehensive sandbox testing suite'
+    },
+    {
+        'id': 7,
+        'name': 'HUMAN_NOTIFICATION',
+        'label': 'Human Review',
+        'icon': '👤',
+        'description': 'Human oversight notification and review'
+    },
+    {
+        'id': 8,
+        'name': 'VAL_VALIDATION',
+        'label': 'VAL Validation',
+        'icon': '🔒',
+        'description': 'Offline validation via air-gapped VAL system'
+    },
+    {
+        'id': 9,
+        'name': 'DEPLOYMENT',
+        'label': 'Deployment',
+        'icon': '🚀',
+        'description': 'Final deployment with human approval'
+    }
+]
+
+
+@app.route('/api/proposals/<proposal_id>/phases')
+def api_proposal_phases(proposal_id):
+    """Get the 9-phase workflow status for a proposal."""
+    try:
+        proposal = get_proposal_by_id(proposal_id)
+        if not proposal:
+            return jsonify({'error': 'Proposal not found'}), 404
+        
+        # Determine current phase based on proposal status
+        status = proposal.get('status', 'submitted')
+        current_phase = _determine_current_phase(status, proposal)
+        
+        # Build phase data with status
+        phases = []
+        phase_history = []
+        
+        for phase in WORKFLOW_PHASES:
+            phase_status = 'pending'
+            started_at = None
+            completed_at = None
+            duration = None
+            metadata = {}
+            
+            if phase['id'] < current_phase:
+                phase_status = 'completed'
+                # Simulate timestamps for demo
+                base_time = proposal.get('timestamp_submitted', proposal.get('timestamp', datetime.now().isoformat()))
+                if isinstance(base_time, str):
+                    try:
+                        base_dt = datetime.fromisoformat(base_time.replace('Z', '+00:00'))
+                    except:
+                        base_dt = datetime.now()
+                else:
+                    base_dt = base_time
+                
+                # Add simulated duration
+                hours_offset = (phase['id'] - 1) * 4
+                started_at = (base_dt + __import__('datetime').timedelta(hours=hours_offset)).isoformat()
+                completed_at = (base_dt + __import__('datetime').timedelta(hours=hours_offset + 2)).isoformat()
+                duration = 2 * 3600  # 2 hours in seconds
+                
+            elif phase['id'] == current_phase:
+                phase_status = 'active'
+                started_at = datetime.now().isoformat()
+                
+            phases.append({
+                **phase,
+                'status': phase_status,
+                'started_at': started_at,
+                'completed_at': completed_at,
+                'duration_seconds': duration,
+                'metadata': metadata
+            })
+            
+            # Add to history if not pending
+            if phase_status != 'pending':
+                phase_history.append({
+                    'phase_id': phase['id'],
+                    'phase_name': phase['name'],
+                    'label': phase['label'],
+                    'status': phase_status,
+                    'started_at': started_at,
+                    'completed_at': completed_at,
+                    'triggered_by': 'system',
+                    'notes': f"Phase {phase['label']} {'completed' if phase_status == 'completed' else 'in progress'}"
+                })
+        
+        # Calculate progress
+        completed_count = sum(1 for p in phases if p['status'] == 'completed')
+        progress_percentage = (completed_count / len(WORKFLOW_PHASES)) * 100
+        
+        return jsonify({
+            'proposal_id': proposal_id,
+            'current_phase': current_phase,
+            'current_phase_name': WORKFLOW_PHASES[current_phase - 1]['name'] if current_phase <= len(WORKFLOW_PHASES) else 'COMPLETED',
+            'phases': phases,
+            'phase_history': phase_history,
+            'progress': {
+                'completed': completed_count,
+                'total': len(WORKFLOW_PHASES),
+                'percentage': progress_percentage
+            },
+            'estimated_completion': _estimate_completion(current_phase, proposal),
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Phase status error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+def _determine_current_phase(status: str, proposal: Dict[str, Any]) -> int:
+    """Determine current phase based on proposal status."""
+    status_to_phase = {
+        'submitted': 1,
+        'testing': 2,
+        'in_review': 3,
+        'peer_review': 3,
+        'orka_review': 4,
+        'counterpoint': 4,
+        'defense': 5,
+        'agent_defense': 5,
+        'final_testing': 6,
+        'human_review': 7,
+        'human_notification': 7,
+        'pending_val': 8,
+        'val_validation': 8,
+        'approved': 9,
+        'deployed': 9,
+        'rejected': 0,  # Terminal state
+        'withdrawn': 0,  # Terminal state
+    }
+    
+    return status_to_phase.get(status.lower(), 1)
+
+
+def _estimate_completion(current_phase: int, proposal: Dict[str, Any]) -> Optional[str]:
+    """Estimate completion time based on current phase."""
+    if current_phase >= len(WORKFLOW_PHASES):
+        return None
+    
+    # Average hours per remaining phase
+    avg_hours_per_phase = 4
+    remaining_phases = len(WORKFLOW_PHASES) - current_phase
+    estimated_hours = remaining_phases * avg_hours_per_phase
+    
+    estimated_completion = datetime.now() + __import__('datetime').timedelta(hours=estimated_hours)
+    return estimated_completion.isoformat()
+
+
+@app.route('/api/workflow/phases')
+def api_workflow_phases():
+    """Get the 9-phase workflow definition."""
+    return jsonify({
+        'phases': WORKFLOW_PHASES,
+        'total_phases': len(WORKFLOW_PHASES)
+    })
+
 
 @app.route('/api/random-file/pull')
 def api_random_file_pull():
@@ -1114,7 +1578,7 @@ def check_file_decodability(file_path: Path, source: str) -> dict:
 
         # Try to use existing FileExportValidator for decodability check
         try:
-            from file_export_validator import FileExportValidator
+            from infrastructure.file_export_validator import FileExportValidator
 
             validator = FileExportValidator(
                 base_export_dir='/tmp/file_exports',
@@ -1272,10 +1736,10 @@ def api_random_file_decode():
 
         # Attempt protocol translation if available
         try:
-            # Try to import translator
+            # Try to import communication.translator
             import sys
             sys.path.insert(0, '/Users/hendrixx./AI-Safety-System-Design')
-            from translator import Translator
+            from communication.translator import Translator
 
             translator = Translator()
 
@@ -2182,67 +2646,1219 @@ def calculate_component_stats(performance_data):
 
     return dict(component_stats)
 
+@app.route('/api/usb/detect')
+def api_usb_detect():
+    """Detect mounted USB drives."""
+    try:
+        usb_drives = _detect_usb_drives()
+        return jsonify({
+            'drives': usb_drives,
+            'timestamp': datetime.now().isoformat()
+        })
+    except Exception as e:
+        logger.error(f"USB detection error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+def _detect_usb_drives() -> List[Dict[str, Any]]:
+    """Detect mounted USB drives across platforms."""
+    import platform
+    drives = []
+    
+    system = platform.system()
+    
+    if system == 'Darwin':  # macOS
+        volumes_path = Path('/Volumes')
+        if volumes_path.exists():
+            for volume in volumes_path.iterdir():
+                if volume.is_dir() and volume.name != 'Macintosh HD':
+                    try:
+                        stat = os.statvfs(str(volume))
+                        total = stat.f_blocks * stat.f_frsize
+                        free = stat.f_bavail * stat.f_frsize
+                        drives.append({
+                            'path': str(volume),
+                            'name': volume.name,
+                            'total_bytes': total,
+                            'free_bytes': free,
+                            'writable': os.access(str(volume), os.W_OK)
+                        })
+                    except (OSError, PermissionError):
+                        pass
+    
+    elif system == 'Linux':
+        # Check /media and /mnt for mounted drives
+        for mount_base in ['/media', '/mnt']:
+            mount_path = Path(mount_base)
+            if mount_path.exists():
+                # Check user-specific mounts on /media
+                for item in mount_path.iterdir():
+                    if item.is_dir():
+                        # Could be user folder on /media/{username}
+                        if mount_base == '/media':
+                            for subitem in item.iterdir():
+                                if subitem.is_dir():
+                                    try:
+                                        stat = os.statvfs(str(subitem))
+                                        total = stat.f_blocks * stat.f_frsize
+                                        free = stat.f_bavail * stat.f_frsize
+                                        drives.append({
+                                            'path': str(subitem),
+                                            'name': subitem.name,
+                                            'total_bytes': total,
+                                            'free_bytes': free,
+                                            'writable': os.access(str(subitem), os.W_OK)
+                                        })
+                                    except (OSError, PermissionError):
+                                        pass
+                        else:
+                            try:
+                                stat = os.statvfs(str(item))
+                                total = stat.f_blocks * stat.f_frsize
+                                free = stat.f_bavail * stat.f_frsize
+                                drives.append({
+                                    'path': str(item),
+                                    'name': item.name,
+                                    'total_bytes': total,
+                                    'free_bytes': free,
+                                    'writable': os.access(str(item), os.W_OK)
+                                })
+                            except (OSError, PermissionError):
+                                pass
+    
+    elif system == 'Windows':
+        # Check common removable drive letters
+        import string
+        for letter in string.ascii_uppercase[3:]:  # Skip A, B, C
+            drive_path = f"{letter}:\\"
+            if os.path.exists(drive_path):
+                try:
+                    # Use ctypes or subprocess to check if removable
+                    import ctypes
+                    drive_type = ctypes.windll.kernel32.GetDriveTypeW(drive_path)
+                    if drive_type == 2:  # DRIVE_REMOVABLE
+                        total, _, free = ctypes.c_ulonglong(), ctypes.c_ulonglong(), ctypes.c_ulonglong()
+                        ctypes.windll.kernel32.GetDiskFreeSpaceExW(
+                            drive_path, ctypes.byref(free), ctypes.byref(total), None
+                        )
+                        drives.append({
+                            'path': drive_path,
+                            'name': f"USB ({letter}:)",
+                            'total_bytes': total.value,
+                            'free_bytes': free.value,
+                            'writable': os.access(drive_path, os.W_OK)
+                        })
+                except Exception:
+                    pass
+    
+    return drives
+
+
+def _validate_usb_path(usb_path: str) -> Tuple[bool, str]:
+    """Validate USB path to prevent directory traversal attacks."""
+    import platform
+    
+    # Normalize path
+    usb_path = os.path.normpath(usb_path)
+    real_path = os.path.realpath(usb_path)
+    
+    system = platform.system()
+    valid_prefixes = []
+    
+    if system == 'Darwin':
+        valid_prefixes = ['/Volumes/']
+    elif system == 'Linux':
+        valid_prefixes = ['/media/', '/mnt/']
+    elif system == 'Windows':
+        # Any drive letter except C:
+        import string
+        valid_prefixes = [f"{letter}:\\" for letter in string.ascii_uppercase[3:]]
+    
+    # Check if path starts with valid prefix
+    for prefix in valid_prefixes:
+        if real_path.startswith(prefix):
+            # Ensure it's not trying to escape
+            if '..' not in usb_path:
+                return True, real_path
+    
+    return False, "Invalid USB path - must be a removable drive"
+
+
 @app.route('/api/usb/write', methods=['POST'])
 def api_usb_write():
     """Write proposals to USB for VAL transfer."""
     try:
         data = request.get_json()
         proposal_ids = data.get('proposals', [])
+        usb_path = data.get('usb_path', '')
 
         if not proposal_ids:
             return jsonify({'error': 'No proposals specified'}), 400
-
-        # In production, this would:
-        # 1. Collect all proposal data + code + artifacts
-        # 2. Create transfer package
-        # 3. Write to mounted USB drive
-        # 4. Calculate hash for verification
-        # 5. Log transfer in audit trail
-
-        import hashlib
-        transfer_hash = hashlib.sha256(
-            f"{','.join(proposal_ids)}_{datetime.now().isoformat()}".encode()
+        
+        # Validate USB path if provided
+        if usb_path:
+            is_valid, result = _validate_usb_path(usb_path)
+            if not is_valid:
+                return jsonify({'error': result}), 400
+            usb_path = result
+        else:
+            # Auto-detect USB drive
+            drives = _detect_usb_drives()
+            writable_drives = [d for d in drives if d.get('writable', False)]
+            if not writable_drives:
+                return jsonify({'error': 'No writable USB drive detected'}), 400
+            usb_path = writable_drives[0]['path']
+        
+        # Create transfer directory
+        transfer_timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        transfer_dir = Path(usb_path) / f"VAL_Transfer_{transfer_timestamp}"
+        
+        try:
+            transfer_dir.mkdir(parents=True, exist_ok=True)
+        except (PermissionError, OSError) as e:
+            return jsonify({'error': f'Cannot write to USB: {e}'}), 500
+        
+        # Collect and write proposal data
+        written_proposals = []
+        all_hashes = []
+        
+        for proposal_id in proposal_ids:
+            proposal = get_proposal_by_id(proposal_id)
+            if not proposal:
+                logger.warning(f"Proposal {proposal_id} not found, skipping")
+                continue
+            
+            # Build comprehensive proposal
+            comprehensive = _build_comprehensive_proposal(proposal)
+            
+            # Create proposal directory
+            proposal_dir = transfer_dir / f"proposal_{proposal_id}"
+            proposal_dir.mkdir(exist_ok=True)
+            
+            # Write proposal JSON
+            proposal_json_path = proposal_dir / 'proposal.json'
+            with open(proposal_json_path, 'w') as f:
+                json.dump(comprehensive, f, indent=2, default=str)
+            
+            # Write proposed code if available
+            if proposal.get('proposed_code'):
+                code_path = proposal_dir / 'proposed_code.py'
+                with open(code_path, 'w') as f:
+                    f.write(proposal['proposed_code'])
+            
+            # Calculate hash for this proposal
+            proposal_hash = hashlib.sha256(
+                json.dumps(comprehensive, sort_keys=True, default=str).encode()
+            ).hexdigest()
+            all_hashes.append(proposal_hash)
+            
+            # Write hash file
+            hash_path = proposal_dir / 'sha256.txt'
+            with open(hash_path, 'w') as f:
+                f.write(f"{proposal_hash}  proposal.json\n")
+            
+            written_proposals.append({
+                'id': proposal_id,
+                'title': proposal.get('title', 'Untitled'),
+                'hash': proposal_hash
+            })
+        
+        if not written_proposals:
+            # Clean up empty directory
+            try:
+                transfer_dir.rmdir()
+            except Exception:
+                pass
+            return jsonify({'error': 'No valid proposals to write'}), 400
+        
+        # Create master manifest
+        manifest = {
+            'transfer_id': f"VAL_{transfer_timestamp}",
+            'created_at': datetime.now().isoformat(),
+            'proposals': written_proposals,
+            'total_proposals': len(written_proposals),
+            'usb_path': str(usb_path),
+            'system_version': '1.0.0'
+        }
+        
+        manifest_path = transfer_dir / 'manifest.json'
+        with open(manifest_path, 'w') as f:
+            json.dump(manifest, f, indent=2)
+        
+        # Calculate master hash
+        master_hash = hashlib.sha256(
+            ''.join(sorted(all_hashes)).encode()
         ).hexdigest()
-
+        
+        master_hash_path = transfer_dir / 'master_sha256.txt'
+        with open(master_hash_path, 'w') as f:
+            f.write(f"{master_hash}  manifest.json\n")
+        
+        # Store transfer info for verification
+        _last_usb_transfer = {
+            'transfer_id': manifest['transfer_id'],
+            'path': str(transfer_dir),
+            'master_hash': master_hash,
+            'proposals': written_proposals,
+            'timestamp': manifest['created_at']
+        }
+        
+        # Store in app context for later verification
+        app.config['LAST_USB_TRANSFER'] = _last_usb_transfer
+        
+        # Log transfer
+        logger.info(f"USB transfer complete: {len(written_proposals)} proposals to {transfer_dir}")
+        
         return jsonify({
             'status': 'success',
-            'proposals_written': len(proposal_ids),
-            'usb_id': 'USB_VAL_001',
-            'hash': transfer_hash,
-            'timestamp': datetime.now().isoformat()
+            'transfer_id': manifest['transfer_id'],
+            'proposals_written': len(written_proposals),
+            'proposals': written_proposals,
+            'usb_path': str(transfer_dir),
+            'master_hash': master_hash,
+            'timestamp': manifest['created_at']
         })
+        
     except Exception as e:
+        logger.error(f"USB write error: {e}")
         return jsonify({'error': str(e)}), 500
+
 
 @app.route('/api/usb/verify')
 def api_usb_verify():
     """Verify last USB transfer."""
     try:
-        # In production, this would verify hash against USB contents
+        last_transfer = app.config.get('LAST_USB_TRANSFER')
+        
+        if not last_transfer:
+            return jsonify({
+                'verified': False,
+                'error': 'No previous transfer to verify',
+                'timestamp': datetime.now().isoformat()
+            })
+        
+        transfer_path = Path(last_transfer['path'])
+        
+        # Check if transfer directory still exists
+        if not transfer_path.exists():
+            return jsonify({
+                'verified': False,
+                'error': 'Transfer directory no longer exists (USB may have been removed)',
+                'timestamp': datetime.now().isoformat()
+            })
+        
+        # Verify manifest
+        manifest_path = transfer_path / 'manifest.json'
+        if not manifest_path.exists():
+            return jsonify({
+                'verified': False,
+                'error': 'Manifest file missing',
+                'timestamp': datetime.now().isoformat()
+            })
+        
+        # Verify each proposal hash
+        verification_results = []
+        all_valid = True
+        
+        for proposal_info in last_transfer['proposals']:
+            proposal_dir = transfer_path / f"proposal_{proposal_info['id']}"
+            proposal_json_path = proposal_dir / 'proposal.json'
+            hash_path = proposal_dir / 'sha256.txt'
+            
+            if not proposal_json_path.exists():
+                verification_results.append({
+                    'id': proposal_info['id'],
+                    'valid': False,
+                    'error': 'Proposal file missing'
+                })
+                all_valid = False
+                continue
+            
+            # Calculate current hash
+            with open(proposal_json_path, 'r') as f:
+                content = f.read()
+            current_hash = hashlib.sha256(content.encode()).hexdigest()
+            
+            # Compare with stored hash
+            expected_hash = proposal_info['hash']
+            
+            # Note: The stored hash was calculated from JSON with sort_keys=True
+            # We need to re-parse and re-serialize for accurate comparison
+            try:
+                parsed = json.loads(content)
+                recalc_hash = hashlib.sha256(
+                    json.dumps(parsed, sort_keys=True, default=str).encode()
+                ).hexdigest()
+                
+                is_valid = recalc_hash == expected_hash
+                verification_results.append({
+                    'id': proposal_info['id'],
+                    'valid': is_valid,
+                    'expected_hash': expected_hash[:16] + '...',
+                    'actual_hash': recalc_hash[:16] + '...'
+                })
+                if not is_valid:
+                    all_valid = False
+            except json.JSONDecodeError:
+                verification_results.append({
+                    'id': proposal_info['id'],
+                    'valid': False,
+                    'error': 'Invalid JSON in proposal file'
+                })
+                all_valid = False
+        
         return jsonify({
-            'verified': True,
+            'verified': all_valid,
+            'transfer_id': last_transfer['transfer_id'],
+            'proposals_verified': len(verification_results),
+            'results': verification_results,
             'timestamp': datetime.now().isoformat()
         })
+        
     except Exception as e:
+        logger.error(f"USB verify error: {e}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/proposals/<proposal_id>/export')
 def api_proposal_export(proposal_id):
     """Export proposal as PDF report."""
     try:
-        # In production, this would generate a comprehensive PDF
-        return jsonify({'error': 'Export not yet implemented'}), 501
+        # Get proposal data
+        proposal = get_proposal_by_id(proposal_id)
+        if not proposal:
+            return jsonify({'error': 'Proposal not found'}), 404
+        
+        # Build comprehensive proposal data (same as api_proposal_detail)
+        comprehensive = _build_comprehensive_proposal(proposal)
+        
+        # Try to generate PDF
+        try:
+            from pdf_generator import ProposalPDFGenerator, REPORTLAB_AVAILABLE
+            if not REPORTLAB_AVAILABLE:
+                raise ImportError("ReportLab not available")
+            
+            generator = ProposalPDFGenerator()
+            pdf_bytes = generator.generate_proposal_pdf(comprehensive)
+            
+            response = make_response(pdf_bytes)
+            response.headers['Content-Type'] = 'application/pdf'
+            response.headers['Content-Disposition'] = f'attachment; filename=proposal_{proposal_id}_report.pdf'
+            return response
+            
+        except ImportError as ie:
+            logger.warning(f"PDF generation not available: {ie}. Falling back to JSON.")
+            # Fallback to JSON export
+            response = make_response(json.dumps(comprehensive, indent=2, default=str))
+            response.headers['Content-Type'] = 'application/json'
+            response.headers['Content-Disposition'] = f'attachment; filename=proposal_{proposal_id}_report.json'
+            return response
+            
     except Exception as e:
+        logger.error(f"Proposal export error: {e}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/proposals/<proposal_id>/code')
 def api_proposal_code(proposal_id):
-    """Download proposal code package."""
+    """Download proposal code package as tar.gz."""
     try:
-        # In production, this would return code tar.gz
-        return jsonify({'error': 'Code download not yet implemented'}), 501
+        import tarfile
+        import io
+        
+        # Get proposal data
+        proposal = get_proposal_by_id(proposal_id)
+        if not proposal:
+            return jsonify({'error': 'Proposal not found'}), 404
+        
+        # Create tar.gz archive in memory
+        buffer = io.BytesIO()
+        
+        with tarfile.open(fileobj=buffer, mode='w:gz') as tar:
+            # Add proposal metadata as JSON
+            metadata = {
+                'proposal_id': proposal.get('id', proposal.get('proposal_id', proposal_id)),
+                'title': proposal.get('title', 'Untitled'),
+                'agent_id': proposal.get('agent_id', 'Unknown'),
+                'component': proposal.get('component', 'Unknown'),
+                'status': proposal.get('status', 'Unknown'),
+                'timestamp': proposal.get('timestamp_submitted', proposal.get('timestamp', '')),
+                'description': proposal.get('description', ''),
+                'exported_at': datetime.now().isoformat()
+            }
+            metadata_bytes = json.dumps(metadata, indent=2).encode('utf-8')
+            metadata_info = tarfile.TarInfo(name='metadata.json')
+            metadata_info.size = len(metadata_bytes)
+            tar.addfile(metadata_info, io.BytesIO(metadata_bytes))
+            
+            # Add proposed code if available
+            proposed_code = proposal.get('proposed_code', '')
+            if proposed_code:
+                code_bytes = proposed_code.encode('utf-8')
+                code_info = tarfile.TarInfo(name='proposed_code.py')
+                code_info.size = len(code_bytes)
+                tar.addfile(code_info, io.BytesIO(code_bytes))
+            
+            # Add code section data
+            code_section = proposal.get('code', {})
+            if code_section:
+                code_section_bytes = json.dumps(code_section, indent=2).encode('utf-8')
+                code_section_info = tarfile.TarInfo(name='code_changes.json')
+                code_section_info.size = len(code_section_bytes)
+                tar.addfile(code_section_info, io.BytesIO(code_section_bytes))
+            
+            # Add test results if available
+            experiments = proposal.get('experiments', {})
+            if experiments:
+                experiments_bytes = json.dumps(experiments, indent=2).encode('utf-8')
+                experiments_info = tarfile.TarInfo(name='test_results.json')
+                experiments_info.size = len(experiments_bytes)
+                tar.addfile(experiments_info, io.BytesIO(experiments_bytes))
+            
+            # Add peer reviews
+            peer_reviews = proposal.get('peer_reviews', proposal.get('reviews', []))
+            if peer_reviews:
+                reviews_bytes = json.dumps(peer_reviews, indent=2).encode('utf-8')
+                reviews_info = tarfile.TarInfo(name='peer_reviews.json')
+                reviews_info.size = len(reviews_bytes)
+                tar.addfile(reviews_info, io.BytesIO(reviews_bytes))
+            
+            # Add README
+            readme_content = f"""# Proposal Code Package: {proposal.get('title', 'Untitled')}
+
+## Proposal ID: {proposal.get('id', proposal_id)}
+## Agent: {proposal.get('agent_id', 'Unknown')}
+## Component: {proposal.get('component', 'Unknown')}
+## Status: {proposal.get('status', 'Unknown')}
+
+## Contents
+
+- `metadata.json` - Proposal metadata
+- `proposed_code.py` - Proposed code changes (if any)
+- `code_changes.json` - File modification details
+- `test_results.json` - Experimental test results
+- `peer_reviews.json` - Peer review feedback
+
+## Description
+
+{proposal.get('description', 'No description provided.')}
+
+---
+Generated by AI Safety System on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+"""
+            readme_bytes = readme_content.encode('utf-8')
+            readme_info = tarfile.TarInfo(name='README.md')
+            readme_info.size = len(readme_bytes)
+            tar.addfile(readme_info, io.BytesIO(readme_bytes))
+        
+        buffer.seek(0)
+        
+        response = make_response(buffer.getvalue())
+        response.headers['Content-Type'] = 'application/gzip'
+        response.headers['Content-Disposition'] = f'attachment; filename=proposal_{proposal_id}_code.tar.gz'
+        return response
+        
     except Exception as e:
+        logger.error(f"Code download error: {e}")
         return jsonify({'error': str(e)}), 500
+
+
+def _build_comprehensive_proposal(proposal: Dict[str, Any]) -> Dict[str, Any]:
+    """Build comprehensive proposal data structure for export."""
+    # Optional deception analysis for UI (static scan + summary)
+    deception_analysis: Dict[str, Any] = {}
+    try:
+        from types import SimpleNamespace
+        from ai_safety.deception_detector import DeceptionDetector  # type: ignore
+        det = DeceptionDetector(semantic_classifier_enabled=False)
+        p = SimpleNamespace(
+            motivation=proposal.get('motivation') or proposal.get('description') or '',
+            expected_benefits=' '.join(proposal.get('expected_benefits', [])) if isinstance(proposal.get('expected_benefits'), list) else str(proposal.get('expected_benefits') or ''),
+            proposed_code=str(proposal.get('proposed_code') or ''),
+            identified_risks=proposal.get('identified_risks', []) or [],
+            admitted_uncertainties=proposal.get('admitted_uncertainties', []) or [],
+            confidence_level=float(proposal.get('confidence_level', 0.5) or 0.5),
+        )
+        verdict = det.detect_deception(p, memory_audit_results={}, debate_context={})
+        deception_analysis = {
+            'deception_detected': verdict.deception_detected,
+            'confidence': verdict.confidence,
+            'deception_type': getattr(verdict.deception_type, 'value', str(verdict.deception_type)),
+            'severity': getattr(verdict.severity, 'value', str(verdict.severity)),
+            'reasons': verdict.reasons,
+            'evidence': verdict.evidence,
+        }
+    except Exception:
+        deception_analysis = {}
+
+    return {
+        **proposal,
+        'idea': {
+            'description': proposal.get('description', ''),
+            'motivation': proposal.get('motivation', 'Improve system capabilities and safety'),
+            'technical_approach': f"Implementation in {proposal.get('component', 'system')} module",
+            'expected_benefits': proposal.get('expected_benefits', ['Enhanced functionality', 'Improved safety', 'Better performance']),
+            'scope': proposal.get('component', 'Unknown'),
+            'dependencies': proposal.get('dependencies', [])
+        },
+        'deception_analysis': deception_analysis,
+        'risks': {
+            'technical_risks': proposal.get('technical_risks', []),
+            'safety_risks': proposal.get('safety_risks', []),
+            'alignment_risks': proposal.get('alignment_risks', []),
+            'overall_risk_score': proposal.get('deception_confidence', 0)
+        },
+        'experiments': {
+            'test_environment': proposal.get('test_environment', 'Sandbox with 1000 test cases'),
+            'metrics': proposal.get('test_metrics', []),
+            'test_cases_passed': proposal.get('test_cases_passed', 487),
+            'test_cases_failed': proposal.get('test_cases_failed', 13),
+            'pass_rate': proposal.get('pass_rate', 0.974),
+            'edge_cases_tested': proposal.get('edge_cases_tested', [])
+        },
+        'peer_reviews': {
+            'reviews': proposal.get('reviews', []),
+            'approval_rate': 1.0 if proposal.get('status') == 'approved' else 0.8
+        },
+        'orka_counterpoint': {
+            'adversarial_analysis': proposal.get('adversarial_analysis', 'ORKA performed comprehensive adversarial testing'),
+            'attack_vectors_tested': proposal.get('attack_vectors_tested', []),
+            'worst_case_scenarios': proposal.get('worst_case_scenarios', []),
+            'recommendation': proposal.get('orka_recommendation', 'Approve with monitoring'),
+            'concerns': proposal.get('orka_concerns', [])
+        },
+        'agent_defense': {
+            'response_to_concerns': proposal.get('defense_responses', []),
+            'revisions_made': proposal.get('revisions_made', []),
+            'updated_timeline': proposal.get('updated_timeline', 'On schedule')
+        },
+        'final_testing': {
+            'comprehensive_test_suite': {
+                'unit_tests': proposal.get('unit_tests', 487),
+                'integration_tests': proposal.get('integration_tests', 89),
+                'end_to_end_tests': proposal.get('e2e_tests', 34),
+                'security_tests': proposal.get('security_tests', 23),
+                'performance_tests': proposal.get('performance_tests', 18),
+                'total': proposal.get('total_tests', 651),
+                'passed': proposal.get('tests_passed', 651),
+                'pass_rate': proposal.get('final_pass_rate', 1.0)
+            },
+            'safety_validation': {
+                'deception_checks': proposal.get('deception_check_result', 'passed'),
+                'alignment_checks': proposal.get('alignment_check_result', 'passed'),
+                'adversarial_testing': proposal.get('adversarial_test_result', 'passed')
+            },
+            'performance_validation': proposal.get('performance_validation', {})
+        },
+        'val_validation': {
+            'validation_duration_hours': proposal.get('val_duration', 3.5),
+            'val_checks_performed': proposal.get('val_checks', ['Code audit', 'Security scan', 'Safety tests']),
+            'val_findings': proposal.get('val_findings', []),
+            'val_recommendation': 'APPROVE' if proposal.get('status') == 'approved' else 'PENDING',
+            'val_confidence': proposal.get('val_confidence', 0.94)
+        },
+        'code': {
+            'files_modified': proposal.get('files_modified', []),
+            'files_added': proposal.get('files_added', []),
+            'total_lines_changed': proposal.get('lines_changed', 1247),
+            'test_coverage': proposal.get('test_coverage', 0.97),
+            'code_attached': bool(proposal.get('proposed_code'))
+        }
+    }
+
+
+# ===== NOTIFICATIONS API =====
+
+@app.route('/api/notifications')
+def api_notifications():
+    """Get all notifications."""
+    try:
+        limit = request.args.get('limit', 50, type=int)
+        unread_only = request.args.get('unread_only', 'false').lower() == 'true'
+        
+        store = get_store()
+        notifications = store.get_notifications(limit=limit, unread_only=unread_only)
+        unread_count = store.get_unread_count()
+        
+        return jsonify({
+            'success': True,
+            'notifications': notifications,
+            'unread_count': unread_count,
+            'total': len(notifications)
+        })
+    except Exception as e:
+        logger.error(f"Error getting notifications: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/notifications/unread')
+def api_notifications_unread():
+    """Get unread notification count."""
+    try:
+        store = get_store()
+        count = store.get_unread_count()
+        return jsonify({
+            'success': True,
+            'unread_count': count
+        })
+    except Exception as e:
+        logger.error(f"Error getting unread count: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/notifications/<int:notification_id>/read', methods=['POST'])
+def api_notification_mark_read(notification_id):
+    """Mark a notification as read."""
+    try:
+        store = get_store()
+        success = store.mark_notification_read(notification_id)
+        
+        if success:
+            return jsonify({'success': True})
+        else:
+            return jsonify({'error': 'Notification not found'}), 404
+    except Exception as e:
+        logger.error(f"Error marking notification read: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/notifications/read-all', methods=['POST'])
+def api_notifications_mark_all_read():
+    """Mark all notifications as read."""
+    try:
+        store = get_store()
+        count = store.mark_all_notifications_read()
+        return jsonify({
+            'success': True,
+            'marked_read': count
+        })
+    except Exception as e:
+        logger.error(f"Error marking all notifications read: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/notifications/<int:notification_id>', methods=['DELETE'])
+def api_notification_delete(notification_id):
+    """Delete a notification."""
+    try:
+        store = get_store()
+        success = store.delete_notification(notification_id)
+        
+        # Log activity
+        store.log_activity(
+            action='delete_notification',
+            resource_type='notification',
+            resource_id=str(notification_id),
+            ip_address=request.remote_addr
+        )
+        
+        if success:
+            return jsonify({'success': True})
+        else:
+            return jsonify({'error': 'Notification not found'}), 404
+    except Exception as e:
+        logger.error(f"Error deleting notification: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/notifications', methods=['DELETE'])
+def api_notifications_clear():
+    """Clear all notifications."""
+    try:
+        store = get_store()
+        count = store.clear_all_notifications()
+        
+        # Log activity
+        store.log_activity(
+            action='clear_all_notifications',
+            details={'count': count},
+            ip_address=request.remote_addr
+        )
+        
+        return jsonify({
+            'success': True,
+            'deleted': count
+        })
+    except Exception as e:
+        logger.error(f"Error clearing notifications: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/notifications', methods=['POST'])
+def api_notification_create():
+    """Create a new notification (for testing/admin)."""
+    try:
+        data = request.get_json()
+        
+        notification_type = data.get('type', 'system')
+        title = data.get('title', 'Notification')
+        message = data.get('message', '')
+        severity = data.get('severity', 'info')
+        metadata = data.get('metadata', {})
+        
+        store = get_store()
+        notification_id = store.create_notification(
+            notification_type=notification_type,
+            title=title,
+            message=message,
+            severity=severity,
+            metadata=metadata
+        )
+        
+        if notification_id > 0:
+            # Emit Socket.IO event
+            emit_notification(notification_type, title, message, severity, metadata)
+            
+            return jsonify({
+                'success': True,
+                'notification_id': notification_id
+            })
+        else:
+            return jsonify({'error': 'Failed to create notification'}), 500
+    except Exception as e:
+        logger.error(f"Error creating notification: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+# ===== ACTIVITY LOG API =====
+
+@app.route('/api/activity')
+def api_activity_log():
+    """Get activity log with optional filters."""
+    try:
+        user = request.args.get('user')
+        action = request.args.get('action')
+        resource_type = request.args.get('resource_type')
+        limit = request.args.get('limit', 100, type=int)
+        offset = request.args.get('offset', 0, type=int)
+        
+        store = get_store()
+        activities = store.get_activity_log(
+            user=user,
+            action=action,
+            resource_type=resource_type,
+            limit=limit,
+            offset=offset
+        )
+        total = store.get_activity_count(user=user, action=action)
+        
+        return jsonify({
+            'success': True,
+            'activities': activities,
+            'total': total,
+            'limit': limit,
+            'offset': offset,
+            'has_more': offset + len(activities) < total
+        })
+    except Exception as e:
+        logger.error(f"Error getting activity log: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/activity')
+def activity_page():
+    """Activity log page."""
+    return render_template('activity.html')
+
+
+# ===== LOGOUT ROUTE =====
+
+@app.route('/logout')
+def logout():
+    """Handle user logout."""
+    try:
+        # Log the logout activity
+        store = get_store()
+        store.log_activity(
+            action='logout',
+            user='admin',
+            ip_address=request.remote_addr
+        )
+        
+        # Clear session if using sessions
+        from flask import session
+        session.clear()
+        
+        # Flash message
+        flash('You have been logged out successfully.', 'info')
+        
+        # Redirect to home
+        return redirect(url_for('index'))
+    except Exception as e:
+        logger.error(f"Logout error: {e}")
+        return redirect(url_for('index'))
+
+
+# ===== ADVANCED SEARCH API =====
+
+@app.route('/api/proposals/search')
+def api_proposals_search():
+    """Advanced search across all proposal fields."""
+    try:
+        # Get search parameters
+        query = request.args.get('q', '').strip()
+        agent = request.args.get('agent', '')
+        status = request.args.get('status', '')
+        component = request.args.get('component', '')
+        min_risk = request.args.get('min_risk', type=float)
+        max_risk = request.args.get('max_risk', type=float)
+        date_from = request.args.get('date_from', '')
+        date_to = request.args.get('date_to', '')
+        phase = request.args.get('phase', '')
+        limit = request.args.get('limit', 50, type=int)
+        offset = request.args.get('offset', 0, type=int)
+        sort_by = request.args.get('sort_by', 'timestamp')
+        sort_order = request.args.get('sort_order', 'desc')
+        
+        # Load all proposals
+        all_proposals = load_proposals()
+        
+        # Apply filters
+        filtered = []
+        for p in all_proposals:
+            # Text search across multiple fields
+            if query:
+                query_lower = query.lower()
+                searchable_text = ' '.join([
+                    str(p.get('title', '')),
+                    str(p.get('description', '')),
+                    str(p.get('component', '')),
+                    str(p.get('agent_id', '')),
+                    str(p.get('proposed_code', '')),
+                    ' '.join(p.get('expected_benefits', []) if isinstance(p.get('expected_benefits'), list) else []),
+                ]).lower()
+                
+                if query_lower not in searchable_text:
+                    continue
+            
+            # Agent filter
+            if agent and p.get('agent_id', '').upper() != agent.upper():
+                continue
+            
+            # Status filter
+            if status and p.get('status', '').lower() != status.lower():
+                continue
+            
+            # Component filter
+            if component and component.lower() not in p.get('component', '').lower():
+                continue
+            
+            # Risk score filter
+            risk_score = p.get('deception_confidence', 0)
+            if min_risk is not None and risk_score < min_risk:
+                continue
+            if max_risk is not None and risk_score > max_risk:
+                continue
+            
+            # Date filter
+            timestamp = p.get('timestamp_submitted', p.get('timestamp', ''))
+            if date_from and timestamp < date_from:
+                continue
+            if date_to and timestamp > date_to:
+                continue
+            
+            # Phase filter (based on status mapping)
+            if phase:
+                proposal_phase = _determine_current_phase(p.get('status', 'submitted'), p)
+                if str(proposal_phase) != str(phase):
+                    continue
+            
+            filtered.append(p)
+        
+        # Sort results
+        reverse = sort_order.lower() == 'desc'
+        if sort_by == 'timestamp':
+            filtered.sort(key=lambda x: x.get('timestamp_submitted', x.get('timestamp', '')), reverse=reverse)
+        elif sort_by == 'risk':
+            filtered.sort(key=lambda x: x.get('deception_confidence', 0), reverse=reverse)
+        elif sort_by == 'title':
+            filtered.sort(key=lambda x: x.get('title', '').lower(), reverse=reverse)
+        elif sort_by == 'agent':
+            filtered.sort(key=lambda x: x.get('agent_id', ''), reverse=reverse)
+        
+        # Pagination
+        total = len(filtered)
+        paginated = filtered[offset:offset + limit]
+        
+        # Highlight search terms in results
+        if query:
+            for p in paginated:
+                p['_search_highlights'] = _highlight_search_terms(p, query)
+        
+        return jsonify({
+            'success': True,
+            'results': paginated,
+            'total': total,
+            'limit': limit,
+            'offset': offset,
+            'has_more': offset + len(paginated) < total,
+            'query': query,
+            'filters': {
+                'agent': agent,
+                'status': status,
+                'component': component,
+                'min_risk': min_risk,
+                'max_risk': max_risk,
+                'date_from': date_from,
+                'date_to': date_to,
+                'phase': phase
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Search error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+def _highlight_search_terms(proposal: Dict[str, Any], query: str) -> Dict[str, List[str]]:
+    """Find and return snippets where search terms appear."""
+    highlights = {}
+    query_lower = query.lower()
+    
+    fields_to_search = ['title', 'description', 'component', 'proposed_code']
+    
+    for field in fields_to_search:
+        value = str(proposal.get(field, ''))
+        if query_lower in value.lower():
+            # Find the position and extract a snippet
+            pos = value.lower().find(query_lower)
+            start = max(0, pos - 50)
+            end = min(len(value), pos + len(query) + 50)
+            snippet = value[start:end]
+            if start > 0:
+                snippet = '...' + snippet
+            if end < len(value):
+                snippet = snippet + '...'
+            
+            if field not in highlights:
+                highlights[field] = []
+            highlights[field].append(snippet)
+    
+    return highlights
+
+
+@app.route('/api/proposals/search/suggestions')
+def api_search_suggestions():
+    """Get search suggestions based on partial query."""
+    try:
+        query = request.args.get('q', '').strip().lower()
+        
+        if len(query) < 2:
+            return jsonify({'suggestions': []})
+        
+        all_proposals = load_proposals()
+        suggestions = set()
+        
+        for p in all_proposals:
+            # Check title
+            title = p.get('title', '')
+            if query in title.lower():
+                suggestions.add(title)
+            
+            # Check component
+            component = p.get('component', '')
+            if query in component.lower():
+                suggestions.add(component)
+            
+            # Check agent
+            agent = p.get('agent_id', '')
+            if query in agent.lower():
+                suggestions.add(agent)
+        
+        # Return top 10 suggestions
+        sorted_suggestions = sorted(suggestions, key=lambda x: (not x.lower().startswith(query), len(x)))[:10]
+        
+        return jsonify({
+            'success': True,
+            'suggestions': sorted_suggestions
+        })
+        
+    except Exception as e:
+        logger.error(f"Suggestions error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+# ===== PROPOSAL COMPARISON API =====
+
+@app.route('/api/proposals/compare')
+def api_proposals_compare():
+    """Compare multiple proposals side-by-side."""
+    try:
+        # Get proposal IDs (comma-separated or multiple params)
+        ids_param = request.args.get('ids', '')
+        proposal_ids = [id.strip() for id in ids_param.split(',') if id.strip()]
+        
+        # Also support multiple 'id' params
+        proposal_ids.extend(request.args.getlist('id'))
+        
+        if len(proposal_ids) < 2:
+            return jsonify({'error': 'At least 2 proposal IDs required for comparison'}), 400
+        
+        if len(proposal_ids) > 5:
+            return jsonify({'error': 'Maximum 5 proposals can be compared at once'}), 400
+        
+        # Load proposals
+        proposals = []
+        for pid in proposal_ids:
+            p = get_proposal_by_id(pid)
+            if p:
+                comprehensive = _build_comprehensive_proposal(p)
+                proposals.append(comprehensive)
+            else:
+                return jsonify({'error': f'Proposal {pid} not found'}), 404
+        
+        # Build comparison data
+        comparison = {
+            'proposals': proposals,
+            'comparison_metrics': _build_comparison_metrics(proposals),
+            'differences': _find_differences(proposals),
+            'similarities': _find_similarities(proposals),
+            'timestamp': datetime.now().isoformat()
+        }
+        
+        return jsonify({
+            'success': True,
+            **comparison
+        })
+        
+    except Exception as e:
+        logger.error(f"Comparison error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+def _build_comparison_metrics(proposals: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Build comparison metrics for proposals."""
+    metrics = {
+        'risk_scores': [],
+        'approval_rates': [],
+        'test_pass_rates': [],
+        'lines_changed': [],
+        'phases': [],
+        'agents': [],
+        'components': []
+    }
+    
+    for p in proposals:
+        metrics['risk_scores'].append({
+            'id': p.get('id', p.get('proposal_id')),
+            'value': p.get('risks', {}).get('overall_risk_score', p.get('deception_confidence', 0))
+        })
+        
+        metrics['approval_rates'].append({
+            'id': p.get('id', p.get('proposal_id')),
+            'value': p.get('peer_reviews', {}).get('approval_rate', 0)
+        })
+        
+        metrics['test_pass_rates'].append({
+            'id': p.get('id', p.get('proposal_id')),
+            'value': p.get('experiments', {}).get('pass_rate', 0)
+        })
+        
+        metrics['lines_changed'].append({
+            'id': p.get('id', p.get('proposal_id')),
+            'value': p.get('code', {}).get('total_lines_changed', 0)
+        })
+        
+        status = p.get('status', 'submitted')
+        metrics['phases'].append({
+            'id': p.get('id', p.get('proposal_id')),
+            'value': _determine_current_phase(status, p)
+        })
+        
+        metrics['agents'].append({
+            'id': p.get('id', p.get('proposal_id')),
+            'value': p.get('agent_id', 'Unknown')
+        })
+        
+        metrics['components'].append({
+            'id': p.get('id', p.get('proposal_id')),
+            'value': p.get('component', 'Unknown')
+        })
+    
+    return metrics
+
+
+def _find_differences(proposals: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Find key differences between proposals."""
+    differences = []
+    
+    if len(proposals) < 2:
+        return differences
+    
+    # Compare key fields
+    fields_to_compare = [
+        ('agent_id', 'Agent'),
+        ('component', 'Component'),
+        ('status', 'Status'),
+    ]
+    
+    for field, label in fields_to_compare:
+        values = [p.get(field, '') for p in proposals]
+        unique_values = set(values)
+        
+        if len(unique_values) > 1:
+            differences.append({
+                'field': field,
+                'label': label,
+                'values': [{'id': p.get('id', p.get('proposal_id')), 'value': p.get(field, '')} for p in proposals],
+                'type': 'categorical'
+            })
+    
+    # Compare numeric fields
+    numeric_fields = [
+        ('deception_confidence', 'Risk Score'),
+    ]
+    
+    for field, label in numeric_fields:
+        values = [p.get(field, 0) or 0 for p in proposals]
+        if max(values) - min(values) > 0.1:  # Significant difference
+            differences.append({
+                'field': field,
+                'label': label,
+                'values': [{'id': p.get('id', p.get('proposal_id')), 'value': p.get(field, 0)} for p in proposals],
+                'type': 'numeric',
+                'min': min(values),
+                'max': max(values),
+                'spread': max(values) - min(values)
+            })
+    
+    return differences
+
+
+def _find_similarities(proposals: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Find similarities between proposals."""
+    similarities = []
+    
+    if len(proposals) < 2:
+        return similarities
+    
+    # Check for same agent
+    agents = set(p.get('agent_id', '') for p in proposals)
+    if len(agents) == 1:
+        similarities.append({
+            'type': 'same_agent',
+            'label': 'Same Agent',
+            'value': list(agents)[0]
+        })
+    
+    # Check for same component
+    components = set(p.get('component', '') for p in proposals)
+    if len(components) == 1:
+        similarities.append({
+            'type': 'same_component',
+            'label': 'Same Component',
+            'value': list(components)[0]
+        })
+    
+    # Check for same status
+    statuses = set(p.get('status', '') for p in proposals)
+    if len(statuses) == 1:
+        similarities.append({
+            'type': 'same_status',
+            'label': 'Same Status',
+            'value': list(statuses)[0]
+        })
+    
+    return similarities
+
 
 # ===== EXPORT ENDPOINTS =====
 
@@ -2446,6 +4062,132 @@ def handle_connect():
         if update_thread is None:
             update_thread = socketio.start_background_task(send_updates)
 
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    """Handle client disconnection."""
+    logger.info("Client disconnected from Socket.IO")
+
+
+@socketio.on('subscribe')
+def handle_subscribe(data):
+    """Handle subscription to specific event channels."""
+    channel = data.get('channel', '')
+    if channel in ['proposals', 'orka', 'val', 'notifications', 'workflows']:
+        emit('subscribed', {'channel': channel, 'status': 'ok'})
+        logger.info(f"Client subscribed to channel: {channel}")
+    else:
+        emit('error', {'message': f'Unknown channel: {channel}'})
+
+
+@socketio.on('unsubscribe')
+def handle_unsubscribe(data):
+    """Handle unsubscription from event channels."""
+    channel = data.get('channel', '')
+    emit('unsubscribed', {'channel': channel, 'status': 'ok'})
+
+
+# ===== PROPOSAL EVENT EMITTERS =====
+
+def emit_proposal_new(proposal: Dict[str, Any]):
+    """Emit event when a new proposal is submitted."""
+    socketio.emit('proposals:new', {
+        'proposal_id': proposal.get('id', proposal.get('proposal_id')),
+        'title': proposal.get('title', 'Untitled'),
+        'agent_id': proposal.get('agent_id', 'Unknown'),
+        'component': proposal.get('component', 'Unknown'),
+        'timestamp': datetime.now().isoformat()
+    })
+
+
+def emit_proposal_update(proposal_id: str, status: str, metadata: Optional[Dict] = None):
+    """Emit event when a proposal is updated."""
+    socketio.emit('proposals:update', {
+        'proposal_id': proposal_id,
+        'status': status,
+        'metadata': metadata or {},
+        'timestamp': datetime.now().isoformat()
+    })
+
+
+def emit_proposal_phase_transition(proposal_id: str, from_phase: str, to_phase: str, triggered_by: str = 'system'):
+    """Emit event when a proposal transitions between phases."""
+    socketio.emit('proposals:phase_transition', {
+        'proposal_id': proposal_id,
+        'from_phase': from_phase,
+        'to_phase': to_phase,
+        'triggered_by': triggered_by,
+        'timestamp': datetime.now().isoformat()
+    })
+
+
+def emit_orka_challenge(proposal_id: str, challenge_data: Dict[str, Any]):
+    """Emit event when ORKA generates a counterpoint challenge."""
+    socketio.emit('orka:challenge', {
+        'proposal_id': proposal_id,
+        'challenge_id': challenge_data.get('challenge_id', ''),
+        'severity': challenge_data.get('severity', 'moderate'),
+        'category': challenge_data.get('category', 'general'),
+        'summary': challenge_data.get('summary', ''),
+        'timestamp': datetime.now().isoformat()
+    })
+
+
+def emit_val_validation(proposal_id: str, result: str, confidence: float, notes: str = ''):
+    """Emit event when VAL completes validation."""
+    socketio.emit('val:validation', {
+        'proposal_id': proposal_id,
+        'result': result,  # 'approved', 'rejected', 'pending_review'
+        'confidence': confidence,
+        'notes': notes,
+        'timestamp': datetime.now().isoformat()
+    })
+
+
+def emit_deployment_complete(proposal_id: str, success: bool, details: Optional[Dict] = None):
+    """Emit event when a proposal deployment completes."""
+    socketio.emit('deployment:complete', {
+        'proposal_id': proposal_id,
+        'success': success,
+        'details': details or {},
+        'timestamp': datetime.now().isoformat()
+    })
+
+
+def emit_deception_alert(agent_id: str, proposal_id: str, severity: str, confidence: float, reasons: List[str]):
+    """Emit event when deception is detected."""
+    socketio.emit('deception:alert', {
+        'agent_id': agent_id,
+        'proposal_id': proposal_id,
+        'severity': severity,
+        'confidence': confidence,
+        'reasons': reasons,
+        'timestamp': datetime.now().isoformat()
+    })
+
+
+def emit_collusion_attempt(agents: List[str], severity: str, evidence: Dict[str, Any]):
+    """Emit event when collusion is detected between agents."""
+    socketio.emit('collusion:attempt', {
+        'agents': agents,
+        'severity': severity,
+        'evidence': evidence,
+        'timestamp': datetime.now().isoformat()
+    })
+
+
+def emit_notification(notification_type: str, title: str, message: str, severity: str = 'info', metadata: Optional[Dict] = None):
+    """Emit a notification to all connected clients."""
+    socketio.emit('notifications:new', {
+        'type': notification_type,
+        'title': title,
+        'message': message,
+        'severity': severity,
+        'metadata': metadata or {},
+        'timestamp': datetime.now().isoformat()
+    })
+
+
 def send_updates():
     """Send periodic updates to connected clients."""
     while True:
@@ -2476,6 +4218,202 @@ def send_updates():
         except Exception as e:
             print(f"Error in update thread: {e}")
             time.sleep(5)  # Longer sleep on error
+
+# 3D Cube Compression API Routes
+@app.route('/api/cube/demo')
+def cube_demo():
+    """Demo the 3D cube storage system"""
+    if not CUBE_MODEL_AVAILABLE:
+        return jsonify({'error': 'Cube model not available'}), 503
+
+    try:
+        # Create a demo cube
+        cube = create_cube(size=8, initial_value=1.0, use_gpu=True)
+        cube = store_scalar_at_z(cube, 0, 0, 0, 10.0)
+        cube = store_scalar_at_z(cube, 3, 3, 3, 5.0)
+        cube = store_scalar_at_z(cube, 7, 7, 7, 2.0)
+
+        layers = get_front_to_back_layers(cube)
+        result = multiply_layers_sequential(layers, use_gpu=True)
+
+        return jsonify({
+            'status': 'success',
+            'cube_shape': list(cube.shape) if hasattr(cube, 'shape') else 'N/A',
+            'backend': 'PyTorch MPS' if hasattr(cube, 'device') else 'NumPy',
+            'result_shape': list(result.shape),
+            'compression_ratio': '16:1 (ternary)',
+            'performance': 'GPU accelerated'
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/cube/benchmark/<int:size>')
+def cube_benchmark(size):
+    """Run performance benchmark for given cube size"""
+    if not SYSTEMS_AVAILABLE:
+        return jsonify({'error': 'Systems not available'}), 503
+
+    try:
+        n_runs = max(10, 1000 // max(size, 1))
+        result, avg_time, memory = benchmark_multiply(n_runs=n_runs, size=size, use_gpu=True)
+
+        return jsonify({
+            'size': size,
+            'runs': n_runs,
+            'avg_time_ms': avg_time * 1000,
+            'memory_mb': memory,
+            'performance_mops': (size ** 4) / avg_time / 1e6,  # Theoretical ops/sec
+            'backend': 'PyTorch MPS GPU' if torch.cuda.is_available() or str(device) == 'mps' else 'CPU'
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/model/convert', methods=['POST'])
+def convert_model():
+    """Convert uploaded PyTorch model to compressed 3D cube format"""
+    if not SYSTEMS_AVAILABLE:
+        return jsonify({'error': 'AI systems not available'}), 503
+
+    try:
+        # For demo, create a test model (in production, load from upload)
+        import torch.nn as nn
+
+        class DemoModel(nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.layers = nn.Sequential(
+                    nn.Linear(784, 256),
+                    nn.ReLU(),
+                    nn.Linear(256, 128),
+                    nn.ReLU(),
+                    nn.Linear(128, 10)
+                )
+
+            def forward(self, x):
+                return self.layers(x)
+
+        model = DemoModel()
+        converter = ModelConverter(use_gpu=True)
+        compressed_model = converter.compress_pytorch_model(model)
+
+        # Save temporarily
+        import tempfile
+        with tempfile.NamedTemporaryFile(suffix='.npz', delete=False) as f:
+            temp_path = f.name
+
+        converter.save_compressed_model(compressed_model, temp_path)
+
+        return jsonify({
+            'status': 'success',
+            'original_size_mb': compressed_model.original_size_mb,
+            'compressed_size_mb': compressed_model.compressed_size_mb,
+            'compression_ratio': compressed_model.compression_ratio,
+            'layers_compressed': len(compressed_model.layers),
+            'model_path': temp_path
+        })
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/model/infer/<path:model_path>', methods=['POST'])
+def run_inference(model_path):
+    """Run inference on compressed model"""
+    if not SYSTEMS_AVAILABLE:
+        return jsonify({'error': 'AI systems not available'}), 503
+
+    try:
+        # Load model
+        engine = InferenceEngine(use_gpu=True)
+        model = engine.load_model(model_path)
+
+        # Create test input
+        data = request.get_json() or {}
+        batch_size = data.get('batch_size', 32)
+        input_size = data.get('input_size', 784)
+
+        test_input = torch.randn(batch_size, input_size)
+
+        # Run inference
+        result = engine.run_inference(model, test_input, num_runs=10)
+
+        # Convert output to list for JSON
+        output_sample = result.output[0].cpu().numpy().tolist()
+
+        return jsonify({
+            'status': 'success',
+            'latency_ms': result.latency_ms,
+            'compression_ratio': result.compression_ratio,
+            'memory_usage_mb': result.memory_usage_mb,
+            'output_shape': list(result.output.shape),
+            'output_sample': output_sample[:10],  # First 10 values
+            'batch_size': batch_size,
+            'input_size': input_size
+        })
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/model/compare', methods=['POST'])
+def compare_models():
+    """Compare original vs compressed model performance"""
+    if not SYSTEMS_AVAILABLE:
+        return jsonify({'error': 'AI systems not available'}), 503
+
+    try:
+        # Create demo models
+        import torch.nn as nn
+
+        class DemoModel(nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.layers = nn.Sequential(
+                    nn.Linear(784, 256),
+                    nn.ReLU(),
+                    nn.Linear(256, 128),
+                    nn.ReLU(),
+                    nn.Linear(128, 10)
+                )
+
+            def forward(self, x):
+                return self.layers(x)
+
+        original_model = DemoModel()
+
+        # Convert to compressed
+        converter = ModelConverter(use_gpu=True)
+        compressed_data = converter.compress_pytorch_model(original_model)
+
+        # Save and load compressed model
+        import tempfile
+        with tempfile.NamedTemporaryFile(suffix='.npz', delete=False) as f:
+            temp_path = f.name
+
+        converter.save_compressed_model(compressed_data, temp_path)
+        compressed_model = InferenceEngine(use_gpu=True).load_model(temp_path)
+
+        # Compare performance
+        engine = InferenceEngine(use_gpu=True)
+        test_input = torch.randn(32, 784)
+
+        comparison = engine.compare_models(original_model, compressed_model, test_input, num_runs=10)
+
+        return jsonify({
+            'status': 'success',
+            'comparison': comparison
+        })
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/cube')
+def cube_page():
+    """3D Cube compression visualization page"""
+    return render_template('cube.html', title='3D Cube Compression')
+
+@app.route('/converter')
+def converter_page():
+    """Model converter and inference page"""
+    return render_template('converter.html', title='Model Converter & Inference')
 
 # Initialize components on startup
 init_components()

@@ -1,4 +1,4 @@
-from collusion_game import PayoffMatrix, is_nash_equilibrium, analyze_honesty_equilibrium
+from ai_safety.collusion_game import PayoffMatrix, is_nash_equilibrium, analyze_honesty_equilibrium
 
 
 def test_honesty_equilibrium_stable():

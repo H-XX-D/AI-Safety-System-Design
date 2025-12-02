@@ -6,7 +6,7 @@ try:
 except Exception:  # pragma: no cover
     SigningKey = None  # type: ignore
 
-from config_loader import verify_signature_ed25519
+from utilities.config_loader import verify_signature_ed25519
 
 
 def test_verify_signature_ed25519_roundtrip():

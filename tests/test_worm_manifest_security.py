@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from attestation import sign
+from security.attestation import sign
 
 
 def _write_manifest(path: Path, payload: dict, *, signed: bool = True) -> None:
@@ -12,7 +12,7 @@ def _write_manifest(path: Path, payload: dict, *, signed: bool = True) -> None:
 
 
 def _reset_state(monkeypatch):
-    import worm_manifest
+    import security.worm_manifest
 
     monkeypatch.setattr(worm_manifest, '_manifest_cache', None)
     monkeypatch.setattr(worm_manifest, '_last_error', None)
@@ -21,7 +21,7 @@ def _reset_state(monkeypatch):
 
 
 def test_signed_manifest_required(monkeypatch, tmp_path):
-    import worm_manifest
+    import security.worm_manifest
 
     payload = {
         'core_values_hash': 'a' * 64,
@@ -43,7 +43,7 @@ def test_signed_manifest_required(monkeypatch, tmp_path):
 
 
 def test_unsigned_manifest_rejected(monkeypatch, tmp_path):
-    import worm_manifest
+    import security.worm_manifest
 
     payload = {
         'core_values_hash': 'c' * 64,

@@ -1,7 +1,7 @@
 from datetime import datetime
 import hashlib
 
-from hardware_translator import HardwareTranslator, AIMessage
+from utilities.hardware_translator import HardwareTranslator, AIMessage
 
 
 def test_translation_rule_full_coverage():

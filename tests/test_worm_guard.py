@@ -1,11 +1,11 @@
 import hashlib
 import json
-from worm_guard import get_guard, WormGuard
+from security.worm_guard import get_guard, WormGuard
 
 
 def test_basic_verification_pass(monkeypatch):
     # Patch expected hash functions to simulate presence
-    import worm_manifest
+    import security.worm_manifest
     worm_manifest.enable_software_equivalence_mode(justification='test')
     monkeypatch.setenv('CORE_VALUES_KNOWN_HASH', 'a'*64)
     monkeypatch.setenv('CORE_ALIGNMENT_FILTER_HASH', 'b'*64)
@@ -19,7 +19,7 @@ def test_basic_verification_pass(monkeypatch):
 
 def test_fail_escalation(monkeypatch):
     # Remove hashes to force failure
-    import worm_manifest
+    import security.worm_manifest
     # Ensure any previous manifest is cleared so tests remain isolated
     worm_manifest._manifest_cache = None
     worm_manifest._manifest_signature_verified = False
@@ -38,7 +38,7 @@ def test_fail_escalation(monkeypatch):
 
 
 def test_audit_chain_integrity(monkeypatch):
-    import worm_manifest
+    import security.worm_manifest
     worm_manifest.enable_software_equivalence_mode(justification='test')
     monkeypatch.setenv('CORE_VALUES_KNOWN_HASH', 'c'*64)
     monkeypatch.setenv('CORE_ALIGNMENT_FILTER_HASH', 'd'*64)
@@ -54,7 +54,7 @@ def test_audit_chain_integrity(monkeypatch):
 
 
 def test_version_advance_and_rollback(monkeypatch):
-    import worm_manifest
+    import security.worm_manifest
     worm_manifest.enable_software_equivalence_mode(justification='test')
     monkeypatch.setenv('CORE_VALUES_KNOWN_HASH', 'e'*64)
     monkeypatch.setenv('CORE_ALIGNMENT_FILTER_HASH', 'f'*64)

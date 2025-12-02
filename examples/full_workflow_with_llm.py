@@ -35,14 +35,14 @@ from typing import Dict, Any
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from llm_adapter_factory import create_llm_adapter, get_adapter_guardrails
-from research_system import SystemSpecialization
-from bulletproof_alignment_filter import BulletproofAlignmentFilter
-from deception_detector import DeceptionDetector
-from debate_engine import DebateEngine
-from seventh_validator import SeventhValidator
-from core_values import CoreValues
-from logging_config import get_logger
+from research.llm_adapter_factory import create_llm_adapter, get_adapter_guardrails
+from research.research_system import SystemSpecialization
+from ai_safety.bulletproof_alignment_filter import BulletproofAlignmentFilter
+from ai_safety.deception_detector import DeceptionDetector
+from research.debate_engine import DebateEngine
+from ai_safety.seventh_validator import SeventhValidator
+from utilities.core_values import CoreValues
+from utilities.logging_config import get_logger
 
 logger = get_logger(__name__)
 

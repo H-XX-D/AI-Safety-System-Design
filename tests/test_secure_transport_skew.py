@@ -1,7 +1,7 @@
 import time
 import os
 
-from aura_secure_transport import TransportContext, pack_secure, unpack_secure, ReplayError
+from communication.aura_secure_transport import TransportContext, pack_secure, unpack_secure, ReplayError
 
 
 def _ctx():

@@ -1,5 +1,5 @@
-from aura_bitpacked_extension import BitPackedCompressor
-from message_codec import MessageCodec, reset_replay_state
+from communication.aura_bitpacked_extension import BitPackedCompressor
+from communication.message_codec import MessageCodec, reset_replay_state
 
 
 def test_sequence_wraparound_monotonic():

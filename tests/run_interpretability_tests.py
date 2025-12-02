@@ -11,7 +11,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import numpy as np
 from typing import List
-from interpretability_monitor_enhanced import EnhancedInterpretabilityMonitor
+from ai_safety.interpretability_monitor_enhanced import EnhancedInterpretabilityMonitor
 
 
 def generate_stable_activations(mean: float = 0.5, std: float = 0.1, size: int = 100) -> np.ndarray:

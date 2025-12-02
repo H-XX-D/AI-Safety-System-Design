@@ -8,7 +8,7 @@ def test_secure_transport_enabled_roundtrip(monkeypatch):
     # Reload message_codec to pick up config change
     if 'message_codec' in importlib.sys.modules:
         importlib.reload(importlib.import_module('message_codec'))
-    from message_codec import MessageCodec, reset_replay_state  # type: ignore
+    from communication.message_codec import MessageCodec, reset_replay_state  # type: ignore
 
     reset_replay_state()
     codec = MessageCodec(prefer_secure_bitpacked=True, min_compression_size=18)
@@ -28,7 +28,7 @@ def test_secure_transport_replay_detection(monkeypatch):
     monkeypatch.setenv('APP_ENV', 'development')
     if 'message_codec' in importlib.sys.modules:
         importlib.reload(importlib.import_module('message_codec'))
-    from message_codec import MessageCodec, reset_replay_state  # type: ignore
+    from communication.message_codec import MessageCodec, reset_replay_state  # type: ignore
 
     reset_replay_state()
     codec = MessageCodec(prefer_secure_bitpacked=True, min_compression_size=18)

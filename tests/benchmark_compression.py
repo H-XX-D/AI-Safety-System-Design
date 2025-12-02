@@ -5,7 +5,7 @@ Compression Ratio Benchmarking
 Benchmarks AURA bitpacked compression on realistic AI Safety System messages.
 
 Tests:
-- Real-world message patterns from orchestrator
+- Real-world message patterns from core.orchestrator
 - Comparison: bitpacked vs. AURA fallback
 - Compression ratio and savings percentage
 - Performance metrics (compress/decompress time)
@@ -22,7 +22,7 @@ import statistics
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from aura_bitpacked_extension import BitPackedCompressor
+from communication.aura_bitpacked_extension import BitPackedCompressor
 
 # Realistic message dataset from AI Safety System
 REALISTIC_MESSAGES = [

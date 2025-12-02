@@ -2,8 +2,8 @@ import json
 
 import pytest
 
-from config_loader import load_config
-from demo_integration import main
+from utilities.config_loader import load_config
+from research.demo_integration import main
 
 
 def test_demo_integration_smoke(monkeypatch, tmp_path):

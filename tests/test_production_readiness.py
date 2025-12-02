@@ -1,4 +1,4 @@
-from config_loader import validate_production_readiness
+from utilities.config_loader import validate_production_readiness
 
 
 def test_validate_production_readiness_raises_on_bad_cfg(monkeypatch):

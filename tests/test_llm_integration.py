@@ -8,8 +8,8 @@ Works with template (no API key) or real LLMs (with valid API keys).
 """
 
 import sys
-from research_system import SystemSpecialization, TemplateLLMAdapter
-from llm_adapters import OpenAIAdapter, ClaudeAdapter
+from research.research_system import SystemSpecialization, TemplateLLMAdapter
+from research.llm_adapters import OpenAIAdapter, ClaudeAdapter
 
 def test_template_adapter():
     """Test with template adapter (always works)."""

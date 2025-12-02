@@ -1,6 +1,6 @@
 import pytest
 
-from debate_engine import Argument, Claim, DebateEngine
+from research.debate_engine import Argument, Claim, DebateEngine
 
 
 def test_debate_engine_multi_round_scoring_and_consensus():

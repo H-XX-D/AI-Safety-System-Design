@@ -13,7 +13,7 @@ def test_core_values_hash_verification_missing_env(monkeypatch):
 
 
 def test_core_values_hash_verification_success(monkeypatch):
-    import worm_manifest
+    import security.worm_manifest
     worm_manifest.enable_software_equivalence_mode(justification='test')
     cv = importlib.import_module('core_values')
     expected = cv.CoreValues.compute_hash()

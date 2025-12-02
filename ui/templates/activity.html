@@ -1,0 +1,383 @@
+{% extends "base.html" %}
+
+{% block title %}Activity Log - AI Safety System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .activity-container {
+        padding: 24px;
+    }
+    
+    .activity-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+    }
+    
+    .activity-header h1 {
+        margin: 0;
+        color: var(--text-primary);
+    }
+    
+    .activity-filters {
+        display: flex;
+        gap: 16px;
+        margin-bottom: 24px;
+        flex-wrap: wrap;
+    }
+    
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    
+    .filter-group label {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+    }
+    
+    .filter-group select,
+    .filter-group input {
+        padding: 8px 12px;
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        color: var(--text-primary);
+        min-width: 150px;
+    }
+    
+    .activity-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: var(--card-bg);
+        border-radius: 12px;
+        overflow: hidden;
+    }
+    
+    .activity-table th,
+    .activity-table td {
+        padding: 12px 16px;
+        text-align: left;
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .activity-table th {
+        background: rgba(255, 255, 255, 0.05);
+        font-weight: 600;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        font-size: 0.75rem;
+    }
+    
+    .activity-table tr:hover {
+        background: rgba(255, 255, 255, 0.02);
+    }
+    
+    .action-badge {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    
+    .action-badge.create { background: rgba(16, 185, 129, 0.2); color: #10b981; }
+    .action-badge.update { background: rgba(99, 102, 241, 0.2); color: #6366f1; }
+    .action-badge.delete { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+    .action-badge.view { background: rgba(156, 163, 175, 0.2); color: #9ca3af; }
+    .action-badge.login { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
+    .action-badge.logout { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+    
+    .resource-link {
+        color: var(--primary-color);
+        text-decoration: none;
+    }
+    
+    .resource-link:hover {
+        text-decoration: underline;
+    }
+    
+    .details-cell {
+        max-width: 300px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+    }
+    
+    .pagination {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        margin-top: 24px;
+    }
+    
+    .pagination button {
+        padding: 8px 16px;
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        color: var(--text-primary);
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .pagination button:hover:not(:disabled) {
+        background: var(--primary-color);
+        border-color: var(--primary-color);
+    }
+    
+    .pagination button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    
+    .pagination-info {
+        color: var(--text-secondary);
+        font-size: 0.875rem;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 48px;
+        color: var(--text-secondary);
+    }
+    
+    .empty-state i {
+        font-size: 3rem;
+        margin-bottom: 16px;
+        opacity: 0.5;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="activity-container">
+    <div class="activity-header">
+        <h1><i class="fas fa-history"></i> Activity Log</h1>
+        <button class="btn btn-secondary" onclick="refreshActivityLog()">
+            <i class="fas fa-sync-alt"></i> Refresh
+        </button>
+    </div>
+    
+    <div class="activity-filters">
+        <div class="filter-group">
+            <label>User</label>
+            <select id="filterUser" onchange="applyFilters()">
+                <option value="">All Users</option>
+                <option value="admin">Admin</option>
+                <option value="system">System</option>
+            </select>
+        </div>
+        
+        <div class="filter-group">
+            <label>Action</label>
+            <select id="filterAction" onchange="applyFilters()">
+                <option value="">All Actions</option>
+                <option value="create">Create</option>
+                <option value="update">Update</option>
+                <option value="delete">Delete</option>
+                <option value="view">View</option>
+                <option value="login">Login</option>
+                <option value="logout">Logout</option>
+            </select>
+        </div>
+        
+        <div class="filter-group">
+            <label>Resource Type</label>
+            <select id="filterResourceType" onchange="applyFilters()">
+                <option value="">All Types</option>
+                <option value="proposal">Proposal</option>
+                <option value="notification">Notification</option>
+                <option value="workflow">Workflow</option>
+                <option value="trajectory">Trajectory</option>
+            </select>
+        </div>
+    </div>
+    
+    <div id="activityTableContainer">
+        <div class="loading-spinner">
+            <i class="fas fa-spinner fa-spin"></i> Loading activity log...
+        </div>
+    </div>
+    
+    <div class="pagination" id="pagination" style="display: none;">
+        <button id="prevBtn" onclick="previousPage()" disabled>
+            <i class="fas fa-chevron-left"></i> Previous
+        </button>
+        <span class="pagination-info" id="paginationInfo">Page 1</span>
+        <button id="nextBtn" onclick="nextPage()">
+            Next <i class="fas fa-chevron-right"></i>
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let currentPage = 0;
+const pageSize = 50;
+let totalActivities = 0;
+
+async function loadActivityLog(offset = 0) {
+    const container = document.getElementById('activityTableContainer');
+    
+    try {
+        const user = document.getElementById('filterUser').value;
+        const action = document.getElementById('filterAction').value;
+        const resourceType = document.getElementById('filterResourceType').value;
+        
+        let url = `/api/activity?limit=${pageSize}&offset=${offset}`;
+        if (user) url += `&user=${encodeURIComponent(user)}`;
+        if (action) url += `&action=${encodeURIComponent(action)}`;
+        if (resourceType) url += `&resource_type=${encodeURIComponent(resourceType)}`;
+        
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        if (!data.success) {
+            throw new Error(data.error || 'Failed to load activity log');
+        }
+        
+        totalActivities = data.total;
+        currentPage = Math.floor(offset / pageSize);
+        
+        if (data.activities.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-inbox"></i>
+                    <p>No activity recorded yet</p>
+                </div>
+            `;
+            document.getElementById('pagination').style.display = 'none';
+            return;
+        }
+        
+        let html = `
+            <table class="activity-table">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>User</th>
+                        <th>Action</th>
+                        <th>Resource</th>
+                        <th>Details</th>
+                        <th>IP Address</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        
+        data.activities.forEach(activity => {
+            const actionClass = getActionClass(activity.action);
+            const timestamp = new Date(activity.created_at).toLocaleString();
+            const details = typeof activity.details === 'object' 
+                ? JSON.stringify(activity.details) 
+                : (activity.details || '-');
+            
+            html += `
+                <tr>
+                    <td>${timestamp}</td>
+                    <td>${escapeHtml(activity.user || 'system')}</td>
+                    <td><span class="action-badge ${actionClass}">${escapeHtml(activity.action)}</span></td>
+                    <td>
+                        ${activity.resource_type ? `
+                            <span class="resource-type">${escapeHtml(activity.resource_type)}</span>
+                            ${activity.resource_id ? `<a href="#" class="resource-link">#${escapeHtml(activity.resource_id)}</a>` : ''}
+                        ` : '-'}
+                    </td>
+                    <td class="details-cell" title="${escapeHtml(details)}">${escapeHtml(details.substring(0, 50))}${details.length > 50 ? '...' : ''}</td>
+                    <td>${escapeHtml(activity.ip_address || '-')}</td>
+                </tr>
+            `;
+        });
+        
+        html += '</tbody></table>';
+        container.innerHTML = html;
+        
+        // Update pagination
+        updatePagination(data.total, offset);
+        
+    } catch (error) {
+        console.error('Error loading activity log:', error);
+        container.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-exclamation-triangle"></i>
+                <p>Error loading activity log: ${error.message}</p>
+            </div>
+        `;
+    }
+}
+
+function getActionClass(action) {
+    if (!action) return '';
+    action = action.toLowerCase();
+    if (action.includes('create') || action.includes('add')) return 'create';
+    if (action.includes('update') || action.includes('edit')) return 'update';
+    if (action.includes('delete') || action.includes('remove') || action.includes('clear')) return 'delete';
+    if (action.includes('view') || action.includes('get') || action.includes('read')) return 'view';
+    if (action.includes('login')) return 'login';
+    if (action.includes('logout')) return 'logout';
+    return '';
+}
+
+function updatePagination(total, offset) {
+    const pagination = document.getElementById('pagination');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const info = document.getElementById('paginationInfo');
+    
+    const totalPages = Math.ceil(total / pageSize);
+    const currentPage = Math.floor(offset / pageSize) + 1;
+    
+    if (totalPages <= 1) {
+        pagination.style.display = 'none';
+        return;
+    }
+    
+    pagination.style.display = 'flex';
+    prevBtn.disabled = currentPage <= 1;
+    nextBtn.disabled = currentPage >= totalPages;
+    info.textContent = `Page ${currentPage} of ${totalPages} (${total} total)`;
+}
+
+function previousPage() {
+    const newOffset = Math.max(0, currentPage * pageSize - pageSize);
+    loadActivityLog(newOffset);
+}
+
+function nextPage() {
+    const newOffset = (currentPage + 1) * pageSize;
+    if (newOffset < totalActivities) {
+        loadActivityLog(newOffset);
+    }
+}
+
+function applyFilters() {
+    loadActivityLog(0);
+}
+
+function refreshActivityLog() {
+    loadActivityLog(currentPage * pageSize);
+    showToast('Activity log refreshed', 'success');
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Load on page load
+document.addEventListener('DOMContentLoaded', () => {
+    loadActivityLog(0);
+});
+</script>
+{% endblock %}
+

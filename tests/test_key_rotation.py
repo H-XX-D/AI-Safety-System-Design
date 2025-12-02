@@ -1,8 +1,8 @@
 import pytest
 from pathlib import Path
 
-from key_rotation import generate_keypair, sign_config, rotate_key
-from config_loader import verify_signature_ed25519, verify_signature_with_keyring
+from models.key_rotation import generate_keypair, sign_config, rotate_key
+from utilities.config_loader import verify_signature_ed25519, verify_signature_with_keyring
 
 pytestmark = pytest.mark.skipif('nacl' not in globals(), reason='PyNaCl may be missing')
 

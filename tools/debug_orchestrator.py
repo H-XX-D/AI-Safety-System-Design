@@ -4,10 +4,10 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from core_values import CoreValues
-from memory_merkle import MemoryStorage
-from orchestrator import Orchestrator
-import worm_manifest
+from utilities.core_values import CoreValues
+from infrastructure.memory_merkle import MemoryStorage
+from core.orchestrator import Orchestrator
+import security.worm_manifest
 
 
 def run_debug() -> None:

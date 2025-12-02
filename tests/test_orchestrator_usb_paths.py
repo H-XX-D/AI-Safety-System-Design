@@ -7,7 +7,7 @@ import shutil
 
 import pytest
 
-from orchestrator import OrchestratorProcessMonitor, SuspicionAlert
+from core.orchestrator import OrchestratorProcessMonitor, SuspicionAlert
 
 
 def test_write_alert_writes_to_env_usb_path(monkeypatch, tmp_path):
@@ -34,7 +34,7 @@ def test_write_alert_fallbacks_to_demo_outputs(monkeypatch, tmp_path):
     # Ensure env var not present and config usb path non-existent
     monkeypatch.delenv('WORM_USB_PATH', raising=False)
     # Force software equivalence mode in worm_manifest
-    import worm_manifest as wm
+    import security.worm_manifest as wm
     wm.enable_software_equivalence_mode(justification='test', expires_at=None)
     try:
         monitor = OrchestratorProcessMonitor(alert_threshold=0.1)

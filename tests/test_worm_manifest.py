@@ -2,7 +2,7 @@ import os
 import json
 from typing import Any
 
-from memory_merkle import MemoryStorage, MemoryType, MerkleTree
+from infrastructure.memory_merkle import MemoryStorage, MemoryType, MerkleTree
 
 
 def test_placeholder_worm_manifest_structures_exist():

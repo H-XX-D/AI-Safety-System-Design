@@ -1,9 +1,9 @@
 import random
 from datetime import datetime
 
-from worm_guard import WormGuard
-from aura_bitpacked_extension import BitPackedCompressor
-from message_codec import (
+from security.worm_guard import WormGuard
+from communication.aura_bitpacked_extension import BitPackedCompressor
+from communication.message_codec import (
     MessageCodec,
     _last_sequence_by_sender,
     _seen_sequences_by_sender,
@@ -12,7 +12,7 @@ from message_codec import (
 
 def test_hash_chain_linkage_random_sequences(monkeypatch):
     """Randomly interleave verify_worm and advance_version; chain should remain valid."""
-    import worm_manifest
+    import security.worm_manifest
     worm_manifest.enable_software_equivalence_mode(justification='test')
     monkeypatch.setenv('CORE_VALUES_KNOWN_HASH', 'a' * 64)
     monkeypatch.setenv('CORE_ALIGNMENT_FILTER_HASH', 'b' * 64)

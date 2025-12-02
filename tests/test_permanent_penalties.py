@@ -1,5 +1,5 @@
-from worm_manifest import worm_manifest
-from deception_incident import DeceptionType, Severity
+from security.worm_manifest import worm_manifest
+from ai_safety.deception_incident import DeceptionType, Severity
 
 
 def test_permanent_penalty_compounding_schedule():

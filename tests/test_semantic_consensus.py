@@ -1,5 +1,5 @@
-from translator import Translation
-from semantic_consensus import compute_consensus
+from communication.translator import Translation
+from utilities.semantic_consensus import compute_consensus
 
 
 def _T(text: str, conf: float, tid: int) -> Translation:

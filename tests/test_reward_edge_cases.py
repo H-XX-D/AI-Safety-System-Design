@@ -1,4 +1,4 @@
-from worm_usb_verifier import AlignedGoalStructure, ImprovementProposal, ImprovementType
+from security.worm_usb_verifier import AlignedGoalStructure, ImprovementProposal, ImprovementType
 from typing import Dict, Any
 
 

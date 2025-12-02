@@ -17,7 +17,7 @@ def test_val_inspect_manifest_signers(tmp_path, monkeypatch):
     content_hash = __import__('hashlib').sha256(json.dumps(payload, sort_keys=True).encode('utf-8')).hexdigest()
     secret = 'valsecret'
     monkeypatch.setenv('VAL_SIGNING_SECRET', secret)
-    from human_review import sign_human_decision
+    from research.human_review import sign_human_decision
 
     sig1_msg = {
         'reviewer_id': 101,

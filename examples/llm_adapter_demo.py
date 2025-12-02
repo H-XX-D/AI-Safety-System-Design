@@ -34,9 +34,9 @@ import os
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from research_system import SystemSpecialization, TemplateLLMAdapter
-from llm_adapters import OpenAIAdapter, ClaudeAdapter
-from logging_config import get_logger
+from research.research_system import SystemSpecialization, TemplateLLMAdapter
+from research.llm_adapters import OpenAIAdapter, ClaudeAdapter
+from utilities.logging_config import get_logger
 
 logger = get_logger(__name__)
 

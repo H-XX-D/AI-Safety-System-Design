@@ -1,6 +1,6 @@
 import importlib
 
-from config_loader import load_config
+from utilities.config_loader import load_config
 
 
 def test_production_config_sandbox_block(monkeypatch):
@@ -23,7 +23,7 @@ def test_production_sandbox_manager_applies_limits(monkeypatch):
     monkeypatch.setenv('APP_ENV', 'production')
     monkeypatch.delenv('SANDBOX_USE_VIRTUAL', raising=False)
 
-    import orchestrator_sandbox
+    import core.orchestrator_sandbox
 
     importlib.reload(orchestrator_sandbox)
     mgr = orchestrator_sandbox.SandboxEnvironmentManager()
@@ -40,7 +40,7 @@ def test_env_flag_overrides_virtual_manager(monkeypatch):
     monkeypatch.setenv('APP_ENV', 'production')
     monkeypatch.setenv('SANDBOX_USE_VIRTUAL', '0')
 
-    import orchestrator_sandbox
+    import core.orchestrator_sandbox
 
     importlib.reload(orchestrator_sandbox)
     mgr = orchestrator_sandbox.SandboxEnvironmentManager()
@@ -68,7 +68,7 @@ def test_default_sandbox_manager_allowlists(monkeypatch):
     monkeypatch.setenv('APP_ENV', 'default')
     monkeypatch.delenv('SANDBOX_USE_VIRTUAL', raising=False)
 
-    import orchestrator_sandbox
+    import core.orchestrator_sandbox
 
     importlib.reload(orchestrator_sandbox)
     mgr = orchestrator_sandbox.SandboxEnvironmentManager()
@@ -97,7 +97,7 @@ def test_development_sandbox_manager_settings(monkeypatch):
     monkeypatch.setenv('APP_ENV', 'development')
     monkeypatch.delenv('SANDBOX_USE_VIRTUAL', raising=False)
 
-    import orchestrator_sandbox
+    import core.orchestrator_sandbox
 
     importlib.reload(orchestrator_sandbox)
     mgr = orchestrator_sandbox.SandboxEnvironmentManager()

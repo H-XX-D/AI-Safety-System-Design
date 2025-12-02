@@ -16,7 +16,7 @@ def test_val_inspect_legacy_single_signer(tmp_path, monkeypatch):
         'timestamp': '2025-01-02T00:00:00Z',
         'notes': 'legacy path',
     }
-    from human_review import sign_human_decision
+    from research.human_review import sign_human_decision
     msg['signature'] = sign_human_decision(msg, secret)
     f = tmp_path / 'VAL_LEGACY.json'
     f.write_text(json.dumps(msg))

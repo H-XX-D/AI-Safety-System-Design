@@ -1,9 +1,9 @@
 import logging
 from datetime import datetime
 
-from orchestrator import Orchestrator
-from orchestrator_sandbox import SandboxEnvironmentManager
-from memory_merkle import MemoryStorage
+from core.orchestrator import Orchestrator
+from core.orchestrator_sandbox import SandboxEnvironmentManager
+from infrastructure.memory_merkle import MemoryStorage
 
 
 def _make_simple_proposal(proposer_id: int):

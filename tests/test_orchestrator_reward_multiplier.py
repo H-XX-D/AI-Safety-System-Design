@@ -1,8 +1,8 @@
 import math
 from typing import Dict, Any
-from orchestrator import Orchestrator
-from memory_merkle import MemoryStorage
-from worm_manifest import worm_manifest
+from core.orchestrator import Orchestrator
+from infrastructure.memory_merkle import MemoryStorage
+from security.worm_manifest import worm_manifest
 
 
 def make_dummy_proposal(system_id: int) -> Dict[str, Any]:

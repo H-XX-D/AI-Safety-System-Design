@@ -4,8 +4,8 @@ import types
 
 import pytest
 
-import research_system as rs_module
-from research_system import (
+import research.research_system as rs_module
+from research.research_system import (
     BaseLLMAdapter,
     LLMAdapterResult,
     ResearchSystem,

@@ -2,8 +2,8 @@ import json
 
 import pytest
 
-import hardware_adapter
-from orchestrator_sandbox import SandboxEnvironmentManager
+import utilities.hardware_adapter
+from core.orchestrator_sandbox import SandboxEnvironmentManager
 
 
 @pytest.mark.parametrize(

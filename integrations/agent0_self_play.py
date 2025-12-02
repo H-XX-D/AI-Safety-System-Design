@@ -348,7 +348,7 @@ class Agent0SelfPlay:
     def _record_to_ui(self, result: SelfPlayResult):
         """Record result to UI for display."""
         try:
-            from ui_integration import record_training_game
+            from utilities.ui_integration import record_training_game
             
             record_training_game(
                 curriculum_agent=result.curriculum_agent,
@@ -517,7 +517,7 @@ def broadcast_hypothesis_improvement(
     """
     Broadcast hypothesis improvement request.
     
-    Call this from orchestrator to start self-play.
+    Call this from core.orchestrator to start self-play.
     """
     self_play = get_self_play()
     return self_play.broadcast_hypothesis_improvement(target_component, goal, num_tasks)

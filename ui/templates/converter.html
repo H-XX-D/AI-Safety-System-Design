@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Model Converter & Inference - {{ title }}</title>
+    <link href="{{ url_for('static', filename='css/main.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/orka.css') }}" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔄 Model Converter & Inference Engine</h1>
+            <p class="subtitle">Convert neural networks to 3D compressed format and run GPU-accelerated inference</p>
+        </header>
+
+        <div class="dashboard-grid">
+            <!-- Model Conversion -->
+            <div class="card">
+                <h3>🔄 Model Conversion</h3>
+                <div class="conversion-controls">
+                    <button onclick="convertModel()" class="btn btn-primary" id="convertBtn">
+                        Convert Demo Model
+                    </button>
+                    <div id="conversion-status" class="status-message" style="display: none;">
+                        Converting model...
+                    </div>
+                </div>
+
+                <div id="conversion-results" class="results-panel" style="display: none;">
+                    <h4>Conversion Results</h4>
+                    <div class="metric-grid">
+                        <div class="metric">
+                            <span class="value" id="orig-size">0.0</span>
+                            <span class="label">Original (MB)</span>
+                        </div>
+                        <div class="metric">
+                            <span class="value" id="comp-size">0.0</span>
+                            <span class="label">Compressed (MB)</span>
+                        </div>
+                        <div class="metric">
+                            <span class="value" id="comp-ratio">1.0</span>
+                            <span class="label">Compression Ratio</span>
+                        </div>
+                    </div>
+                    <div class="layers-info">
+                        <strong>Layers Compressed:</strong> <span id="layers-count">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Inference Engine -->
+            <div class="card">
+                <h3>🚀 Inference Engine</h3>
+                <div class="inference-controls">
+                    <div class="input-group">
+                        <label>Batch Size:</label>
+                        <input type="number" id="batchSize" value="32" min="1" max="128">
+                    </div>
+                    <div class="input-group">
+                        <label>Input Size:</label>
+                        <input type="number" id="inputSize" value="784" min="10" max="10000">
+                    </div>
+                    <button onclick="runInference()" class="btn btn-success" id="inferBtn">
+                        Run Inference
+                    </button>
+                </div>
+
+                <div id="inference-results" class="results-panel" style="display: none;">
+                    <h4>Inference Results</h4>
+                    <div class="metric-grid">
+                        <div class="metric">
+                            <span class="value" id="latency">0.0</span>
+                            <span class="label">Latency (ms)</span>
+                        </div>
+                        <div class="metric">
+                            <span class="value" id="inf-comp-ratio">1.0</span>
+                            <span class="label">Compression</span>
+                        </div>
+                        <div class="metric">
+                            <span class="value" id="memory">0.0</span>
+                            <span class="label">Memory (MB)</span>
+                        </div>
+                    </div>
+                    <div class="output-info">
+                        <strong>Output Shape:</strong> <span id="output-shape">[?, ?]</span><br>
+                        <strong>Sample Output:</strong> <span id="output-sample">[...]</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Performance Comparison -->
+            <div class="card">
+                <h3>⚡ Performance Comparison</h3>
+                <button onclick="compareModels()" class="btn btn-warning" id="compareBtn">
+                    Compare Original vs Compressed
+                </button>
+
+                <div id="comparison-results" class="results-panel" style="display: none;">
+                    <h4>Original vs Compressed Model</h4>
+                    <div class="comparison-grid">
+                        <div class="comparison-item">
+                            <div class="metric">
+                                <span class="value" id="orig-latency">0.0</span>
+                                <span class="label">Original Latency (ms)</span>
+                            </div>
+                            <div class="metric">
+                                <span class="value" id="comp-latency">0.0</span>
+                                <span class="label">Compressed Latency (ms)</span>
+                            </div>
+                        </div>
+                        <div class="comparison-item">
+                            <div class="metric">
+                                <span class="value" id="speedup">1.0</span>
+                                <span class="label">Speedup Factor</span>
+                            </div>
+                            <div class="metric">
+                                <span class="value" id="memory-savings">0</span>
+                                <span class="label">Memory Savings (%)</span>
+                            </div>
+                        </div>
+                        <div class="comparison-item">
+                            <div class="metric">
+                                <span class="value" id="accuracy">100</span>
+                                <span class="label">Accuracy (%)</span>
+                            </div>
+                            <div class="metric">
+                                <span class="value" id="comp-ratio-final">1.0</span>
+                                <span class="label">Compression Ratio</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Real-time Charts -->
+            <div class="card">
+                <h3>📊 Performance Charts</h3>
+                <canvas id="performanceChart" width="400" height="200"></canvas>
+                <div class="chart-controls">
+                    <button onclick="updateChart()" class="btn btn-secondary">
+                        Refresh Chart
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Technical Details -->
+        <div class="card">
+            <h3>🔧 Technical Architecture</h3>
+            <div class="tech-overview">
+                <div class="tech-section">
+                    <h4>Conversion Process</h4>
+                    <ol>
+                        <li>Load PyTorch/TensorFlow model</li>
+                        <li>Quantize weights to ternary {-1,0,+1}</li>
+                        <li>Pack into 3D Morton-ordered cubes</li>
+                        <li>Save compressed format (.npz)</li>
+                    </ol>
+                </div>
+                <div class="tech-section">
+                    <h4>Inference Process</h4>
+                    <ol>
+                        <li>Load compressed model</li>
+                        <li>Reconstruct weights via matrix multiplication</li>
+                        <li>Run GPU-accelerated inference</li>
+                        <li>Return results with performance metrics</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let performanceChart;
+        let modelPath = null;
+
+        function initChart() {
+            const ctx = document.getElementById('performanceChart').getContext('2d');
+            performanceChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Original', 'Compressed'],
+                    datasets: [{
+                        label: 'Latency (ms)',
+                        data: [0, 0],
+                        backgroundColor: ['rgba(255, 99, 132, 0.6)', 'rgba(54, 162, 235, 0.6)'],
+                        borderColor: ['rgba(255, 99, 132, 1)', 'rgba(54, 162, 235, 1)'],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Latency (milliseconds)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        async function convertModel() {
+            const btn = document.getElementById('convertBtn');
+            const status = document.getElementById('conversion-status');
+            const results = document.getElementById('conversion-results');
+
+            btn.disabled = true;
+            btn.textContent = 'Converting...';
+            status.style.display = 'block';
+            results.style.display = 'none';
+
+            try {
+                const response = await fetch('/api/model/convert', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    modelPath = data.model_path;
+                    document.getElementById('orig-size').textContent = data.original_size_mb.toFixed(2);
+                    document.getElementById('comp-size').textContent = data.compressed_size_mb.toFixed(2);
+                    document.getElementById('comp-ratio').textContent = data.compression_ratio.toFixed(1) + 'x';
+                    document.getElementById('layers-count').textContent = data.layers_compressed;
+
+                    status.style.display = 'none';
+                    results.style.display = 'block';
+                    btn.textContent = 'Convert Demo Model';
+                } else {
+                    throw new Error(data.error);
+                }
+            } catch (error) {
+                status.textContent = 'Error: ' + error.message;
+                status.style.color = '#dc2626';
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        async function runInference() {
+            if (!modelPath) {
+                alert('Please convert a model first!');
+                return;
+            }
+
+            const btn = document.getElementById('inferBtn');
+            const results = document.getElementById('inference-results');
+
+            btn.disabled = true;
+            btn.textContent = 'Running...';
+
+            const batchSize = parseInt(document.getElementById('batchSize').value);
+            const inputSize = parseInt(document.getElementById('inputSize').value);
+
+            try {
+                const response = await fetch(`/api/model/infer/${modelPath}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        batch_size: batchSize,
+                        input_size: inputSize
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    document.getElementById('latency').textContent = data.latency_ms.toFixed(2);
+                    document.getElementById('inf-comp-ratio').textContent = data.compression_ratio.toFixed(1) + 'x';
+                    document.getElementById('memory').textContent = data.memory_usage_mb.toFixed(2);
+                    document.getElementById('output-shape').textContent = data.output_shape.join(' × ');
+                    document.getElementById('output-sample').textContent = '[' + data.output_sample.map(x => x.toFixed(3)).join(', ') + ', ...]';
+
+                    results.style.display = 'block';
+                    updateChart();
+                } else {
+                    throw new Error(data.error);
+                }
+            } catch (error) {
+                alert('Inference error: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Run Inference';
+            }
+        }
+
+        async function compareModels() {
+            const btn = document.getElementById('compareBtn');
+            const results = document.getElementById('comparison-results');
+
+            btn.disabled = true;
+            btn.textContent = 'Comparing...';
+
+            try {
+                const response = await fetch('/api/model/compare', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    const comp = data.comparison;
+                    document.getElementById('orig-latency').textContent = comp.original_latency.toFixed(2);
+                    document.getElementById('comp-latency').textContent = comp.compressed_latency.toFixed(2);
+                    document.getElementById('speedup').textContent = comp.speedup.toFixed(2) + 'x';
+                    document.getElementById('memory-savings').textContent = comp.memory_savings.toFixed(1) + '%';
+                    document.getElementById('accuracy').textContent = comp.accuracy_preservation.toFixed(1) + '%';
+                    document.getElementById('comp-ratio-final').textContent = comp.compression_ratio.toFixed(1) + 'x';
+
+                    results.style.display = 'block';
+                    updateChart();
+                } else {
+                    throw new Error(data.error);
+                }
+            } catch (error) {
+                alert('Comparison error: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Compare Original vs Compressed';
+            }
+        }
+
+        function updateChart() {
+            const origLatency = parseFloat(document.getElementById('orig-latency').textContent) || 0;
+            const compLatency = parseFloat(document.getElementById('comp-latency').textContent) || 0;
+
+            performanceChart.data.datasets[0].data = [origLatency, compLatency];
+            performanceChart.update();
+        }
+
+        // Initialize
+        initChart();
+    </script>
+
+    <style>
+        .conversion-controls, .inference-controls {
+            margin-bottom: 1rem;
+        }
+
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .input-group label {
+            min-width: 80px;
+        }
+
+        .input-group input {
+            width: 80px;
+            padding: 0.25rem;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .status-message {
+            padding: 0.5rem;
+            background: rgba(54, 162, 235, 0.1);
+            border: 1px solid rgba(54, 162, 235, 0.3);
+            border-radius: 4px;
+            margin-top: 0.5rem;
+        }
+
+        .results-panel {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: rgba(0, 255, 136, 0.05);
+            border: 1px solid rgba(0, 255, 136, 0.2);
+            border-radius: 8px;
+        }
+
+        .layers-info, .output-info {
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            color: #888;
+        }
+
+        .comparison-grid {
+            display: grid;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .comparison-item {
+            display: flex;
+            gap: 1rem;
+            justify-content: space-between;
+        }
+
+        .tech-overview {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        .tech-section h4 {
+            color: #00ff88;
+            margin-bottom: 0.5rem;
+        }
+
+        .tech-section ol {
+            margin: 0;
+            padding-left: 1.5rem;
+        }
+
+        .tech-section li {
+            margin-bottom: 0.25rem;
+            color: #ccc;
+        }
+
+        #performanceChart {
+            max-width: 100%;
+            margin-bottom: 1rem;
+        }
+
+        .chart-controls {
+            text-align: center;
+        }
+    </style>
+</body>
+</html>

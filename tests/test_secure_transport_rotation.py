@@ -4,7 +4,7 @@ import importlib
 def test_secure_transport_decode_with_fallback_key(monkeypatch):
     # Configure primary + fallback keys
     monkeypatch.setenv('APP_ENV', 'development')
-    from config_loader import load_config
+    from utilities.config_loader import load_config
     cfg = load_config() or {}
     st = cfg.get('secure_transport', {})
     primary = st.get('hmac_key_hex')
@@ -30,8 +30,8 @@ def test_secure_transport_decode_with_fallback_key(monkeypatch):
     monkeypatch.setenv('CONFIG_PUBKEY_HEX', '')
     monkeypatch.setenv('CONFIG_PUBKEYS_HEX', '')
     monkeypatch.setattr('message_codec.load_config', _fake_load)
-    import message_codec
-    import aura_secure_transport
+    import communication.message_codec
+    import communication.aura_secure_transport
     importlib.reload(message_codec)
 
     codec = message_codec.MessageCodec()

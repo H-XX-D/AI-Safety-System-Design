@@ -123,6 +123,34 @@ class UIDataStore:
                 )
             ''')
             
+            # Notifications table
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS notifications (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    type TEXT NOT NULL,
+                    severity TEXT NOT NULL DEFAULT 'info',
+                    title TEXT NOT NULL,
+                    message TEXT,
+                    read INTEGER DEFAULT 0,
+                    created_at TEXT NOT NULL,
+                    metadata TEXT
+                )
+            ''')
+            
+            # Activity log table
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS activity_log (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user TEXT,
+                    action TEXT NOT NULL,
+                    resource_type TEXT,
+                    resource_id TEXT,
+                    details TEXT,
+                    ip_address TEXT,
+                    created_at TEXT NOT NULL
+                )
+            ''')
+            
             # Create indexes
             cursor.execute('CREATE INDEX IF NOT EXISTS idx_trajectories_agent ON trajectories(agent_id)')
             cursor.execute('CREATE INDEX IF NOT EXISTS idx_trajectories_proposal ON trajectories(proposal_id)')
@@ -131,6 +159,11 @@ class UIDataStore:
             cursor.execute('CREATE INDEX IF NOT EXISTS idx_workflow_stages_workflow ON workflow_stages(workflow_id)')
             cursor.execute('CREATE INDEX IF NOT EXISTS idx_training_games_executor ON training_games(executor_agent)')
             cursor.execute('CREATE INDEX IF NOT EXISTS idx_training_games_timestamp ON training_games(timestamp)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(read)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_notifications_created ON notifications(created_at)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_activity_log_user ON activity_log(user)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_activity_log_action ON activity_log(action)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_activity_log_created ON activity_log(created_at)')
             
             conn.commit()
     
@@ -526,6 +559,177 @@ class UIDataStore:
                             'success_rate': round(row['games_solved'] / games_played, 3)
                         }
                 return metrics
+    
+    # Notification methods
+    def create_notification(self, notification_type: str, title: str, message: str = '',
+                           severity: str = 'info', metadata: Optional[Dict[str, Any]] = None) -> int:
+        """Create a new notification."""
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    INSERT INTO notifications (type, severity, title, message, read, created_at, metadata)
+                    VALUES (?, ?, ?, ?, 0, ?, ?)
+                ''', (
+                    notification_type,
+                    severity,
+                    title,
+                    message,
+                    datetime.now().isoformat(),
+                    json.dumps(metadata or {})
+                ))
+                return cursor.lastrowid
+        except Exception:
+            return -1
+    
+    def get_notifications(self, limit: int = 50, unread_only: bool = False) -> List[Dict[str, Any]]:
+        """Get notifications with optional unread filter."""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            query = 'SELECT * FROM notifications WHERE 1=1'
+            params = []
+            
+            if unread_only:
+                query += ' AND read = 0'
+            
+            query += ' ORDER BY created_at DESC LIMIT ?'
+            params.append(limit)
+            
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+            notifications = []
+            for row in rows:
+                n = dict(row)
+                try:
+                    n['metadata'] = json.loads(n.get('metadata', '{}'))
+                except:
+                    n['metadata'] = {}
+                notifications.append(n)
+            return notifications
+    
+    def get_unread_count(self) -> int:
+        """Get count of unread notifications."""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT COUNT(*) as count FROM notifications WHERE read = 0')
+            row = cursor.fetchone()
+            return row['count'] if row else 0
+    
+    def mark_notification_read(self, notification_id: int) -> bool:
+        """Mark a notification as read."""
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('UPDATE notifications SET read = 1 WHERE id = ?', (notification_id,))
+                return cursor.rowcount > 0
+        except Exception:
+            return False
+    
+    def mark_all_notifications_read(self) -> int:
+        """Mark all notifications as read. Returns count of updated."""
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('UPDATE notifications SET read = 1 WHERE read = 0')
+                return cursor.rowcount
+        except Exception:
+            return 0
+    
+    def delete_notification(self, notification_id: int) -> bool:
+        """Delete a notification."""
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('DELETE FROM notifications WHERE id = ?', (notification_id,))
+                return cursor.rowcount > 0
+        except Exception:
+            return False
+    
+    def clear_all_notifications(self) -> int:
+        """Clear all notifications. Returns count of deleted."""
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('DELETE FROM notifications')
+                return cursor.rowcount
+        except Exception:
+            return 0
+    
+    # Activity log methods
+    def log_activity(self, action: str, user: str = 'system', resource_type: Optional[str] = None,
+                    resource_id: Optional[str] = None, details: Optional[Dict[str, Any]] = None,
+                    ip_address: Optional[str] = None) -> int:
+        """Log an activity."""
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    INSERT INTO activity_log (user, action, resource_type, resource_id, details, ip_address, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    user,
+                    action,
+                    resource_type,
+                    resource_id,
+                    json.dumps(details or {}),
+                    ip_address,
+                    datetime.now().isoformat()
+                ))
+                return cursor.lastrowid
+        except Exception:
+            return -1
+    
+    def get_activity_log(self, user: Optional[str] = None, action: Optional[str] = None,
+                        resource_type: Optional[str] = None, limit: int = 100,
+                        offset: int = 0) -> List[Dict[str, Any]]:
+        """Get activity log with optional filters."""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            query = 'SELECT * FROM activity_log WHERE 1=1'
+            params = []
+            
+            if user:
+                query += ' AND user = ?'
+                params.append(user)
+            if action:
+                query += ' AND action = ?'
+                params.append(action)
+            if resource_type:
+                query += ' AND resource_type = ?'
+                params.append(resource_type)
+            
+            query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?'
+            params.extend([limit, offset])
+            
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+            activities = []
+            for row in rows:
+                a = dict(row)
+                try:
+                    a['details'] = json.loads(a.get('details', '{}'))
+                except:
+                    a['details'] = {}
+                activities.append(a)
+            return activities
+    
+    def get_activity_count(self, user: Optional[str] = None, action: Optional[str] = None) -> int:
+        """Get total count of activities with optional filters."""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            query = 'SELECT COUNT(*) as count FROM activity_log WHERE 1=1'
+            params = []
+            
+            if user:
+                query += ' AND user = ?'
+                params.append(user)
+            if action:
+                query += ' AND action = ?'
+                params.append(action)
+            
+            cursor.execute(query, params)
+            row = cursor.fetchone()
+            return row['count'] if row else 0
 
 
 # Global store instance

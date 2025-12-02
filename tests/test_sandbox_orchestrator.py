@@ -1,6 +1,6 @@
-from orchestrator import Orchestrator
-from orchestrator_sandbox import SandboxEnvironmentManager
-from memory_merkle import MemoryStorage
+from core.orchestrator import Orchestrator
+from core.orchestrator_sandbox import SandboxEnvironmentManager
+from infrastructure.memory_merkle import MemoryStorage
 from typing import Any, Dict
 
 
@@ -41,7 +41,7 @@ def test_orchestrator_sandbox_testing_flow():
 
 
 def test_seventh_validator_basic():
-    from seventh_validator import SeventhValidator
+    from ai_safety.seventh_validator import SeventhValidator
     validator = SeventhValidator()
     proposal: Dict[str, Any] = {
         'motivation': 'This change will improve system reliability and transparency significantly by refactoring components.',

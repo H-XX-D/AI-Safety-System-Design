@@ -2,7 +2,7 @@ from pathlib import Path
 import dataclasses
 import pytest
 import time
-from audit_seed_chain import (
+from security.audit_seed_chain import (
     compute_hour_epoch,
     derive_seed,
     random_nonce,

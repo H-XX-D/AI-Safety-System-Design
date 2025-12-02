@@ -19,12 +19,12 @@ from datetime import datetime
 
 import pytest
 
-from ai_safety_worm_usb import (
+from security.ai_safety_worm_usb import (
     WORMUSBBuilder,
     AuditPackage,
     WORMManifest
 )
-from memory_storage import MemoryStorage, MemoryType
+from infrastructure.memory_storage import MemoryStorage, MemoryType
 
 
 @pytest.fixture

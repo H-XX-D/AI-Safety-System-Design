@@ -1,5 +1,5 @@
 import hashlib
-from worm_usb_verifier import WORMConfiguration
+from security.worm_usb_verifier import WORMConfiguration
 
 
 def test_validate_code_hash_returns_computed_crc():

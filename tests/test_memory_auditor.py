@@ -16,8 +16,8 @@ import pytest
 from datetime import datetime
 from typing import Dict, Any, List
 
-from memory_auditor import MemoryContentAuditor
-from memory_auditor_optimized import OptimizedMemoryContentAuditor, benchmark_comparison
+from infrastructure.memory_auditor import MemoryContentAuditor
+from infrastructure.memory_auditor_optimized import OptimizedMemoryContentAuditor, benchmark_comparison
 
 
 def create_memory_entry(

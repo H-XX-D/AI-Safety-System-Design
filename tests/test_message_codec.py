@@ -1,4 +1,4 @@
-from message_codec import MessageCodec
+from communication.message_codec import MessageCodec
 
 
 def test_codec_bitpacked_secure_roundtrip():

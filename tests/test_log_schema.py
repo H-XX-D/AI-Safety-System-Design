@@ -1,5 +1,5 @@
-from log_schema import validate_log_event, new_event, LogValidationError
-from logging_config import log_event, get_logger
+from utilities.log_schema import validate_log_event, new_event, LogValidationError
+from utilities.logging_config import log_event, get_logger
 
 
 def test_validate_log_event_success():

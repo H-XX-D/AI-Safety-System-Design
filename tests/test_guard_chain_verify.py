@@ -1,9 +1,9 @@
-from worm_guard import WormGuard
+from security.worm_guard import WormGuard
 
 
 def test_guard_chain_verify_pass_and_tamper(monkeypatch):
     # Ensure verification preconditions are met
-    import worm_manifest
+    import security.worm_manifest
     worm_manifest.enable_software_equivalence_mode(justification='test')
     monkeypatch.setenv('CORE_VALUES_KNOWN_HASH', 'a'*64)
     monkeypatch.setenv('CORE_ALIGNMENT_FILTER_HASH', 'b'*64)

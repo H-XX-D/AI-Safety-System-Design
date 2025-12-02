@@ -1,5 +1,5 @@
-from improvement_policy import Severity
-from control_actions import (
+from research.improvement_policy import Severity
+from utilities.control_actions import (
     plan_for_severity,
     DryRunHooks,
     CommandControlHooks,

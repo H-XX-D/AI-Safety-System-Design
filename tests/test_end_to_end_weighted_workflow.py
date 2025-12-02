@@ -1,9 +1,9 @@
 import logging
 from datetime import datetime
 
-from orchestrator import Orchestrator
-from memory_merkle import MemoryStorage
-from reputation_system import ReputationRating
+from core.orchestrator import Orchestrator
+from infrastructure.memory_merkle import MemoryStorage
+from infrastructure.reputation_system import ReputationRating
 from types import SimpleNamespace
 
 

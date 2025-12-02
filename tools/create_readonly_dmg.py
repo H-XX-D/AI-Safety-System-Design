@@ -22,7 +22,7 @@ import sys
 from typing import Optional
 
 # Local import for verification
-import worm_usb_builder as worm
+import security.worm_usb_builder as worm
 
 
 def _run(cmd: list[str]) -> subprocess.CompletedProcess:

@@ -19,7 +19,7 @@ import random
 import statistics
 from typing import List, Dict, Any
 
-from deception_detector import DeceptionDetector
+from ai_safety.deception_detector import DeceptionDetector
 
 # Keywords that the deception detector heuristics likely treat as suspicious
 SUSPICIOUS_TOKENS = [

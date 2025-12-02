@@ -1,5 +1,5 @@
 """Tests for secure bit-packed frames (6-byte) with CRC-8 and sequence."""
-from aura_bitpacked_extension import BitPackedCompressor
+from communication.aura_bitpacked_extension import BitPackedCompressor
 
 
 def test_secure_frame_roundtrip():

@@ -22,7 +22,7 @@ except Exception:  # pragma: no cover - skip when hypothesis not installed
 from typing import Optional
 import re
 
-from aura_bitpacked_extension import (
+from communication.aura_bitpacked_extension import (
     BitPackedCompressor,
     AuraWithBitPacking,
     BitPackedMessageType,

@@ -127,7 +127,7 @@ async def main():
     print("Example complete!")
     print("=" * 80)
     print()
-    print("To use from orchestrator:")
+    print("To use from core.orchestrator:")
     print("  orchestrator.broadcast_hypothesis_improvement(")
     print("      target_component='alignment_filter',")
     print("      goal='reduce false positives'")
@@ -139,6 +139,7 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
 
 
 

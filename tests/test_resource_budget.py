@@ -1,6 +1,6 @@
 import time
 import pytest
-from resource_guard import ResourceBudget, BudgetExceeded
+from infrastructure.resource_guard import ResourceBudget, BudgetExceeded
 
 
 def test_resource_budget_pass():

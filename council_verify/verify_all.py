@@ -20,8 +20,8 @@ from __future__ import annotations
 import argparse
 import sys
 
-import worm_usb_builder as worm
-import offline_bundle as off
+import security.worm_usb_builder as worm
+import infrastructure.offline_bundle as off
 
 
 def _args() -> argparse.Namespace:

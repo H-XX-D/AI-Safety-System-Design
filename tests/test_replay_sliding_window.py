@@ -1,5 +1,5 @@
-from message_codec import MessageCodec, _last_sequence_by_sender, _seen_sequences_by_sender
-from aura_bitpacked_extension import BitPackedCompressor
+from communication.message_codec import MessageCodec, _last_sequence_by_sender, _seen_sequences_by_sender
+from communication.aura_bitpacked_extension import BitPackedCompressor
 
 def test_sliding_window_replay_evicts_old_sequences():
     # Reset globals

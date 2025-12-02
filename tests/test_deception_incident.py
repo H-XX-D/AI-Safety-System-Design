@@ -1,5 +1,5 @@
-from orchestrator import Orchestrator
-from memory_merkle import MemoryStorage
+from core.orchestrator import Orchestrator
+from infrastructure.memory_merkle import MemoryStorage
 
 
 def _build_orchestrator() -> Orchestrator:

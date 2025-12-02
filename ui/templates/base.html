@@ -64,6 +64,14 @@
                 <i class="fas fa-flask"></i>
                 <span>Research</span>
             </a>
+            <a href="/cube" class="nav-item {% if request.path == '/cube' %}active{% endif %}">
+                <i class="fas fa-cube"></i>
+                <span>3D Compression</span>
+            </a>
+            <a href="/converter" class="nav-item {% if request.path == '/converter' %}active{% endif %}">
+                <i class="fas fa-exchange-alt"></i>
+                <span>Model Converter</span>
+            </a>
             <a href="/paperqa" class="nav-item {% if request.path == '/paperqa' %}active{% endif %}">
                 <i class="fas fa-book"></i>
                 <span>Evidence Search</span>

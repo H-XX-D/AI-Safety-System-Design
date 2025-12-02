@@ -3,9 +3,9 @@ try:
     from hypothesis import given, settings, strategies as st
 except Exception:  # pragma: no cover
     pytest.skip("hypothesis not installed in active interpreter", allow_module_level=True)
-from worm_guard import WormGuard
-from aura_bitpacked_extension import BitPackedCompressor
-from message_codec import MessageCodec, reset_replay_state
+from security.worm_guard import WormGuard
+from communication.aura_bitpacked_extension import BitPackedCompressor
+from communication.message_codec import MessageCodec, reset_replay_state
 
 
 @given(st.lists(st.booleans(), min_size=10, max_size=60))

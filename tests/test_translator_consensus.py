@@ -1,5 +1,5 @@
-from translator import AirGappedTranslator
-from translator_alt import AltTranslator, consensus_compare
+from communication.translator import AirGappedTranslator
+from communication.translator_alt import AltTranslator, consensus_compare
 from datetime import datetime
 
 

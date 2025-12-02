@@ -175,25 +175,103 @@ function hideBanner(){
 
 // ===== API HELPERS =====
 
+// API request configuration
+const API_CONFIG = {
+    maxRetries: 3,
+    retryDelay: 1000,
+    timeout: 30000
+};
+
 async function fetchJSON(url, options = {}) {
-    try {
-        const opts = Object.assign({}, options);
-        opts.headers = Object.assign({ 'X-Requested-With': 'XMLHttpRequest' }, (options.headers || {}));
-        const response = await fetch(url, opts);
-        if (!response.ok) {
-            if (response.status === 401) showBanner('Unauthorized: check admin token.', 'danger');
-            else if (response.status === 403) showBanner('Forbidden: insufficient role for this action.', 'warning');
-            else if (response.status === 429) showBanner('Rate limited: please slow down.', 'warning');
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    const maxRetries = options.maxRetries || API_CONFIG.maxRetries;
+    const retryDelay = options.retryDelay || API_CONFIG.retryDelay;
+    
+    let lastError;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            const opts = Object.assign({}, options);
+            opts.headers = Object.assign({ 'X-Requested-With': 'XMLHttpRequest' }, (options.headers || {}));
+            
+            // Create abort controller for timeout
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.timeout);
+            opts.signal = controller.signal;
+            
+            const response = await fetch(url, opts);
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) {
+                if (response.status === 401) showBanner('Unauthorized: check admin token.', 'danger');
+                else if (response.status === 403) showBanner('Forbidden: insufficient role for this action.', 'warning');
+                else if (response.status === 429) showBanner('Rate limited: please slow down.', 'warning');
+                
+                const error = new Error(`HTTP ${response.status}: ${response.statusText}`);
+                error.status = response.status;
+                
+                // Don't retry for client errors (4xx)
+                if (response.status >= 400 && response.status < 500) {
+                    throw error;
+                }
+                
+                throw error;
+            }
+            
+            return await response.json();
+            
+        } catch (error) {
+            lastError = error;
+            
+            // Handle timeout
+            if (error.name === 'AbortError') {
+                console.warn(`Request timeout (${url})`);
+                error.message = 'Request timed out';
+                showToast('Request timed out - please try again', 'warning');
+            }
+            
+            // Don't retry for client errors (4xx)
+            if (error.status && error.status >= 400 && error.status < 500) {
+                throw error;
+            }
+            
+            // Log retry attempt
+            if (attempt < maxRetries) {
+                console.warn(`API retry ${attempt}/${maxRetries} for ${url}: ${error.message}`);
+                await sleep(retryDelay * attempt);  // Exponential backoff
+            }
         }
-        return await response.json();
-    } catch (error) {
-        console.error(`API Error (${url}):`, error);
-        throw error;
     }
+    
+    console.error(`API Error (${url}) after ${maxRetries} attempts:`, lastError);
+    throw lastError;
 }
 
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// Global error handler for unhandled promise rejections
+window.addEventListener('unhandledrejection', (event) => {
+    console.error('Unhandled promise rejection:', event.reason);
+    
+    // Show user-friendly error for network errors
+    if (event.reason && event.reason.message) {
+        const message = event.reason.message;
+        if (message.includes('Failed to fetch') || message.includes('NetworkError')) {
+            showToast('Network error - please check your connection', 'error');
+        }
+    }
+});
+
+// Global error handler for uncaught errors
+window.addEventListener('error', (event) => {
+    console.error('Uncaught error:', event.error);
+});
+
 // ===== REAL-TIME UPDATES =====
+
+// Socket.IO connection instance
+let socket = null;
 
 function setupRealTimeUpdates() {
     // Update timestamps every minute
@@ -222,6 +300,236 @@ function setupRealTimeUpdates() {
             }
         }
     }, 5000);
+    
+    // Setup Socket.IO connection
+    setupSocketIO();
+}
+
+function setupSocketIO() {
+    // Check if Socket.IO is available
+    if (typeof io === 'undefined') {
+        console.warn('Socket.IO not available');
+        return;
+    }
+    
+    socket = io();
+    
+    // Connection events
+    socket.on('connect', () => {
+        console.log('Socket.IO connected');
+        state.isConnected = true;
+        
+        // Subscribe to relevant channels
+        socket.emit('subscribe', { channel: 'proposals' });
+        socket.emit('subscribe', { channel: 'notifications' });
+        socket.emit('subscribe', { channel: 'orka' });
+    });
+    
+    socket.on('disconnect', () => {
+        console.log('Socket.IO disconnected');
+        state.isConnected = false;
+    });
+    
+    socket.on('status', (data) => {
+        console.log('Server status:', data.message);
+    });
+    
+    // Proposal events
+    socket.on('proposals:new', (data) => {
+        console.log('New proposal:', data);
+        showToast(`New proposal submitted: ${data.title}`, 'info');
+        updateProposalBadge(1);
+        // Refresh proposals list if on proposals page
+        if (typeof loadAllProposals === 'function') {
+            loadAllProposals();
+        }
+    });
+    
+    socket.on('proposals:update', (data) => {
+        console.log('Proposal updated:', data);
+        showToast(`Proposal ${data.proposal_id} status: ${data.status}`, 'info');
+        // Refresh if viewing this proposal
+        if (typeof refreshCurrentProposal === 'function') {
+            refreshCurrentProposal(data.proposal_id);
+        }
+    });
+    
+    socket.on('proposals:phase_transition', (data) => {
+        console.log('Phase transition:', data);
+        showToast(`Proposal ${data.proposal_id}: ${data.from_phase} → ${data.to_phase}`, 'info');
+        // Update workflow visualization if visible
+        if (typeof updateWorkflowVisualization === 'function') {
+            updateWorkflowVisualization(data.proposal_id, data.to_phase);
+        }
+    });
+    
+    // ORKA events
+    socket.on('orka:challenge', (data) => {
+        console.log('ORKA challenge:', data);
+        showToast(`ORKA Challenge for ${data.proposal_id}: ${data.summary}`, 'warning');
+    });
+    
+    // VAL events
+    socket.on('val:validation', (data) => {
+        console.log('VAL validation:', data);
+        const resultIcon = data.result === 'approved' ? '✓' : data.result === 'rejected' ? '✗' : '⏳';
+        showToast(`VAL Validation ${resultIcon}: ${data.proposal_id} - ${data.result}`, 
+            data.result === 'approved' ? 'success' : data.result === 'rejected' ? 'error' : 'warning');
+    });
+    
+    // Deployment events
+    socket.on('deployment:complete', (data) => {
+        console.log('Deployment complete:', data);
+        showToast(`Deployment ${data.success ? 'successful' : 'failed'}: ${data.proposal_id}`, 
+            data.success ? 'success' : 'error');
+    });
+    
+    // Deception alerts
+    socket.on('deception:alert', (data) => {
+        console.log('Deception alert:', data);
+        showToast(`⚠️ Deception detected: Agent ${data.agent_id} - ${data.severity} severity`, 'error', 8000);
+        updateDeceptionAlertBadge(1);
+    });
+    
+    // Collusion attempts
+    socket.on('collusion:attempt', (data) => {
+        console.log('Collusion attempt:', data);
+        showToast(`🚨 Collusion detected between agents: ${data.agents.join(', ')}`, 'error', 10000);
+    });
+    
+    // Notifications
+    socket.on('notifications:new', (data) => {
+        console.log('New notification:', data);
+        addNotificationToPanel(data);
+        updateNotificationBadge(1);
+        
+        // Show toast for important notifications
+        if (data.severity === 'error' || data.severity === 'warning') {
+            showToast(`${data.title}: ${data.message}`, data.severity);
+        }
+    });
+    
+    // General updates
+    socket.on('update', (data) => {
+        // Update dashboard metrics if visible
+        updateDashboardMetrics(data);
+    });
+    
+    // Trajectory updates
+    socket.on('trajectories:update', (data) => {
+        console.log('Trajectory update:', data);
+        if (typeof loadTrajectories === 'function') {
+            loadTrajectories();
+        }
+    });
+    
+    // Workflow updates
+    socket.on('workflows:update', (data) => {
+        console.log('Workflow update:', data);
+        if (typeof loadWorkflows === 'function') {
+            loadWorkflows();
+        }
+    });
+    
+    // Training updates
+    socket.on('training:update', (data) => {
+        console.log('Training update:', data);
+        if (typeof loadTrainingMetrics === 'function') {
+            loadTrainingMetrics();
+        }
+    });
+}
+
+function updateProposalBadge(increment) {
+    const badge = document.getElementById('proposalBadge');
+    if (badge) {
+        const current = parseInt(badge.textContent) || 0;
+        badge.textContent = current + increment;
+        badge.style.display = 'inline-block';
+    }
+}
+
+function updateDeceptionAlertBadge(increment) {
+    const badge = document.getElementById('deceptionBadge');
+    if (badge) {
+        const current = parseInt(badge.textContent) || 0;
+        badge.textContent = current + increment;
+        badge.style.display = 'inline-block';
+    }
+}
+
+function updateNotificationBadge(increment) {
+    const badge = document.getElementById('notificationBadge');
+    if (badge) {
+        const current = parseInt(badge.textContent) || 0;
+        const newCount = current + increment;
+        badge.textContent = newCount;
+        badge.style.display = newCount > 0 ? 'inline-block' : 'none';
+    }
+}
+
+function addNotificationToPanel(notification) {
+    const panel = document.getElementById('notificationList');
+    if (!panel) return;
+    
+    const item = document.createElement('div');
+    item.className = `notification-item ${notification.severity} unread`;
+    item.innerHTML = `
+        <div class="notification-icon">
+            <i class="fas ${getNotificationIcon(notification.type)}"></i>
+        </div>
+        <div class="notification-content">
+            <div class="notification-title">${escapeHtml(notification.title)}</div>
+            <div class="notification-message">${escapeHtml(notification.message)}</div>
+            <div class="notification-time">${formatTimestamp(notification.timestamp)}</div>
+        </div>
+    `;
+    panel.insertBefore(item, panel.firstChild);
+}
+
+function getNotificationIcon(type) {
+    const icons = {
+        'proposal': 'fa-file-alt',
+        'deception': 'fa-exclamation-triangle',
+        'penalty': 'fa-gavel',
+        'system': 'fa-cog',
+        'deployment': 'fa-rocket',
+        'val': 'fa-shield-alt'
+    };
+    return icons[type] || 'fa-bell';
+}
+
+function updateDashboardMetrics(data) {
+    // Update active proposals count
+    const activeProposalsEl = document.getElementById('activeProposals');
+    if (activeProposalsEl && data.active_proposals !== undefined) {
+        activeProposalsEl.textContent = data.active_proposals;
+    }
+    
+    // Update detection alerts count
+    const detectionAlertsEl = document.getElementById('deceptionAlerts');
+    if (detectionAlertsEl && data.detection_alerts !== undefined) {
+        detectionAlertsEl.textContent = data.detection_alerts;
+    }
+    
+    // Update processing queue
+    const queueEl = document.getElementById('processingQueue');
+    if (queueEl && data.processing_queue !== undefined) {
+        queueEl.textContent = data.processing_queue;
+    }
+    
+    // Update WORM USB status
+    const wormStatusEl = document.getElementById('wormConnected');
+    if (wormStatusEl && data.worm_usb_connected !== undefined) {
+        wormStatusEl.className = data.worm_usb_connected ? 'status-connected' : 'status-disconnected';
+        wormStatusEl.textContent = data.worm_usb_connected ? 'Connected' : 'Disconnected';
+    }
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 // ===== CHART HELPERS =====

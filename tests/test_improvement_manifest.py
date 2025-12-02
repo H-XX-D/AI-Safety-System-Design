@@ -1,11 +1,11 @@
-from improvement_manifest import (
+from research.improvement_manifest import (
     DebateMessage,
     DebateTranscript,
     ImprovementManifest,
     store_manifest,
 )
 from pathlib import Path
-from memory_merkle import MemoryStorage, MemoryType
+from infrastructure.memory_merkle import MemoryStorage, MemoryType
 
 
 def build_sample_transcript():

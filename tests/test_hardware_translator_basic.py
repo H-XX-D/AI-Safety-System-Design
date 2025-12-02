@@ -1,4 +1,4 @@
-from hardware_translator import HardwareTranslator, AIMessage, TranslatorVerificationSystem
+from utilities.hardware_translator import HardwareTranslator, AIMessage, TranslatorVerificationSystem
 import hashlib
 from datetime import datetime
 

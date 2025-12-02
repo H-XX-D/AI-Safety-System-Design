@@ -199,7 +199,7 @@ class RewardComputer:
         return reward * self.config.reward_scale
     
     def compute_from_orchestrator_result(self, result: Dict[str, Any]) -> float:
-        """Compute reward from orchestrator result dict."""
+        """Compute reward from core.orchestrator result dict."""
         return self.compute_reward(
             proposal_outcome=result,
             deception_score=result.get('deception_score', 0.0),
@@ -421,7 +421,7 @@ class RLTrainer:
         Args:
             prompt: The input prompt/context
             response: The model's response/proposal
-            outcome: Dict with outcome details from orchestrator
+            outcome: Dict with outcome details from core.orchestrator
             
         Returns:
             The created TrainingExample

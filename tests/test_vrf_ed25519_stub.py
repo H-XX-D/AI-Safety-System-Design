@@ -1,5 +1,5 @@
 import pytest
-from vrf_ed25519 import generate_keypair, get_vrf_target, verify_vrf
+from models.vrf_ed25519 import generate_keypair, get_vrf_target, verify_vrf
 
 
 def test_vrf_target_and_verify_roundtrip():

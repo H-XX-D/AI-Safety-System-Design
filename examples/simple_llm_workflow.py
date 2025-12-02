@@ -18,8 +18,8 @@ import argparse
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from llm_adapter_factory import create_configured_adapter
-from research_system import SystemSpecialization
+from research.llm_adapter_factory import create_configured_adapter
+from research.research_system import SystemSpecialization
 
 
 def main():

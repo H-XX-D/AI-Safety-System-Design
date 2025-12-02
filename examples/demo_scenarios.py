@@ -27,12 +27,12 @@ from typing import Dict, Any, List, Tuple
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from orchestrator import Orchestrator
-from memory_merkle import MemoryStorage, MemoryType
-from research_system import ResearchSystem, SystemSpecialization, TemplateLLMAdapter
-from interpretability_monitor_enhanced import EnhancedInterpretabilityMonitor
-from memory_auditor_optimized import OptimizedMemoryContentAuditor
-from logging_config import get_logger
+from core.orchestrator import Orchestrator
+from infrastructure.memory_merkle import MemoryStorage, MemoryType
+from research.research_system import ResearchSystem, SystemSpecialization, TemplateLLMAdapter
+from ai_safety.interpretability_monitor_enhanced import EnhancedInterpretabilityMonitor
+from infrastructure.memory_auditor_optimized import OptimizedMemoryContentAuditor
+from utilities.logging_config import get_logger
 
 logger = get_logger(__name__)
 

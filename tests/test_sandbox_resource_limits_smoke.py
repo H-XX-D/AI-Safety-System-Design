@@ -4,7 +4,7 @@ import os
 def test_sandbox_limits_follow_config_dev(monkeypatch):
     # Development defaults from config/development.yaml
     monkeypatch.setenv('APP_ENV', 'development')
-    from orchestrator_sandbox import SandboxEnvironmentManager
+    from core.orchestrator_sandbox import SandboxEnvironmentManager
     s = SandboxEnvironmentManager()
     # Values from development.yaml
     assert s.exec_timeout_sec == 10
@@ -16,7 +16,7 @@ def test_sandbox_limits_follow_config_dev(monkeypatch):
 def test_sandbox_limits_follow_config_prod(monkeypatch):
     # Production values from config/production.yaml
     monkeypatch.setenv('APP_ENV', 'production')
-    from orchestrator_sandbox import SandboxEnvironmentManager
+    from core.orchestrator_sandbox import SandboxEnvironmentManager
     s = SandboxEnvironmentManager()
     assert s.exec_timeout_sec == 3
     assert s.cpu_time_sec == 1

@@ -1,5 +1,5 @@
 import json
-from memory_merkle import MemoryStorage, MemoryType
+from infrastructure.memory_merkle import MemoryStorage, MemoryType
 
 def test_query_normalizes_legacy_prefixed_types():
     storage = MemoryStorage(system_id=99, private_key="key99")

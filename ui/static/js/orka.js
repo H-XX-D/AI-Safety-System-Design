@@ -689,7 +689,37 @@ async function writeToUSB() {
     }
 
     try {
-        showToast('Writing to USB...', 'info');
+        showToast('Detecting USB drives...', 'info');
+        
+        // First detect available USB drives
+        const detectResponse = await fetch('/api/usb/detect');
+        const detectResult = await detectResponse.json();
+        
+        if (!detectResponse.ok) {
+            showToast(`Error detecting USB: ${detectResult.error}`, 'error');
+            return;
+        }
+        
+        const drives = detectResult.drives || [];
+        const writableDrives = drives.filter(d => d.writable);
+        
+        if (writableDrives.length === 0) {
+            showToast('No writable USB drives detected. Please insert a USB drive.', 'warning');
+            return;
+        }
+        
+        // Use first writable drive or let user select
+        let selectedDrive = writableDrives[0];
+        if (writableDrives.length > 1) {
+            const driveList = writableDrives.map((d, i) => `${i + 1}. ${d.name} (${formatBytes(d.free_bytes)} free)`).join('\n');
+            const choice = prompt(`Multiple USB drives detected:\n${driveList}\n\nEnter number to select (default: 1):`);
+            const idx = parseInt(choice) - 1;
+            if (idx >= 0 && idx < writableDrives.length) {
+                selectedDrive = writableDrives[idx];
+            }
+        }
+        
+        showToast(`Writing ${selectedProposals.length} proposals to ${selectedDrive.name}...`, 'info');
 
         const response = await fetch('/api/usb/write', {
             method: 'POST',
@@ -697,16 +727,19 @@ async function writeToUSB() {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                proposals: selectedProposals
+                proposals: selectedProposals,
+                usb_path: selectedDrive.path
             })
         });
 
         const result = await response.json();
 
         if (response.ok) {
-            showToast(`Successfully wrote to USB. Hash: ${result.hash.substring(0, 16)}...`, 'success', 5000);
+            showToast(`Successfully wrote ${result.proposals_written} proposals to USB!\nTransfer ID: ${result.transfer_id}\nHash: ${result.master_hash.substring(0, 16)}...`, 'success', 8000);
             // Refresh transfer log
             loadTransferLog();
+            // Update USB panel
+            updateUSBPanel(result);
         } else {
             showToast(`Error: ${result.error}`, 'error');
         }
@@ -716,15 +749,48 @@ async function writeToUSB() {
     }
 }
 
+function updateUSBPanel(transferResult) {
+    // Update the USB transfer panel with latest transfer info
+    const logContainer = document.getElementById('transferLog');
+    if (logContainer) {
+        const entry = document.createElement('div');
+        entry.className = 'transfer-entry';
+        entry.innerHTML = `
+            <div class="transfer-id">${_h(transferResult.transfer_id)}</div>
+            <div class="transfer-meta">
+                <span>${transferResult.proposals_written} proposals</span>
+                <span>${new Date(transferResult.timestamp).toLocaleString()}</span>
+            </div>
+            <div class="transfer-hash" title="${_h(transferResult.master_hash)}">
+                Hash: ${_h(transferResult.master_hash.substring(0, 16))}...
+            </div>
+        `;
+        logContainer.insertBefore(entry, logContainer.firstChild);
+    }
+}
+
+function formatBytes(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
 async function verifyTransfer() {
     showToast('Verifying last transfer...', 'info');
 
     try {
         const result = await fetchJSON('/api/usb/verify');
         if (result.verified) {
-            showToast('Transfer verified successfully!', 'success');
+            showToast(`Transfer verified successfully!\n${result.proposals_verified} proposals validated.`, 'success', 5000);
         } else {
-            showToast('Transfer verification failed', 'error');
+            const errorMsg = result.error || 'Hash mismatch detected';
+            showToast(`Transfer verification failed: ${errorMsg}`, 'error', 5000);
+            // Show detailed results if available
+            if (result.results) {
+                console.log('Verification results:', result.results);
+            }
         }
     } catch (error) {
         console.error('Verification error:', error);
@@ -732,9 +798,38 @@ async function verifyTransfer() {
     }
 }
 
+async function detectUSBDrives() {
+    try {
+        const result = await fetchJSON('/api/usb/detect');
+        const drives = result.drives || [];
+        
+        // Update USB status panel
+        const statusEl = document.getElementById('usbStatus');
+        if (statusEl) {
+            if (drives.length === 0) {
+                statusEl.innerHTML = '<span class="status-warning">No USB drives detected</span>';
+            } else {
+                const driveInfo = drives.map(d => 
+                    `<div class="usb-drive ${d.writable ? 'writable' : 'readonly'}">
+                        <i class="fas fa-usb"></i> ${_h(d.name)} 
+                        <span class="drive-space">${formatBytes(d.free_bytes)} free</span>
+                        ${d.writable ? '<span class="badge-success">Writable</span>' : '<span class="badge-warning">Read-only</span>'}
+                    </div>`
+                ).join('');
+                statusEl.innerHTML = driveInfo;
+            }
+        }
+        
+        return drives;
+    } catch (error) {
+        console.error('USB detection error:', error);
+        return [];
+    }
+}
+
 async function loadTransferLog() {
-    // Fetch and update transfer log
-    // Implementation depends on backend API
+    // Refresh USB detection status
+    await detectUSBDrives();
 }
 
 // ===== EXPORT FUNCTIONS =====

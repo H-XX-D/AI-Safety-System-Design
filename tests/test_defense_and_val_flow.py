@@ -1,10 +1,10 @@
 import os
 from datetime import datetime
 
-from orchestrator import Orchestrator
-from orchestrator_sandbox import SandboxEnvironmentManager
-from memory_merkle import MemoryStorage
-from human_review import sign_human_decision
+from core.orchestrator import Orchestrator
+from core.orchestrator_sandbox import SandboxEnvironmentManager
+from infrastructure.memory_merkle import MemoryStorage
+from research.human_review import sign_human_decision
 
 
 def _mk_orch():

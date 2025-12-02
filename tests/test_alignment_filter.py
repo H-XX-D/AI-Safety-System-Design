@@ -5,7 +5,7 @@ import importlib
 def make_filter():
     # Ensure correct core values hash for instantiation
     cv = importlib.import_module('core_values')
-    import worm_manifest
+    import security.worm_manifest
     worm_manifest.enable_software_equivalence_mode(justification='test')
     os.environ['CORE_VALUES_KNOWN_HASH'] = cv.CoreValues.compute_hash()
     core = importlib.import_module('ai_safety_system_core')
