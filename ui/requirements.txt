@@ -3,9 +3,10 @@
 
 # Web Framework
 Flask==3.0.0
-flask-socketio==5.3.5
+Flask-CORS==4.0.0
 
 # WebSocket Support
+flask-socketio==5.3.5
 python-socketio==5.10.0
 python-engineio==4.8.0
 
@@ -22,5 +23,13 @@ python-dateutil==2.8.2
 python-dotenv==1.0.0
 
 # Research API integrations
-arxiv>=2.1.0  # For arXiv paper search
-requests>=2.31.0  # For API calls (already in main requirements, but listed here for clarity)
+requests==2.31.0
+
+# Data handling
+pandas==2.0.3  # Compatible with Python 3.13, avoids build errors
+numpy==1.24.3  # Stable with pandas 2.0.3
+
+# Testing
+pytest==7.4.3
+
+# Production

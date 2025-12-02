@@ -575,3 +575,5 @@ def generate_improvement_proposals_sync(
     return asyncio.run(generate_improvement_proposals(target_component, num_proposals))
 
 
+
+

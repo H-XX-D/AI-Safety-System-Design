@@ -34,5 +34,9 @@ paper-qa>=5.0.0  # For documentation search and evidence gathering
 psutil==5.9.8
 docker==7.0.0
 
+# GPU Acceleration (optional)
+jax[cpu]>=0.8.1  # JAX for GPU acceleration (Metal backend on Apple Silicon)
+jax-metal>=0.1.1  # Metal backend plugin for Apple Silicon GPUs
+
 # Security & System Control (optional)
 # Optional repeat for emphasis; core install covered above

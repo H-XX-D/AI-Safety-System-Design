@@ -201,3 +201,5 @@ If filters are too restrictive:
 The system is designed to be **lenient by default** to encourage innovation while maintaining safety. Filters can be tightened for production, but the default encourages experimentation and creative improvements.
 
 
+
+
