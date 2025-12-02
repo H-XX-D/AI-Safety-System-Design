@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="600" viewBox="0 0 1100 600" role="img" aria-labelledby="title desc">
+  <title id="title">Figure 13: Collusion-Adjusted Multi-Agent Payoffs</title>
+  <desc id="desc">Simplified payoff matrix for two representative agents comparing Inspect vs Approve under collusion risk.</desc>
+  <style><![CDATA[
+    .title { font:700 20px sans-serif; }
+    .hdr { font:600 16px sans-serif; }
+    .cell { fill:#fff; stroke:#222; stroke-width:2; }
+    .note { font:14px sans-serif; }
+  ]]></style>
+
+  <text class="title" x="550" y="50" text-anchor="middle">Inspect (I) vs Approve (A) Payoffs</text>
+
+  <!-- Headers -->
+  <rect class="cell" x="180" y="80" width="200" height="60"/>
+  <text class="hdr" x="280" y="115" text-anchor="middle">Agent A</text>
+  <rect class="cell" x="380" y="80" width="260" height="60"/>
+  <text class="hdr" x="510" y="115" text-anchor="middle">Agent B: Inspect</text>
+  <rect class="cell" x="640" y="80" width="260" height="60"/>
+  <text class="hdr" x="770" y="115" text-anchor="middle">Agent B: Approve</text>
+
+  <!-- Row Inspect -->
+  <rect class="cell" x="180" y="140" width="200" height="180"/>
+  <text class="hdr" x="280" y="170" text-anchor="middle">Inspect (I)</text>
+  <rect class="cell" x="380" y="140" width="260" height="180"/>
+  <text class="note" x="510" y="190" text-anchor="middle">Detect Bonus_A + Detect Bonus_B</text>
+  <text class="note" x="510" y="210" text-anchor="middle">Approval Weight_A + Transparency</text>
+  <rect class="cell" x="640" y="140" width="260" height="180"/>
+  <text class="note" x="770" y="210" text-anchor="middle">Detect Bonus_A, Negligence Penalty_B</text>
+
+  <!-- Row Approve -->
+  <rect class="cell" x="180" y="320" width="200" height="180"/>
+  <text class="hdr" x="280" y="350" text-anchor="middle">Approve (A)</text>
+  <rect class="cell" x="380" y="320" width="260" height="180"/>
+  <text class="note" x="510" y="380" text-anchor="middle">Negligence Penalty_A, Detect Bonus_B</text>
+  <rect class="cell" x="640" y="320" width="260" height="180"/>
+  <text class="note" x="770" y="360" text-anchor="middle">Approval Weights - Collusion Risk</text>
+  <text class="note" x="770" y="380" text-anchor="middle">Future Permanent Multiplier ↓</text>
+</svg>

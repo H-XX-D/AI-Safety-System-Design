@@ -1,0 +1,23 @@
+{
+  "learned_pattern": {
+    "key": "learned_pattern",
+    "value": {
+      "method": "sparse attention",
+      "improvement": "30%"
+    },
+    "timestamp": "2025-12-01T14:52:32.407620",
+    "metadata": {}
+  },
+  "hypothesis_contradiction:hyp_123": {
+    "key": "hypothesis_contradiction:hyp_123",
+    "value": {
+      "hypothesis": "Use method X",
+      "evidence": "Research shows method X fails under load",
+      "noted_at": "2025-12-01T14:52:32.407717"
+    },
+    "timestamp": "2025-12-01T14:52:32.407719",
+    "metadata": {
+      "type": "hypothesis_contradiction"
+    }
+  }
+}

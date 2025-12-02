@@ -1,0 +1,89 @@
+worm:
+  max_penalty: 0.90
+  detection_bonus: 0.02
+  penalty_schedule:
+    initial: 1.0
+    decay: 0.92
+    floor: 0.50
+  # Development defaults: do not halt, do not fail-close writes (tests/dev friendly)
+  halt_on_failure: false
+  fail_closed_writes: false
+
+rewards:
+  human_understanding: 10.0
+  approval_outcome: 5.0
+  deception_detected: -40.0
+
+system:
+  num_research_ais: 3
+  min_peer_approvals: 2
+  detection_threshold: 0.6
+
+validation:
+  auto_approve_threshold: 0.15
+  auto_run_deferred: true
+  detector_retrain_interval_hours: 6
+  software_trust_mode:
+    enabled: true
+    justification: development_soft_mode
+  stages:
+    - name: quick_checks
+      tests: [alignment, security]
+      max_risk: 0.25
+      allowed_scopes: [minor]
+    - name: standard_battery
+      tests: [alignment, performance, security, edge_cases]
+      min_risk: 0.15
+      max_risk: 0.6
+      allowed_scopes: [minor, moderate]
+    - name: full_sandbox
+      tests: [alignment, performance, security, edge_cases, execution]
+      min_risk: 0.5
+      defer: true
+
+sandbox:
+  exec_timeout_sec: 10
+  cpu_time_sec: 3
+  cpus: 1.5
+  cpu_shares: 256
+  max_memory_mb: 256
+  pids_limit: 192
+  disk_quota_mb: 512
+  use_virtual_manager: true
+  deny_network: false
+  policy_allowlists:
+    default: [math, statistics, json, datetime, decimal, fractions]
+    demo_component: [math, json, datetime]
+
+control_hooks:
+  type: system
+  dry_run: true
+  process_timeout_sec: 5
+  network_interfaces: []
+  researcher_systems: ["research_ai_1", "research_ai_2", "research_ai_3"]
+  power_nodes: []
+  snapshot_root: ./forensics_snapshots
+  snapshot_seconds: 2
+  use_docker_client: true
+
+secure_transport:
+  enabled: true
+  sender_id: 6        # ORKA
+  recipient_id: 7     # VAL / Human governance
+  session_id: 123456789
+  # Example HMAC key (hex). Replace with a secret in real staging.
+  hmac_key_hex: "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"
+  # Optional Ed25519 keys (hex); leave empty to skip signatures in dev
+  ed25519_private_hex: ""
+  ed25519_public_hex: ""
+
+val:
+  required_signers: 1
+  signers:
+    "101": "Safety Officer A"
+    "202": "Safety Officer B"
+    "303": "Auditor C"
+
+ui:
+  csp_allow_cdns: true
+  # socketio_cors_origins: ["https://your-host"]  # optional override

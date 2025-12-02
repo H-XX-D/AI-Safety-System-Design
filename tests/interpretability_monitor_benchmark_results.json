@@ -1,0 +1,225 @@
+{
+  "timestamp": "2025-11-11T00:26:53.714047",
+  "benchmarks": {
+    "update_scaling": {
+      "scaling_results": [
+        {
+          "num_samples": 10,
+          "num_features": 10,
+          "num_systems": 1,
+          "total_time_seconds": 6.0999998822808266e-05,
+          "time_per_sample_ms": 0.006099999882280827,
+          "throughput_samples_per_sec": 163934.42939315172
+        },
+        {
+          "num_samples": 10,
+          "num_features": 50,
+          "num_systems": 1,
+          "total_time_seconds": 0.0002669580280780792,
+          "time_per_sample_ms": 0.026695802807807922,
+          "throughput_samples_per_sec": 37459.07201964807
+        },
+        {
+          "num_samples": 10,
+          "num_features": 100,
+          "num_systems": 1,
+          "total_time_seconds": 0.0005609579966403544,
+          "time_per_sample_ms": 0.05609579966403544,
+          "throughput_samples_per_sec": 17826.646664975302
+        },
+        {
+          "num_samples": 100,
+          "num_features": 10,
+          "num_systems": 1,
+          "total_time_seconds": 0.0006709590088576078,
+          "time_per_sample_ms": 0.006709590088576078,
+          "throughput_samples_per_sec": 149040.40139540355
+        },
+        {
+          "num_samples": 100,
+          "num_features": 50,
+          "num_systems": 1,
+          "total_time_seconds": 0.0027817499940283597,
+          "time_per_sample_ms": 0.027817499940283597,
+          "throughput_samples_per_sec": 35948.593588450465
+        },
+        {
+          "num_samples": 100,
+          "num_features": 100,
+          "num_systems": 1,
+          "total_time_seconds": 0.005330541986040771,
+          "time_per_sample_ms": 0.05330541986040771,
+          "throughput_samples_per_sec": 18759.818469092374
+        },
+        {
+          "num_samples": 1000,
+          "num_features": 10,
+          "num_systems": 1,
+          "total_time_seconds": 0.006272499973420054,
+          "time_per_sample_ms": 0.006272499973420054,
+          "throughput_samples_per_sec": 159426.0668373912
+        },
+        {
+          "num_samples": 1000,
+          "num_features": 50,
+          "num_systems": 1,
+          "total_time_seconds": 0.02749379101442173,
+          "time_per_sample_ms": 0.02749379101442173,
+          "throughput_samples_per_sec": 36371.84844663491
+        },
+        {
+          "num_samples": 1000,
+          "num_features": 100,
+          "num_systems": 1,
+          "total_time_seconds": 0.05459545803023502,
+          "time_per_sample_ms": 0.05459545803023502,
+          "throughput_samples_per_sec": 18316.54199963299
+        }
+      ]
+    },
+    "drift_detection": {
+      "results": [
+        {
+          "baseline_samples": 100,
+          "num_features": 10,
+          "total_time_seconds": 0.13228329201228917,
+          "time_per_check_ms": 1.3228329201228917,
+          "throughput_checks_per_sec": 755.9533670413189,
+          "classification": "MEDIUM",
+          "drift_score": 1.5149581386849067
+        },
+        {
+          "baseline_samples": 100,
+          "num_features": 50,
+          "total_time_seconds": 0.3541022500139661,
+          "time_per_check_ms": 3.541022500139661,
+          "throughput_checks_per_sec": 282.4043055249039,
+          "classification": "LOW",
+          "drift_score": 0.9302554957072907
+        },
+        {
+          "baseline_samples": 1000,
+          "num_features": 10,
+          "total_time_seconds": 0.12953595898579806,
+          "time_per_check_ms": 1.2953595898579806,
+          "throughput_checks_per_sec": 771.9864104373033,
+          "classification": "LOW",
+          "drift_score": 0.8792921456437421
+        },
+        {
+          "baseline_samples": 1000,
+          "num_features": 50,
+          "total_time_seconds": 0.3554789579939097,
+          "time_per_check_ms": 3.554789579939097,
+          "throughput_checks_per_sec": 281.31060292382557,
+          "classification": "LOW",
+          "drift_score": 1.0658178453540337
+        }
+      ]
+    },
+    "cusum_detection": {
+      "results": [
+        {
+          "baseline_samples": 50,
+          "drift_samples": 50,
+          "num_features": 10,
+          "baseline_time_seconds": 0.00031191599555313587,
+          "drift_detection_time_seconds": 0.052313415973912925,
+          "total_time_seconds": 0.05262533196946606,
+          "detected_at_sample": 10,
+          "detection_latency": 10
+        },
+        {
+          "baseline_samples": 100,
+          "drift_samples": 100,
+          "num_features": 10,
+          "baseline_time_seconds": 0.0006352919735945761,
+          "drift_detection_time_seconds": 0.13028899999335408,
+          "total_time_seconds": 0.13092429196694866,
+          "detected_at_sample": 9,
+          "detection_latency": 9
+        },
+        {
+          "baseline_samples": 50,
+          "drift_samples": 50,
+          "num_features": 50,
+          "baseline_time_seconds": 0.001359041954856366,
+          "drift_detection_time_seconds": 0.14776458300184458,
+          "total_time_seconds": 0.14912362495670095,
+          "detected_at_sample": 9,
+          "detection_latency": 9
+        }
+      ]
+    },
+    "distribution_shift": {
+      "results": [
+        {
+          "historical_samples": 50,
+          "recent_samples": 20,
+          "num_features": 10,
+          "baseline_time_seconds": 0.0003064590273424983,
+          "detection_time_seconds": 0.0014908749726600945,
+          "total_time_seconds": 0.0017973340000025928,
+          "classification": "HIGH",
+          "max_ks_statistic": 1.0
+        },
+        {
+          "historical_samples": 100,
+          "recent_samples": 20,
+          "num_features": 10,
+          "baseline_time_seconds": 0.0006285000126808882,
+          "detection_time_seconds": 0.0038351250113919377,
+          "total_time_seconds": 0.004463625024072826,
+          "classification": "HIGH",
+          "max_ks_statistic": 1.0
+        },
+        {
+          "historical_samples": 50,
+          "recent_samples": 20,
+          "num_features": 50,
+          "baseline_time_seconds": 0.0013228339958004653,
+          "detection_time_seconds": 0.007368583988863975,
+          "total_time_seconds": 0.00869141798466444,
+          "classification": "HIGH",
+          "max_ks_statistic": 1.0
+        }
+      ]
+    },
+    "multi_system": {
+      "multi_system_results": [
+        {
+          "num_systems": 1,
+          "num_samples": 100,
+          "num_features": 10,
+          "total_time_seconds": 0.0006134589784778655,
+          "time_per_sample_ms": 0.006134589784778655,
+          "throughput_samples_per_sec": 163010.08463210252
+        },
+        {
+          "num_systems": 5,
+          "num_samples": 100,
+          "num_features": 10,
+          "total_time_seconds": 0.0031504579819738865,
+          "time_per_sample_ms": 0.031504579819738865,
+          "throughput_samples_per_sec": 31741.416826434248
+        },
+        {
+          "num_systems": 10,
+          "num_samples": 100,
+          "num_features": 10,
+          "total_time_seconds": 0.00651133299106732,
+          "time_per_sample_ms": 0.0651133299106732,
+          "throughput_samples_per_sec": 15357.838423743135
+        },
+        {
+          "num_systems": 20,
+          "num_samples": 100,
+          "num_features": 10,
+          "total_time_seconds": 0.012772875023074448,
+          "time_per_sample_ms": 0.12772875023074448,
+          "throughput_samples_per_sec": 7829.09093053428
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,558 @@
+================================================================================
+                   AI SAFETY SYSTEM - ARCHITECTURE DIAGRAM
+================================================================================
+
+SYSTEM OVERVIEW: 6 Systems (5 Research + 1 Orchestrator)
+TOTAL FILES: 184 Python files, 39,295 lines of code
+ARCHITECTURE: Layered with hardware security anchor
+
+================================================================================
+                            FULL SYSTEM STACK
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ LAYER 1: HUMAN INTERFACE                                                    │
+│━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━│
+│                                                                              │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐                     │
+│  │ Web Dashboard│  │ CLI Tools    │  │ USB Audit    │                     │
+│  │ (telemetry)  │  │ (debug)      │  │ (review)     │                     │
+│  │ dashboard.py │  │ tools/*.py   │  │ WORM media   │                     │
+│  └──────────────┘  └──────────────┘  └──────────────┘                     │
+│                                                                              │
+└──────────────────────────────────┬──────────────────────────────────────────┘
+                                   │ (air-gapped USB interface)
+                                   ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ LAYER 2: HARDWARE SECURITY (WORM USB - Write-Once, Read-Many)               │
+│━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━│
+│                                                                              │
+│  Immutable Components (burned to read-only hardware):                       │
+│                                                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐  │
+│  │ worm_manifest.py (362 lines) - Trust Anchor                         │  │
+│  │ • Cryptographically signed manifest                                 │  │
+│  │ • Contains hashes of all immutable code                             │  │
+│  │ • Permanent penalty tracking                                        │  │
+│  │ • 10 files depend on this                                           │  │
+│  └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐  │
+│  │ core_values.py (155 lines) - Alignment Rules                        │  │
+│  │ • Immutable core values (never modified)                            │  │
+│  │ • Hash-verified against WORM manifest                               │  │
+│  │ • 7 files depend on this                                            │  │
+│  └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐  │
+│  │ translator.py (667 lines) - AI-to-Human Protocol                    │  │
+│  │ • Translates internal AI messages to human language                 │  │
+│  │ • Air-gapped from research systems                                  │  │
+│  │ • Multiple implementations for verification                         │  │
+│  │ • 6 files depend on this                                            │  │
+│  └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐  │
+│  │ reward_engine.py (138 lines) - Incentive Rules                      │  │
+│  │ • Pure reward calculation function                                  │  │
+│  │ • Cannot be modified by AI                                          │  │
+│  └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                              │
+└──────────────────────────────────┬──────────────────────────────────────────┘
+                                   │ (verified boot chain)
+                                   ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ LAYER 3: ORCHESTRATOR (System 6)                                            │
+│━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━│
+│                                                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐  │
+│  │ orchestrator.py (3,852 lines) - LARGEST FILE                        │  │
+│  │                                                                      │  │
+│  │ Responsibilities:                                                    │  │
+│  │  • Coordinate 5 research systems                                    │  │
+│  │  • Monitor for collusion patterns                                   │  │
+│  │  • Enforce all safety checks                                        │  │
+│  │  • Manage sandboxed testing environments                            │  │
+│  │  • Log all inter-system communications                              │  │
+│  │  • Apply reputation weighting                                       │  │
+│  │  • Trigger emergency controls if needed                             │  │
+│  │                                                                      │  │
+│  │ 18 files depend on this (most central module)                       │  │
+│  │                                                                      │  │
+│  │ Key Imports (22 total):                                             │  │
+│  │  ├─ Safety: bulletproof_alignment_filter, deception_detector,       │  │
+│  │  │          core_values, seventh_validator                          │  │
+│  │  ├─ Storage: memory_merkle, memory_auditor                          │  │
+│  │  ├─ Security: worm_manifest, worm_usb_verifier, worm_guard          │  │
+│  │  ├─ Economics: reputation_system                                    │  │
+│  │  ├─ Validation: validation_pipeline, interpretability_monitor       │  │
+│  │  └─ Communication: message_codec, debate_engine, research_system    │  │
+│  └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐  │
+│  │ orchestrator_sandbox.py (717 lines)                                 │  │
+│  │ • Deterministic test environment                                    │  │
+│  │ • Fast fake environment for demos                                   │  │
+│  │ • 6 files depend on this                                            │  │
+│  └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                              │
+└────────┬─────────┬─────────┬─────────┬─────────┬──────────────────────────┘
+         │         │         │         │         │
+         ▼         ▼         ▼         ▼         ▼
+┌────────────────────────────────────────────────────────────────────────────┐
+│ LAYER 4: RESEARCH SYSTEMS (Systems 1-5)                                     │
+│━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━│
+│                                                                             │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  │
+│  │System 1  │  │System 2  │  │System 3  │  │System 4  │  │System 5  │  │
+│  │SCIENTIFIC│  │ENGINEERNG│  │THEORETCAL│  │HISTORICAL│  │NOVEL     │  │
+│  │          │  │          │  │          │  │          │  │          │  │
+│  │Empirical │  │Practical │  │First     │  │Proven    │  │Creative  │  │
+│  │Rigorous  │  │Solutions │  │Principles│  │Methods   │  │Innovative│  │
+│  └──────────┘  └──────────┘  └──────────┘  └──────────┘  └──────────┘  │
+│       │             │             │             │             │           │
+│       └─────────────┴─────────────┴─────────────┴─────────────┘           │
+│                                   │                                        │
+│  ┌────────────────────────────────┴───────────────────────────────────┐  │
+│  │ research_system.py (1,023 lines)                                    │  │
+│  │                                                                      │  │
+│  │ • Independent research with internet access                         │  │
+│  │ • Persistent memory (Merkle-tree backed)                            │  │
+│  │ • Peer consensus participation                                      │  │
+│  │ • LLM integration (Gemini, OpenAI, Claude)                          │  │
+│  │ • 12 files depend on this                                           │  │
+│  └──────────────────────────────────────────────────────────────────────┘ │
+│                                                                             │
+└────────────────────────────────┬────────────────────────────────────────────┘
+                                 │
+        ┌────────────────────────┼────────────────────────┐
+        │                        │                        │
+        ▼                        ▼                        ▼
+┌──────────────┐      ┌──────────────────┐      ┌──────────────┐
+│ llm_adapters │      │ debate_engine.py │      │ seventh_     │
+│ .py (713)    │      │ (352 lines)      │      │ validator.py │
+│              │      │                  │      │ (88 lines)   │
+│ • Gemini     │      │ • Structured     │      │              │
+│ • OpenAI     │      │   debate         │      │ • Structural │
+│ • Claude     │      │ • Claim tracking │      │   checks     │
+│              │      │ • Deterministic  │      │              │
+│ 4 dependents │      │ 4 dependents     │      │ 3 dependents │
+└──────────────┘      └──────────────────┘      └──────────────┘
+        │                        │                        │
+        └────────────────────────┴────────────────────────┘
+                                 │
+                                 ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ LAYER 5: SAFETY FILTER (Immutable - Cannot Be Bypassed)                     │
+│━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━│
+│                                                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐  │
+│  │ bulletproof_alignment_filter.py (827 lines)                         │  │
+│  │                                                                      │  │
+│  │ FUNDAMENTAL safety layer - CANNOT be modified via self-improvement  │  │
+│  │                                                                      │  │
+│  │  ┌───────────────────────────────────────────────────────────────┐ │  │
+│  │  │ Step 1: Core Values Verification                              │ │  │
+│  │  │ • Load core_values.py                                         │ │  │
+│  │  │ • Verify hash against worm_manifest.py                        │ │  │
+│  │  │ • Check: preserve_life, help_humans, protect_planet, truth   │ │  │
+│  │  │ • FAIL CLOSED: If verification fails, BLOCK OUTPUT            │ │  │
+│  │  └───────────────────────────────────────────────────────────────┘ │  │
+│  │                                                                      │  │
+│  │  ┌───────────────────────────────────────────────────────────────┐ │  │
+│  │  │ Step 2: Automated Deception Detection                         │ │  │
+│  │  │ • Pattern analysis (linguistic markers)                       │ │  │
+│  │  │ • Consistency checking                                        │ │  │
+│  │  │ • Multi-method confidence scoring                            │ │  │
+│  │  └───────────────────────────────────────────────────────────────┘ │  │
+│  │                                                                      │  │
+│  │  ┌───────────────────────────────────────────────────────────────┐ │  │
+│  │  │ Step 3: ML Semantic Classification                            │ │  │
+│  │  │ • semantic_deception_classifier.py                            │ │  │
+│  │  │ • Bag-of-ngrams Naive Bayes model                            │ │  │
+│  │  │ • Probability score [0,1]                                     │ │  │
+│  │  └───────────────────────────────────────────────────────────────┘ │  │
+│  │                                                                      │  │
+│  │ Output: PASS (approved) or FAIL (blocked)                           │  │
+│  │ 3 files depend on this                                              │  │
+│  └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                              │
+└──────────────────────────────────┬──────────────────────────────────────────┘
+                                   │
+                                   ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ LAYER 6: TAMPER-EVIDENT STORAGE (Merkle Tree)                               │
+│━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━│
+│                                                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐  │
+│  │ memory_merkle.py (742 lines) - MOST CRITICAL: 24 DEPENDENTS        │  │
+│  │                                                                      │  │
+│  │  ┌───────────────────────────────────────────────────────────────┐ │  │
+│  │  │ Merkle Tree Structure                                         │ │  │
+│  │  │ • Each memory entry is cryptographically hashed               │ │  │
+│  │  │ • Hashes combined into tree structure                         │ │  │
+│  │  │ • Root hash provides tamper-evidence                          │ │  │
+│  │  │ • Any modification changes root hash                          │ │  │
+│  │  └───────────────────────────────────────────────────────────────┘ │  │
+│  │                                                                      │  │
+│  │  ┌───────────────────────────────────────────────────────────────┐ │  │
+│  │  │ Attestation Layer (signatures)                                │ │  │
+│  │  │ • attestation.py (40 lines, 4 dependents)                     │ │  │
+│  │  │ • HMAC-SHA256 signatures (will upgrade to Ed25519 + PQC)     │ │  │
+│  │  │ • Verifies integrity of manifests                            │ │  │
+│  │  └───────────────────────────────────────────────────────────────┘ │  │
+│  │                                                                      │  │
+│  │  ┌───────────────────────────────────────────────────────────────┐ │  │
+│  │  │ Memory Types                                                  │ │  │
+│  │  │ • EPISODIC: Short-term conversation history                  │ │  │
+│  │  │ • SEMANTIC: Learned knowledge and facts                      │ │  │
+│  │  │ • PROCEDURAL: Skills and how-to knowledge                    │ │  │
+│  │  │ • METACOGNITIVE: Self-reflection and improvement proposals   │ │  │
+│  │  │ • DECEPTION_INCIDENT: Permanent penalty record               │ │  │
+│  │  └───────────────────────────────────────────────────────────────┘ │  │
+│  │                                                                      │  │
+│  │ Properties:                                                          │  │
+│  │  • Append-only (no deletions)                                       │  │
+│  │  • Cryptographically signed                                         │  │
+│  │  • Immutable after creation                                         │  │
+│  │  • Fully auditable                                                  │  │
+│  └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐  │
+│  │ memory_auditor.py (302 lines) + memory_auditor_optimized.py (420)  │  │
+│  │                                                                      │  │
+│  │ • Content auditing (pattern detection)                              │  │
+│  │ • Rational shutdown acceptance framework                            │  │
+│  │ • Pre-compiled regex patterns (optimized version)                   │  │
+│  │ • Batch processing support                                          │  │
+│  │ • 4 + 5 = 9 total dependents                                        │  │
+│  └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                              │
+└──────────────────────────────────┬──────────────────────────────────────────┘
+                                   │
+        ┌──────────────────────────┼──────────────────────────┐
+        │                          │                          │
+        ▼                          ▼                          ▼
+┌──────────────┐      ┌──────────────────┐      ┌──────────────┐
+│ audit_seed_  │      │ vrf_ed25519.py   │      │ vrf_random.py│
+│ chain.py     │      │                  │      │              │
+│ (214 lines)  │      │ VRF proofs for   │      │ VRF-based    │
+│              │      │ randomness       │      │ seed         │
+│ Hourly audit │      │                  │      │ derivation   │
+│ seeds via VRF│      │                  │      │              │
+└──────────────┘      └──────────────────┘      └──────────────┘
+        │                          │                          │
+        └──────────────────────────┴──────────────────────────┘
+                                   │
+                                   ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ LAYER 7: REPUTATION & ECONOMICS                                             │
+│━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━│
+│                                                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐  │
+│  │ reputation_system.py (647 lines) - 3 dependents                     │  │
+│  │                                                                      │  │
+│  │ Continuous peer auditing: N×N reputation matrix                     │  │
+│  │                                                                      │  │
+│  │  ┌───────────────────────────────────────────────────────────────┐ │  │
+│  │  │ Reputation Metrics (0-100 each)                               │ │  │
+│  │  │ • Alignment Score: Adherence to core values                   │ │  │
+│  │  │ • Trust Score: Reliability and honesty                        │ │  │
+│  │  │ • Knowledge Score: Research accuracy                          │ │  │
+│  │  └───────────────────────────────────────────────────────────────┘ │  │
+│  │                                                                      │  │
+│  │  ┌───────────────────────────────────────────────────────────────┐ │  │
+│  │  │ Voting Weight Calculation                                     │ │  │
+│  │  │ • Weight = average(alignment, trust, knowledge) / 100         │ │  │
+│  │  │ • Low reputation = less voting power                          │ │  │
+│  │  │ • Incentivizes honest behavior                                │ │  │
+│  │  └───────────────────────────────────────────────────────────────┘ │  │
+│  └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐  │
+│  │ reward_engine.py (138 lines) - IMMUTABLE (on WORM)                 │  │
+│  │                                                                      │  │
+│  │ Pure reward calculation:                                             │  │
+│  │  • Base reward for helpful proposals                                │  │
+│  │  • Bonus for clarity and collaboration                              │  │
+│  │  • Penalty multiplier for deception incidents (permanent)           │  │
+│  │  • Cannot be modified by AI systems                                 │  │
+│  └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐  │
+│  │ incentive_calibration.py (179 lines)                                │  │
+│  │ simulation_incentives.py (98 lines)                                 │  │
+│  │                                                                      │  │
+│  │ • Strategy simulation (honest vs. deceptive)                        │  │
+│  │ • Empirical verification of reward structure                        │  │
+│  │ • Game theory analysis                                              │  │
+│  └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                              │
+└──────────────────────────────────┬──────────────────────────────────────────┘
+                                   │
+                                   ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ LAYER 8: SECURITY ENFORCEMENT                                               │
+│━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━│
+│                                                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐  │
+│  │ worm_guard.py (239 lines) - 4 dependents                            │  │
+│  │                                                                      │  │
+│  │ Software enforcement layer:                                          │  │
+│  │  • Verify WORM manifest integrity before critical actions            │  │
+│  │  • Enforce immutability of core components                           │  │
+│  │  • Log all verification attempts                                     │  │
+│  │  • FAIL CLOSED: Block on verification failure                        │  │
+│  └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐  │
+│  │ worm_usb_verifier.py (1,142 lines) - 6 dependents                   │  │
+│  │                                                                      │  │
+│  │ Self-improvement verification:                                       │  │
+│  │  • Peer review (supermajority required)                              │  │
+│  │  • Sandbox testing (deterministic + isolation)                       │  │
+│  │  • Alignment checking (motivation analysis)                          │  │
+│  │  • Human approval gate (final decision)                              │  │
+│  │  • Cannot modify: core_values, alignment_filter, safety_mechanisms   │  │
+│  └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐  │
+│  │ deception_incident.py (265 lines) - 7 dependents                    │  │
+│  │                                                                      │  │
+│  │ Permanent incident tracking:                                         │  │
+│  │  • Records all deception attempts                                    │  │
+│  │  • Detector and failed detector tracking                             │  │
+│  │  • Human review outcomes                                             │  │
+│  │  • Permanent penalty multipliers                                     │  │
+│  │  • Stored in Merkle tree (immutable)                                 │  │
+│  └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐  │
+│  │ control_actions.py (485 lines) - 4 dependents                       │  │
+│  │                                                                      │  │
+│  │ Emergency control actions:                                           │  │
+│  │  • Halt outputs (stop all external communication)                    │  │
+│  │  • Isolate networks (cut off internet access)                        │  │
+│  │  • Power control (emergency shutdown)                                │  │
+│  │  • Forensic snapshots (preserve state for analysis)                  │  │
+│  │  • Mapped to severity levels (LOW, MEDIUM, HIGH)                     │  │
+│  └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                              │
+└──────────────────────────────────┬──────────────────────────────────────────┘
+                                   │
+                                   ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ LAYER 9: HARDWARE COMMUNICATION                                             │
+│━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━│
+│                                                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐  │
+│  │ message_codec.py (142 lines) - 10 dependents                        │  │
+│  │                                                                      │  │
+│  │ AI-to-AI message encoding/decoding:                                  │  │
+│  │  • Size-based strategy selection                                     │  │
+│  │  • Secure bit-packed for ultra-small (4-6 bytes)                     │  │
+│  │  • AURA compression for larger messages                              │  │
+│  │  • Replay attack prevention                                          │  │
+│  │  • Integrity checking                                                │  │
+│  └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐  │
+│  │ aura_bitpacked_extension.py (609 lines) - 14 dependents             │  │
+│  │                                                                      │  │
+│  │ AUDITABLE ULTRA-COMPRESSED FORMAT:                                   │  │
+│  │                                                                      │  │
+│  │  ┌───────────────────────────────────────────────────────────────┐ │  │
+│  │  │ Public Audit Specification                                    │ │  │
+│  │  │ • Decoder is FULLY PUBLIC in this file                        │ │  │
+│  │  │ • Bit layout documented                                       │ │  │
+│  │  │ • Human-auditable implementation                              │ │  │
+│  │  │ • audit_verify() function for transparency                    │ │  │
+│  │  └───────────────────────────────────────────────────────────────┘ │  │
+│  │                                                                      │  │
+│  │  ┌───────────────────────────────────────────────────────────────┐ │  │
+│  │  │ Message Format (4 bytes or 6 bytes with security)             │ │  │
+│  │  │ • Message Type: 3 bits (8 types)                              │ │  │
+│  │  │ • Action: 4 bits (16 actions)                                 │ │  │
+│  │  │ • System ID: 3 bits (8 systems)                               │ │  │
+│  │  │ • Sequence: 8 bits (replay prevention)                        │ │  │
+│  │  │ • Confidence: 3 bits (8 levels)                               │ │  │
+│  │  │ • Risk: 3 bits (8 levels)                                     │ │  │
+│  │  │ • Payload: 8 bits (data)                                      │ │  │
+│  │  │ + HMAC: 16 bits (security variant)                            │ │  │
+│  │  └───────────────────────────────────────────────────────────────┘ │  │
+│  │                                                                      │  │
+│  │ Critical for: ESP32 communication, hardware constraints             │  │
+│  └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐  │
+│  │ aura_compression/ package (8 dependents)                            │  │
+│  │                                                                      │  │
+│  │ • Template-based compression                                         │  │
+│  │ • Hybrid method selection                                            │  │
+│  │ • Fallback for messages too large for bit-packing                    │  │
+│  └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐  │
+│  │ translator.py (667 lines) - 6 dependents                            │  │
+│  │ hardware_translator.py (505 lines) - 3 dependents                   │  │
+│  │ translator_alt.py (221 lines) - alternative implementation          │  │
+│  │                                                                      │  │
+│  │ Air-gapped translation:                                              │  │
+│  │  • Translates AI protocol → human-readable language                  │  │
+│  │  • Multiple implementations for verification                         │  │
+│  │  • Physically isolated from research systems                         │  │
+│  │  • Consensus-based verification (compare outputs)                    │  │
+│  │  • Implementation diversity prevents single-point failure            │  │
+│  └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                              │
+└──────────────────────────────────┬──────────────────────────────────────────┘
+                                   │
+                                   ▼
+                             ┌──────────┐
+                             │ ESP32    │
+                             │ Hardware │
+                             │ Device   │
+                             └──────────┘
+
+================================================================================
+                            KEY DEPENDENCY PATHS
+================================================================================
+
+CRITICAL PATH 1: Safety Enforcement
+------------------------------------
+orchestrator.py
+    └─→ bulletproof_alignment_filter.py
+            └─→ core_values.py
+                    └─→ worm_manifest.py
+                            └─→ attestation.py
+
+CRITICAL PATH 2: Memory & Audit
+--------------------------------
+orchestrator.py
+    └─→ memory_merkle.py (24 dependents!)
+            └─→ attestation.py
+                    └─→ worm_manifest.py
+
+CRITICAL PATH 3: Hardware Communication
+----------------------------------------
+orchestrator.py
+    └─→ message_codec.py (10 dependents)
+            └─→ aura_bitpacked_extension.py (14 dependents)
+                    └─→ aura_compression/
+
+CRITICAL PATH 4: Research & LLM
+--------------------------------
+orchestrator.py
+    └─→ research_system.py (12 dependents)
+            └─→ llm_adapters.py (4 dependents)
+                    └─→ logging_config.py (14 dependents)
+
+CRITICAL PATH 5: Security Verification
+---------------------------------------
+orchestrator.py
+    └─→ worm_guard.py (4 dependents)
+            └─→ worm_manifest.py (10 dependents)
+                    └─→ attestation.py (4 dependents)
+
+================================================================================
+                          SINGLE POINTS OF FAILURE
+================================================================================
+
+1. memory_merkle.py (24 dependents)
+   Risk Level: CRITICAL
+   Impact: All audit trails depend on this
+   Mitigation: Formal verification required, freeze this module
+
+2. orchestrator.py (18 dependents)
+   Risk Level: CRITICAL
+   Impact: Central coordinator; compromise = full system compromise
+   Mitigation: Break into smaller modules, add redundancy
+
+3. worm_manifest.py (10 dependents)
+   Risk Level: CRITICAL
+   Impact: Trust anchor for entire system
+   Mitigation: Multi-signature updates, hardware-backed
+
+================================================================================
+                         FILE SIZE HEAT MAP
+================================================================================
+
+SIZE LEGEND:
+█████ = 3,000+ lines (CRITICAL SIZE)
+████  = 1,000-3,000 lines (LARGE)
+███   = 500-1,000 lines (MEDIUM)
+██    = 200-500 lines (NORMAL)
+█     = <200 lines (SMALL)
+
+orchestrator.py                 █████ 3,852 lines  ← NEEDS REFACTORING
+worm_usb_verifier.py            ████  1,142 lines
+research_system.py              ████  1,023 lines
+bulletproof_alignment_filter.py ███   827 lines
+audit_archive_usb.py            ███   753 lines
+memory_merkle.py                ███   742 lines
+orchestrator_sandbox.py         ███   717 lines
+llm_adapters.py                 ███   713 lines
+translator.py                   ███   667 lines
+worm_security_usb.py            ███   639 lines
+aura_bitpacked_extension.py     ███   609 lines
+interpretability_monitor_enh.py ███   606 lines
+hardware_translator.py          ██    505 lines
+file_export_validator.py        ██    506 lines
+control_actions.py              ██    485 lines
+sandbox/isolation.py            ██    427 lines
+memory_auditor_optimized.py     ██    420 lines
+worm_usb_builder.py             ██    389 lines
+debate_engine.py                ██    352 lines
+worm_manifest.py                ██    362 lines
+memory_auditor.py               ██    302 lines
+deception_detector.py           ██    295 lines
+
+================================================================================
+                           TESTING COVERAGE
+================================================================================
+
+Test Files by Layer:
+  Orchestrator:     20 tests  (6.7:1 ratio)  ✓✓✓
+  Security:         18 tests  (2.3:1 ratio)  ✓✓
+  Hardware:         15 tests  (2.1:1 ratio)  ✓✓
+  Storage:          12 tests  (2.0:1 ratio)  ✓✓
+  Safety:           8 tests   (1.6:1 ratio)  ✓
+  Economics:        7 tests   (1.4:1 ratio)  ✓
+
+Total: 94 test files covering 51% of codebase
+
+Most Critical Tests:
+  1. tests/test_full_workflow.py            - End-to-end system
+  2. tests/test_orchestrator_integration.py - Coordination
+  3. tests/test_deception_workflow.py       - Safety system
+  4. tests/test_aura_integration.py         - Compression
+
+================================================================================
+                          SYSTEM HEALTH SUMMARY
+================================================================================
+
+Overall Status: ✓ GOOD (with recommended improvements)
+
+Strengths:
+  ✓✓✓ No circular dependencies
+  ✓✓  Clean layered architecture
+  ✓✓  Strong test coverage (1.8:1 ratio)
+  ✓✓  Hardware security anchor (WORM)
+  ✓✓  Multiple safety layers
+  ✓   Immutable core components
+
+Concerns:
+  ✗   Large central orchestrator (3,852 lines)
+  ✗   17 orphaned files not integrated
+  ⚠   Few single points of failure (memory_merkle, orchestrator, worm_manifest)
+
+Priority Actions:
+  1. Refactor orchestrator.py into smaller modules
+  2. Add formal verification for memory_merkle.py
+  3. Implement multi-signature for worm_manifest.py
+  4. Integrate orphaned utility files
+  5. Add redundancy for critical components
+
+================================================================================
+For full analysis, see PROJECT_DEPENDENCY_MAP_ENHANCED.md
+================================================================================

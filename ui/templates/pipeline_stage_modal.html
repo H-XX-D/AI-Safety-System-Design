@@ -1,0 +1,57 @@
+<!-- Pipeline Stage Modal -->
+<div class="modal modal-large" id="pipelineStageModal">
+    <div class="modal-content modal-wide">
+        <div class="modal-header">
+            <h2><i class="fas fa-layer-group"></i> <span id="pipelineStageTitle">Pipeline Stage</span></h2>
+            <button type="button" class="close-btn" onclick="closePipelineModal()" title="Close">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="pipeline-stage-info">
+                <div class="stage-summary">
+                    <div class="summary-stat">
+                        <div class="summary-label">Total Proposals</div>
+                        <div class="summary-value" id="stageTotalCount">0</div>
+                    </div>
+                    <div class="summary-stat">
+                        <div class="summary-label">Average Risk</div>
+                        <div class="summary-value" id="stageAvgRisk">0%</div>
+                    </div>
+                    <div class="summary-stat">
+                        <div class="summary-label">Avg Time in Stage</div>
+                        <div class="summary-value" id="stageAvgTime">0 days</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stage-proposals-list">
+                <table class="proposals-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Agent</th>
+                            <th>Title/Component</th>
+                            <th>Risk Score</th>
+                            <th>Time in Stage</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="stageProposalsBody">
+                        <tr>
+                            <td colspan="6" style="text-align: center; padding: 40px;">
+                                <i class="fas fa-spinner fa-spin"></i> Loading proposals...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closePipelineModal()">Close</button>
+            <button type="button" class="btn btn-info" onclick="exportStageProposals()">
+                <i class="fas fa-download"></i> Export Stage Data
+            </button>
+        </div>
+    </div>
+</div>

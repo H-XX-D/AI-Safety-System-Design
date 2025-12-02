@@ -1,0 +1,346 @@
+{% extends "base.html" %}
+
+{% block title %}Workflow Orchestration{% endblock %}
+
+{% block breadcrumb %}Workflow Orchestration{% endblock %}
+
+{% block extra_head %}
+<style>
+    .workflow-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+    .workflow-list {
+        display: grid;
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    .workflow-card {
+        background: var(--card-bg);
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+    .workflow-card:hover {
+        transform: translateY(-2px);
+    }
+    .workflow-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 1rem;
+    }
+    .workflow-id {
+        font-weight: 600;
+        color: var(--primary);
+        font-size: 1.1rem;
+    }
+    .workflow-status {
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    .status-active { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
+    .status-completed { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
+    .status-pending { background: rgba(156, 163, 175, 0.2); color: #9ca3af; }
+    .workflow-objective {
+        color: var(--text-secondary);
+        margin-bottom: 1rem;
+    }
+    .stage-progress {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+    .stage-badge {
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .stage-active {
+        background: rgba(59, 130, 246, 0.2);
+        color: #3b82f6;
+        border: 2px solid #3b82f6;
+    }
+    .stage-completed {
+        background: rgba(34, 197, 94, 0.2);
+        color: #22c55e;
+    }
+    .stage-pending {
+        background: rgba(156, 163, 175, 0.2);
+        color: #9ca3af;
+    }
+    .workflow-detail {
+        background: var(--card-bg);
+        border-radius: 12px;
+        padding: 2rem;
+        margin-top: 2rem;
+        display: none;
+    }
+    .workflow-detail.active {
+        display: block;
+    }
+    .stage-timeline {
+        position: relative;
+        padding-left: 2rem;
+        margin-top: 2rem;
+    }
+    .stage-item {
+        position: relative;
+        padding-bottom: 2rem;
+        border-left: 2px solid var(--border-color);
+    }
+    .stage-item:last-child {
+        border-left: none;
+    }
+    .stage-dot {
+        position: absolute;
+        left: -8px;
+        top: 0;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--primary);
+        border: 3px solid var(--card-bg);
+    }
+    .stage-dot.completed {
+        background: #22c55e;
+    }
+    .stage-dot.active {
+        background: #3b82f6;
+        animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+    .stage-content {
+        background: var(--bg-secondary);
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin-left: 1rem;
+    }
+    .stage-name {
+        font-weight: 600;
+        font-size: 1.1rem;
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+    }
+    .stage-agent {
+        color: var(--primary);
+        font-weight: 600;
+        margin-bottom: 0.75rem;
+    }
+    .stage-time {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        margin-top: 0.5rem;
+    }
+    .artifacts-list {
+        margin-top: 1.5rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid var(--border-color);
+    }
+    .artifact-item {
+        background: var(--bg-secondary);
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 0.75rem;
+        border-left: 3px solid var(--primary);
+    }
+    .artifact-name {
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 0.25rem;
+    }
+    .artifact-meta {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="workflow-container">
+    <h2 style="margin-bottom: 1.5rem;">
+        <i class="fas fa-network-wired"></i> Workflow Orchestration
+    </h2>
+    <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+        Monitor multi-agent orchestration workflows showing how different agents collaborate across stages (hypothesis generation, experimental assay, data analysis, therapeutic candidates, validation).
+    </p>
+
+    <div class="workflow-list" id="workflowList">
+        <div class="loading">Loading workflows...</div>
+    </div>
+
+    <div class="workflow-detail" id="workflowDetail">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h3 id="detailTitle">Workflow Details</h3>
+            <button onclick="closeDetail()" style="padding: 0.5rem 1rem; background: var(--bg-secondary); border: none; border-radius: 6px; cursor: pointer; color: var(--text-primary);">
+                Close
+            </button>
+        </div>
+        <div id="detailContent"></div>
+    </div>
+</div>
+
+<script>
+let workflows = [];
+
+async function loadWorkflows() {
+    try {
+        const response = await fetch('/api/workflows');
+        const data = await response.json();
+        
+        if (data.success) {
+            workflows = data.workflows;
+            renderWorkflows();
+        }
+    } catch (error) {
+        console.error('Error loading workflows:', error);
+    }
+}
+
+function renderWorkflows() {
+    const container = document.getElementById('workflowList');
+    
+    if (workflows.length === 0) {
+        container.innerHTML = '<div class="loading">No workflows found. Workflows will appear here as multi-agent tasks are initiated.</div>';
+        return;
+    }
+    
+    container.innerHTML = workflows.map(workflow => {
+        const stages = workflow.stages || {};
+        const stageOrder = ['hypothesis_generation', 'experimental_assay', 'data_analysis', 'therapeutic_candidates', 'validation'];
+        
+        return `
+            <div class="workflow-card" onclick="showDetail('${workflow.id}')">
+                <div class="workflow-header">
+                    <div>
+                        <div class="workflow-id">${workflow.id}</div>
+                        <div class="workflow-objective" style="margin-top: 0.5rem;">${workflow.objective || 'No objective specified'}</div>
+                    </div>
+                    <span class="workflow-status status-${workflow.status}">${workflow.status}</span>
+                </div>
+                <div class="stage-progress">
+                    ${stageOrder.map(stageName => {
+                        const stage = stages[stageName] || { status: 'pending' };
+                        const statusClass = `stage-${stage.status}`;
+                        const icon = stage.status === 'completed' ? '✓' : stage.status === 'active' ? '⟳' : '○';
+                        return `<span class="stage-badge ${statusClass}">${icon} ${stageName.replace('_', ' ')}</span>`;
+                    }).join('')}
+                </div>
+                <div style="margin-top: 1rem; color: var(--text-secondary); font-size: 0.9rem;">
+                    <strong>Current Stage:</strong> ${workflow.current_stage || 'N/A'} | 
+                    <strong>Agents:</strong> ${(workflow.agents || []).join(', ') || 'None'}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+async function showDetail(workflowId) {
+    try {
+        const response = await fetch(`/api/workflows/${workflowId}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            const workflow = data.workflow;
+            const detailDiv = document.getElementById('workflowDetail');
+            const detailContent = document.getElementById('detailContent');
+            
+            document.getElementById('detailTitle').textContent = `Workflow: ${workflow.id}`;
+            
+            let html = `
+                <div style="margin-bottom: 2rem;">
+                    <div style="padding: 1.5rem; background: var(--bg-secondary); border-radius: 8px; margin-bottom: 1rem;">
+                        <div style="font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">Objective</div>
+                        <div style="color: var(--text-secondary);">${workflow.objective || 'No objective specified'}</div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                        <div><strong>Status:</strong> <span class="workflow-status status-${workflow.status}">${workflow.status}</span></div>
+                        <div><strong>Current Stage:</strong> ${workflow.current_stage || 'N/A'}</div>
+                        <div><strong>Agents:</strong> ${(workflow.agents || []).join(', ') || 'None'}</div>
+                        <div><strong>Created:</strong> ${new Date(workflow.created_at).toLocaleString()}</div>
+                    </div>
+                </div>
+            `;
+            
+            if (workflow.stages) {
+                const stageOrder = ['hypothesis_generation', 'experimental_assay', 'data_analysis', 'therapeutic_candidates', 'validation'];
+                html += '<div class="stage-timeline">';
+                
+                stageOrder.forEach((stageName, idx) => {
+                    const stage = workflow.stages[stageName] || { status: 'pending' };
+                    const dotClass = stage.status === 'completed' ? 'completed' : stage.status === 'active' ? 'active' : '';
+                    
+                    html += `
+                        <div class="stage-item">
+                            <div class="stage-dot ${dotClass}"></div>
+                            <div class="stage-content">
+                                <div class="stage-name">${stageName.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</div>
+                                <div class="stage-agent">Agent: ${stage.agent || 'N/A'}</div>
+                                <div style="color: var(--text-secondary); margin-bottom: 0.5rem;">
+                                    Status: <span class="workflow-status status-${stage.status}">${stage.status}</span>
+                                </div>
+                                ${stage.started_at ? `<div class="stage-time">Started: ${new Date(stage.started_at).toLocaleString()}</div>` : ''}
+                                ${stage.completed_at ? `<div class="stage-time">Completed: ${new Date(stage.completed_at).toLocaleString()}</div>` : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                html += '</div>';
+            }
+            
+            if (workflow.artifacts && workflow.artifacts.length > 0) {
+                html += '<div class="artifacts-list">';
+                html += '<h4 style="margin-bottom: 1rem; color: var(--text-primary);">Generated Artifacts</h4>';
+                workflow.artifacts.forEach(artifact => {
+                    html += `
+                        <div class="artifact-item">
+                            <div class="artifact-name">${artifact.name || 'Unnamed artifact'}</div>
+                            <div class="artifact-meta">Type: ${artifact.type || 'unknown'} | Size: ${artifact.size || 'N/A'}</div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+            }
+            
+            detailContent.innerHTML = html;
+            detailDiv.classList.add('active');
+        }
+    } catch (error) {
+        console.error('Error loading workflow detail:', error);
+    }
+}
+
+function closeDetail() {
+    document.getElementById('workflowDetail').classList.remove('active');
+}
+
+// Load workflows on page load
+loadWorkflows();
+
+// Subscribe to Socket.IO updates
+if (typeof io !== 'undefined') {
+    const socket = io();
+    socket.on('workflows:update', function(data) {
+        // Reload workflows when updates occur
+        loadWorkflows();
+    });
+}
+
+// Refresh every 5 seconds
+setInterval(loadWorkflows, 5000);
+</script>
+{% endblock %}
+

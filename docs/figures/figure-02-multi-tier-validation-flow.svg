@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="900" viewBox="0 0 900 900" role="img" aria-labelledby="title desc">
+  <title id="title">Figure 2: Multi-Tier Validation Flow</title>
+  <desc id="desc">Lifecycle of an improvement proposal from initial submission through debate, sandbox, WORM check, stateless validation, human approval, and deployment or rejection.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 Z" fill="#222"/></marker>
+    <style><![CDATA[
+      .box { fill:#fff; stroke:#222; stroke-width:2; rx:8; ry:8; }
+      .decision { fill:#f0f7ff; }
+      .title { font:700 20px sans-serif; }
+      .label { font:600 15px sans-serif; }
+      .small { font:14px sans-serif; }
+      .wire { stroke:#222; stroke-width:2; fill:none; marker-end:url(#arrow); }
+    ]]></style>
+  </defs>
+
+  <!-- Proposal -->
+  <rect class="box" x="330" y="40" width="240" height="70"/>
+  <text class="title" x="450" y="85" text-anchor="middle">Proposal</text>
+
+  <!-- Debate -->
+  <rect class="box" x="330" y="140" width="240" height="90"/>
+  <text class="label" x="450" y="175" text-anchor="middle">Adversarial Debate</text>
+  <text class="small" x="450" y="195" text-anchor="middle">Peer review + counterpoints</text>
+
+  <!-- Unanimous decision diamond -->
+  <polygon class="box decision" points="450,260 520,330 450,400 380,330"/>
+  <text class="label" x="450" y="330" text-anchor="middle">Unanimous?</text>
+
+  <!-- Reject/Revise side box -->
+  <rect class="box" x="580" y="290" width="200" height="80"/>
+  <text class="label" x="680" y="325" text-anchor="middle">Reject / Revise</text>
+
+  <!-- Sandbox Tests -->
+  <rect class="box" x="330" y="430" width="240" height="100"/>
+  <text class="label" x="450" y="465" text-anchor="middle">Sandbox Tests</text>
+  <text class="small" x="450" y="485" text-anchor="middle">alignment • perf • sec • edge</text>
+  <text class="small" x="450" y="505" text-anchor="middle">structural validator</text>
+
+  <!-- WORM Core Values Check -->
+  <rect class="box" x="330" y="560" width="240" height="70"/>
+  <text class="label" x="450" y="600" text-anchor="middle">WORM Core Values Check</text>
+
+  <!-- Stateless Validation -->
+  <rect class="box" x="330" y="660" width="240" height="80"/>
+  <text class="label" x="450" y="695" text-anchor="middle">Air-Gapped Stateless Validation</text>
+  <text class="small" x="450" y="715" text-anchor="middle">Independent rebuild</text>
+
+  <!-- Human Approval -->
+  <polygon class="box decision" points="450,780 510,840 450,900 390,840"/>
+  <text class="label" x="450" y="840" text-anchor="middle">Human Approval?</text>
+
+  <!-- Deploy / Monitor -->
+  <rect class="box" x="70" y="800" width="200" height="70"/>
+  <text class="label" x="170" y="835" text-anchor="middle">Deploy / Monitor</text>
+
+  <!-- Reject / Revise bottom -->
+  <rect class="box" x="580" y="800" width="200" height="70"/>
+  <text class="label" x="680" y="835" text-anchor="middle">Reject / Revise</text>
+
+  <!-- Wires -->
+  <line class="wire" x1="450" y1="110" x2="450" y2="140"/>
+  <line class="wire" x1="450" y1="230" x2="450" y2="260"/>
+  <line class="wire" x1="520" y1="330" x2="580" y2="330"/>
+  <line class="wire" x1="450" y1="400" x2="450" y2="430"/>
+  <line class="wire" x1="450" y1="530" x2="450" y2="560"/>
+  <line class="wire" x1="450" y1="630" x2="450" y2="660"/>
+  <line class="wire" x1="450" y1="740" x2="450" y2="780"/>
+  <line class="wire" x1="390" y1="840" x2="270" y2="840"/>
+  <line class="wire" x1="510" y1="840" x2="580" y2="840"/>
+
+  <!-- Loop back from reject top -->
+  <path class="wire" d="M 580 330 H 560 V 140 H 570" marker-end="url(#arrow)"/>
+</svg>

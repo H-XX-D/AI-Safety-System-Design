@@ -1,0 +1,23 @@
+{
+  "system_name": "ORKASTRATOR",
+  "version": "0.4.1-dev",
+  "created": "2025-11-12T09:51:45.972588",
+  "models": {
+    "TIF": "Scientific Research Model",
+    "GIN": "Engineering Model",
+    "TORI": "Historical Analysis Model",
+    "THEO": "Theoretical Model",
+    "NOVEL": "Creative Model",
+    "ORKA": "Orchestrator (System Coordinator)",
+    "VAL": "Validator Model"
+  },
+  "features": [
+    "Multi-round debate engine",
+    "Claim verification system",
+    "Deception detection",
+    "Reputation tracking",
+    "Sandbox execution",
+    "Memory auditing",
+    "WORM manifest validation"
+  ]
+}

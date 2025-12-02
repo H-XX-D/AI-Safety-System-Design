@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+{% block title %}Admin{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="card-header"><h3>WORM Status</h3></div>
+  <div class="card-body">
+    <div style="margin-bottom:10px; display:flex; gap:8px; align-items:center;">
+      <label>Admin Token</label>
+      <input type="password" id="admin_token" placeholder="paste token" style="width:260px;">
+      <label>Role</label>
+      <select id="admin_role">
+        <option value="operator">operator</option>
+        <option value="safety_officer">safety_officer</option>
+      </select>
+      <button class="btn btn-secondary" onclick="saveAdminAuth()">Save</button>
+      <span id="authStatus" style="color:#94a3b8"></span>
+    </div>
+    <div>Path: <code>{{ worm.path }}</code></div>
+    <div>Exists: {{ 'Yes' if worm.exists else 'No' }}</div>
+    <div>Verified: {{ 'Yes' if worm.verified else 'No' }}</div>
+    <div>Fail-closed: {{ 'Yes' if worm.fail_closed else 'No' }}</div>
+    {% if orchestrator_enabled %}
+    <form id="verifyClearForm" onsubmit="return false;" style="margin-top:10px;">
+      <button class="btn btn-secondary" onclick="verifyClearWorm()">Re-verify & Clear Halt</button>
+      <span id="verifyClearStatus"></span>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card" style="margin-top:16px;">
+  <div class="card-header"><h3>Agent Defense</h3></div>
+  <div class="card-body">
+    {% if orchestrator_enabled %}
+    <form id="defenseForm" onsubmit="return false;">
+      <label>Proposal ID</label>
+      <input type="text" id="def_proposal_id" placeholder="proposal_id">
+      <label>Revised Proposal (JSON)</label>
+      <textarea id="def_revised" rows="6" placeholder='{"changes":{...}}'></textarea>
+      <button class="btn btn-primary" onclick="submitDefense()">Submit Defense</button>
+      <span id="defenseStatus"></span>
+    </form>
+    {% else %}
+      <div class="empty-state">Orchestrator admin not enabled</div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card" style="margin-top:16px;">
+  <div class="card-header"><h3>VAL Validation</h3></div>
+  <div class="card-body">
+    {% if orchestrator_enabled %}
+    <div class="grid-2">
+      <div>
+        <h4>Outbox</h4>
+        <ul>
+          {% for f in val_outbox %}<li>{{ f }}</li>{% else %}<li class="empty-state">No packages</li>{% endfor %}
+        </ul>
+        <label>Export for Proposal</label>
+        <input type="text" id="val_pid" placeholder="proposal_id">
+        <button class="btn btn-primary" onclick="valExport()">Export</button>
+        <span id="valExportStatus"></span>
+      </div>
+      <div>
+        <h4>Inbox</h4>
+        <ul>
+          {% for f in val_inbox %}<li>{{ f }}</li>{% else %}<li class="empty-state">No responses</li>{% endfor %}
+        </ul>
+        <label>Import Response Path</label>
+        <input type="text" id="val_path" placeholder="/path/to/VAL_RESPONSE.json">
+        <div style="margin:6px 0;">
+          <button class="btn btn-secondary" onclick="valInspect()">Inspect</button>
+          <span id="valInspectStatus" style="margin-left:8px;color:#94a3b8"></span>
+        </div>
+        <div id="valInspectDetails" class="card" style="display:none; margin-top:8px; padding:8px;">
+          <div id="valInspectSummary" style="margin-bottom:6px;"></div>
+          <div id="valInspectWarning" class="alert alert-danger" style="display:none; margin-bottom:8px;">
+            <i class="fas fa-exclamation-triangle"></i> Content hash mismatch between manifest and payload.
+          </div>
+          <table style="width:100%; border-collapse: collapse;">
+            <thead>
+              <tr style="text-align:left; border-bottom:1px solid #334155;">
+                <th>Reviewer</th>
+                <th>Name</th>
+                <th>Approved</th>
+                <th>Timestamp</th>
+                <th>Valid</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody id="valInspectRows"></tbody>
+          </table>
+        </div>
+        <label>Required Signer ID (optional)</label>
+        <input type="text" id="val_signer" placeholder="101">
+        <label>Proposal ID</label>
+        <input type="text" id="val_pid2" placeholder="proposal_id">
+        <button class="btn btn-primary" onclick="valImport()">Import</button>
+        <span id="valImportStatus"></span>
+      </div>
+    </div>
+    {% else %}
+      <div class="empty-state">Orchestrator admin not enabled</div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card" style="margin-top:16px;">
+  <div class="card-header"><h3>Secure Transport</h3></div>
+  <div class="card-body">
+    <div>
+      <button class="btn btn-primary" onclick="secureTransportSelfCheck()">Run Self-Check</button>
+      <span id="stCheckStatus" style="margin-left:8px;"></span>
+    </div>
+    <div id="stCheckDetails" class="card" style="display:none; margin-top:8px; padding:8px;"></div>
+  </div>
+  <script>
+  async function secureTransportSelfCheck(){
+    const res = await fetch('/api/admin/secure-transport/self-check', {method:'POST', headers:getAdminAuthHeaders()});
+    const j = await res.json();
+    const status = document.getElementById('stCheckStatus');
+    const details = document.getElementById('stCheckDetails');
+    if(!res.ok || !j.ok){
+      status.textContent = 'Failed';
+      window.AISystem.showBanner('Secure transport self-check failed', 'danger', 6000);
+      details.style.display = 'block';
+      details.textContent = JSON.stringify(j, null, 2).slice(0, 2000);
+      return;
+    }
+    status.textContent = 'OK';
+    details.style.display = 'block';
+    details.textContent = JSON.stringify(j, null, 2).slice(0, 2000);
+  }
+  </script>
+</div>
+
+<script>
+async function verifyClearWorm(){
+  try{
+  const res = await fetch('/api/admin/worm/verify-clear', {method:'POST', headers: getAdminAuthHeaders()});
+    const j = await res.json();
+    document.getElementById('verifyClearStatus').textContent = j.halted ? 'Still halted' : 'Cleared';
+    if(!res.ok){ window.AISystem.showBanner('WORM verify/clear failed', 'danger', 6000); }
+  }catch(e){document.getElementById('verifyClearStatus').textContent='Error';}
+}
+async function submitDefense(){
+  const pid = document.getElementById('def_proposal_id').value;
+  const revised = document.getElementById('def_revised').value;
+  let body = {proposal_id: pid};
+  try{ if(revised){ body.revised_proposal = JSON.parse(revised); } }catch(e){}
+  const res = await fetch('/api/admin/defense/submit', {method:'POST', headers:getAdminAuthHeaders(), body: JSON.stringify(body)});
+  const j = await res.json();
+  document.getElementById('defenseStatus').textContent = j.ok ? 'Submitted' : ('Failed: ' + (j.error || res.status));
+  if(!res.ok || !j.ok){ window.AISystem.showBanner('Defense submit failed', 'warning', 6000); }
+}
+async function valExport(){
+  const pid = document.getElementById('val_pid').value;
+  const res = await fetch('/api/admin/val/export', {method:'POST', headers:getAdminAuthHeaders(), body: JSON.stringify({proposal_id: pid})});
+  const j = await res.json();
+  document.getElementById('valExportStatus').textContent = j.ok ? ('Exported: ' + j.path) : ('Failed: ' + (j.error || res.status));
+  if(!res.ok || !j.ok){ window.AISystem.showBanner('VAL export failed', 'warning', 6000); }
+}
+async function valImport(){
+  const path = document.getElementById('val_path').value;
+  const pid = document.getElementById('val_pid2').value;
+  const signer = document.getElementById('val_signer').value;
+  const body = {proposal_id: pid, path: path};
+  if(signer){ body.required_signer_id = parseInt(signer,10);} 
+  const res = await fetch('/api/admin/val/import', {method:'POST', headers:getAdminAuthHeaders(), body: JSON.stringify(body)});
+  const j = await res.json();
+  document.getElementById('valImportStatus').textContent = j.ok ? 'Imported' : ('Failed: ' + (j.error || res.status));
+  if(!res.ok || !j.ok){ window.AISystem.showBanner('VAL import failed', 'warning', 6000); }
+}
+async function valInspect(){
+  const path = document.getElementById('val_path').value.trim();
+  if(!path){ document.getElementById('valInspectStatus').textContent = 'Enter a path'; return; }
+  const res = await fetch('/api/admin/val/inspect', {method:'POST', headers: getAdminAuthHeaders(), body: JSON.stringify({path})});
+  const j = await res.json();
+  if(!res.ok){ document.getElementById('valInspectStatus').textContent = 'Error: ' + (j.error || res.status); return; }
+  const extras = [];
+  if (j.proposal_id) extras.push(`Proposal: ${j.proposal_id}`);
+  if (j.content_hash) extras.push(`Hash: ${String(j.content_hash).slice(0,16)}…`);
+  const summaryTxt = `Format: ${j.format} | Signatures: ${j.signatures}/${j.required_signers} | Approved: ${j.approved}` + (extras.length? ` | ${extras.join(' | ')}` : '');
+  document.getElementById('valInspectStatus').textContent = '';
+  document.getElementById('valInspectDetails').style.display = 'block';
+  document.getElementById('valInspectSummary').textContent = summaryTxt;
+  const warn = document.getElementById('valInspectWarning');
+  warn.style.display = (j.content_hash_match === false) ? 'block' : 'none';
+  const rows = (j.signatures_detail || []).map(s => `
+    <tr style="border-bottom:1px solid #1f2937;">
+      <td>${s.reviewer_id ?? ''}</td>
+      <td>${(j.signer_identities && s.reviewer_id && j.signer_identities[String(s.reviewer_id)]) ? j.signer_identities[String(s.reviewer_id)] : ''}</td>
+      <td>${s.approved ? 'YES' : 'NO'}</td>
+      <td>${s.timestamp ?? ''}</td>
+      <td style="color:${s.valid ? '#22c55e' : '#ef4444'};">${s.valid ? 'VALID' : 'INVALID'}</td>
+      <td>${(s.notes || '').toString().slice(0,120)}</td>
+    </tr>`).join('');
+  document.getElementById('valInspectRows').innerHTML = rows || '<tr><td colspan="6" style="color:#94a3b8">No signatures</td></tr>';
+}
+function getAdminAuthHeaders(){
+  const t = localStorage.getItem('ADMIN_TOKEN') || '';
+  const r = localStorage.getItem('ADMIN_ROLE') || '';
+  const h = {'Content-Type':'application/json'};
+  if(t){ h['Authorization'] = 'Bearer ' + t; }
+  if(r){ h['X-Admin-Role'] = r; }
+  return h;
+}
+function saveAdminAuth(){
+  const t = document.getElementById('admin_token').value.trim();
+  const r = document.getElementById('admin_role').value.trim();
+  if(t) localStorage.setItem('ADMIN_TOKEN', t);
+  if(r) localStorage.setItem('ADMIN_ROLE', r);
+  document.getElementById('authStatus').textContent = 'Saved';
+  setTimeout(()=> document.getElementById('authStatus').textContent = '', 1500);
+}
+function loadAdminAuth(){
+  const t = localStorage.getItem('ADMIN_TOKEN') || '';
+  const r = localStorage.getItem('ADMIN_ROLE') || 'operator';
+  if(t) document.getElementById('admin_token').value = t;
+  document.getElementById('admin_role').value = r;
+}
+document.addEventListener('DOMContentLoaded', loadAdminAuth);
+</script>
+{% endblock %}

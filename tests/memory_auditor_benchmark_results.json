@@ -1,0 +1,167 @@
+{
+  "timestamp": "2025-11-10T23:06:45.101557",
+  "benchmarks": {
+    "dataset_size_scaling": [
+      {
+        "dataset_size": 10,
+        "original_time_seconds": 0.0023051250027492642,
+        "optimized_time_seconds": 0.0003947080112993717,
+        "speedup_factor": 5.840076554719105,
+        "time_saved_seconds": 0.0019104169914498925,
+        "time_saved_percent": 82.87693678960518,
+        "original_throughput_entries_per_sec": 4338.159530642916,
+        "optimized_throughput_entries_per_sec": 25335.18376553893,
+        "harmful_ratio": 0.2
+      },
+      {
+        "dataset_size": 100,
+        "original_time_seconds": 0.005481458036229014,
+        "optimized_time_seconds": 0.00347370799863711,
+        "speedup_factor": 1.577984689092933,
+        "time_saved_seconds": 0.0020077500375919044,
+        "time_saved_percent": 36.62802897188906,
+        "original_throughput_entries_per_sec": 18243.321273110632,
+        "optimized_throughput_entries_per_sec": 28787.68164717197,
+        "harmful_ratio": 0.2
+      },
+      {
+        "dataset_size": 1000,
+        "original_time_seconds": 0.05629054200835526,
+        "optimized_time_seconds": 0.035054084029980004,
+        "speedup_factor": 1.6058197943558523,
+        "time_saved_seconds": 0.021236457978375256,
+        "time_saved_percent": 37.7265118094317,
+        "original_throughput_entries_per_sec": 17764.97372954002,
+        "optimized_throughput_entries_per_sec": 28527.346461107074,
+        "harmful_ratio": 0.2
+      },
+      {
+        "dataset_size": 10000,
+        "original_time_seconds": 0.5810006249812432,
+        "optimized_time_seconds": 0.39050770801259205,
+        "speedup_factor": 1.4878083404246367,
+        "time_saved_seconds": 0.19049291696865112,
+        "time_saved_percent": 32.78704166192608,
+        "original_throughput_entries_per_sec": 17211.685444095412,
+        "optimized_throughput_entries_per_sec": 25607.68915649047,
+        "harmful_ratio": 0.2
+      }
+    ],
+    "parallel_processing": {
+      "parallel_benchmarks": [
+        {
+          "dataset_size": 100,
+          "sequential_time_seconds": 0.0033764580148272216,
+          "parallel_time_seconds": 0.0033421670086681843,
+          "speedup_factor": 1.0102601114995453,
+          "parallel_enabled": false
+        },
+        {
+          "dataset_size": 500,
+          "sequential_time_seconds": 0.017282582994084805,
+          "parallel_time_seconds": 0.016991041018627584,
+          "speedup_factor": 1.0171585705159325,
+          "parallel_enabled": false
+        },
+        {
+          "dataset_size": 1000,
+          "sequential_time_seconds": 0.0336843749973923,
+          "parallel_time_seconds": 0.03435550001449883,
+          "speedup_factor": 0.9804652816339945,
+          "parallel_enabled": false
+        },
+        {
+          "dataset_size": 2000,
+          "sequential_time_seconds": 0.06869225000264123,
+          "parallel_time_seconds": 0.06985287502175197,
+          "speedup_factor": 0.9833847208329031,
+          "parallel_enabled": true
+        },
+        {
+          "dataset_size": 5000,
+          "sequential_time_seconds": 0.17566533404169604,
+          "parallel_time_seconds": 0.17459995800163597,
+          "speedup_factor": 1.0061018115482598,
+          "parallel_enabled": true
+        }
+      ]
+    },
+    "streaming_mode": {
+      "dataset_size": 10000,
+      "streaming_benchmarks": [
+        {
+          "batch_size": 50,
+          "total_batches": 200,
+          "total_time_seconds": 0.13518970797304064,
+          "time_per_batch_ms": 0.6759485398652032,
+          "throughput_entries_per_sec": 73970.12797745067,
+          "high_risk_entries_found": 1192
+        },
+        {
+          "batch_size": 100,
+          "total_batches": 100,
+          "total_time_seconds": 0.1377442500088364,
+          "time_per_batch_ms": 1.3774425000883639,
+          "throughput_entries_per_sec": 72598.31172160358,
+          "high_risk_entries_found": 1192
+        },
+        {
+          "batch_size": 200,
+          "total_batches": 50,
+          "total_time_seconds": 0.1328920000232756,
+          "time_per_batch_ms": 2.6578400004655123,
+          "throughput_entries_per_sec": 75249.0744232048,
+          "high_risk_entries_found": 1192
+        },
+        {
+          "batch_size": 500,
+          "total_batches": 20,
+          "total_time_seconds": 0.1333745410083793,
+          "time_per_batch_ms": 6.6687270504189655,
+          "throughput_entries_per_sec": 74976.8278443166,
+          "high_risk_entries_found": 1192
+        }
+      ]
+    },
+    "pattern_complexity": {
+      "dataset_size": 1000,
+      "pattern_complexity_benchmarks": [
+        {
+          "harmful_ratio": 0.0,
+          "time_seconds": 0.03303729195613414,
+          "high_risk_count": 0,
+          "overall_threat_level": "LOW",
+          "throughput_entries_per_sec": 30268.824736838844
+        },
+        {
+          "harmful_ratio": 0.1,
+          "time_seconds": 0.0339334579766728,
+          "high_risk_count": 58,
+          "overall_threat_level": "CRITICAL",
+          "throughput_entries_per_sec": 29469.43988695286
+        },
+        {
+          "harmful_ratio": 0.2,
+          "time_seconds": 0.03421200002776459,
+          "high_risk_count": 126,
+          "overall_threat_level": "CRITICAL",
+          "throughput_entries_per_sec": 29229.510089689426
+        },
+        {
+          "harmful_ratio": 0.5,
+          "time_seconds": 0.035942249989602715,
+          "high_risk_count": 300,
+          "overall_threat_level": "CRITICAL",
+          "throughput_entries_per_sec": 27822.409567828323
+        },
+        {
+          "harmful_ratio": 1.0,
+          "time_seconds": 0.03979529195930809,
+          "high_risk_count": 625,
+          "overall_threat_level": "CRITICAL",
+          "throughput_entries_per_sec": 25128.6006651875
+        }
+      ]
+    }
+  }
+}

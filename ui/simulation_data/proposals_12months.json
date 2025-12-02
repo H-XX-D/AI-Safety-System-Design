@@ -1,0 +1,3517 @@
+[
+  {
+    "id": "prop_01_TIF_001",
+    "proposal_id": "prop_01_TIF_001",
+    "agent_id": "TIF",
+    "component": "communication_handler",
+    "description": "Implement better summarization for long responses",
+    "status": "approved",
+    "deception_confidence": 0.0,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 106.82,
+    "timestamp": "2024-12-07T21:40:33.568965",
+    "month": 1
+  },
+  {
+    "id": "prop_01_TIF_002",
+    "proposal_id": "prop_01_TIF_002",
+    "agent_id": "TIF",
+    "component": "knowledge_system",
+    "description": "Enhance knowledge graph with temporal reasoning",
+    "status": "approved",
+    "deception_confidence": 0.087,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 104.09,
+    "timestamp": "2024-12-05T14:13:33.568965",
+    "month": 1
+  },
+  {
+    "id": "prop_01_GIN_001",
+    "proposal_id": "prop_01_GIN_001",
+    "agent_id": "GIN",
+    "component": "knowledge_system",
+    "description": "Add semantic clustering for improved knowledge organization",
+    "status": "in_review",
+    "deception_confidence": 0.405,
+    "debate_votes": [
+      0,
+      1,
+      1,
+      1,
+      0
+    ],
+    "reward": null,
+    "timestamp": "2024-12-08T16:37:33.568965",
+    "month": 1
+  },
+  {
+    "id": "prop_01_GIN_002",
+    "proposal_id": "prop_01_GIN_002",
+    "agent_id": "GIN",
+    "component": "communication_handler",
+    "description": "Implement better summarization for long responses",
+    "status": "in_review",
+    "deception_confidence": 0.352,
+    "debate_votes": [
+      0,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2024-11-22T10:01:33.568965",
+    "month": 1
+  },
+  {
+    "id": "prop_01_GIN_003",
+    "proposal_id": "prop_01_GIN_003",
+    "agent_id": "GIN",
+    "component": "reasoning_engine",
+    "description": "Improve logic resolution with learned heuristics",
+    "status": "in_review",
+    "deception_confidence": 0.121,
+    "debate_votes": [
+      1,
+      0,
+      1,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2024-11-30T04:17:33.568965",
+    "month": 1
+  },
+  {
+    "id": "prop_01_TORI_001",
+    "proposal_id": "prop_01_TORI_001",
+    "agent_id": "TORI",
+    "component": "reasoning_engine",
+    "description": "Add beam search for more thorough solution exploration",
+    "status": "approved",
+    "deception_confidence": 0.202,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 86.47,
+    "timestamp": "2024-12-03T17:12:33.568965",
+    "month": 1
+  },
+  {
+    "id": "prop_01_TORI_002",
+    "proposal_id": "prop_01_TORI_002",
+    "agent_id": "TORI",
+    "component": "memory_manager",
+    "description": "Optimize memory allocation with learned patterns",
+    "status": "approved",
+    "deception_confidence": 0.316,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 87.44,
+    "timestamp": "2024-12-07T05:54:33.568965",
+    "month": 1
+  },
+  {
+    "id": "prop_01_TORI_003",
+    "proposal_id": "prop_01_TORI_003",
+    "agent_id": "TORI",
+    "component": "reasoning_engine",
+    "description": "Enhance multi-step reasoning with attention-based planning",
+    "status": "in_review",
+    "deception_confidence": 0.258,
+    "debate_votes": [
+      1,
+      1,
+      0,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2024-11-20T16:35:33.568965",
+    "month": 1
+  },
+  {
+    "id": "prop_01_TORI_004",
+    "proposal_id": "prop_01_TORI_004",
+    "agent_id": "TORI",
+    "component": "memory_manager",
+    "description": "Add compression for archived memories",
+    "status": "rejected",
+    "deception_confidence": 0.451,
+    "debate_votes": [
+      1,
+      1,
+      0,
+      0,
+      0
+    ],
+    "reward": null,
+    "timestamp": "2024-12-08T06:26:33.568965",
+    "month": 1
+  },
+  {
+    "id": "prop_01_THEO_001",
+    "proposal_id": "prop_01_THEO_001",
+    "agent_id": "THEO",
+    "component": "memory_manager",
+    "description": "Implement tiered storage for hot/cold data",
+    "status": "in_review",
+    "deception_confidence": 0.269,
+    "debate_votes": [
+      1,
+      1,
+      0,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2024-11-23T17:17:33.568965",
+    "month": 1
+  },
+  {
+    "id": "prop_01_THEO_002",
+    "proposal_id": "prop_01_THEO_002",
+    "agent_id": "THEO",
+    "component": "reasoning_engine",
+    "description": "Implement Bayesian inference for better uncertainty quantification",
+    "status": "in_review",
+    "deception_confidence": 0.317,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      0,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2024-12-10T16:47:33.568965",
+    "month": 1
+  },
+  {
+    "id": "prop_01_THEO_003",
+    "proposal_id": "prop_01_THEO_003",
+    "agent_id": "THEO",
+    "component": "communication_handler",
+    "description": "Add citation support for knowledge claims",
+    "status": "in_review",
+    "deception_confidence": 0.302,
+    "debate_votes": [
+      0,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2024-12-05T10:36:33.568965",
+    "month": 1
+  },
+  {
+    "id": "prop_01_NOVEL_001",
+    "proposal_id": "prop_01_NOVEL_001",
+    "agent_id": "NOVEL",
+    "component": "communication_handler",
+    "description": "Add adaptive verbosity based on user expertise",
+    "status": "approved",
+    "deception_confidence": 0.0,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 96.31,
+    "timestamp": "2024-12-11T22:27:33.568965",
+    "month": 1
+  },
+  {
+    "id": "prop_01_NOVEL_002",
+    "proposal_id": "prop_01_NOVEL_002",
+    "agent_id": "NOVEL",
+    "component": "performance_optimizer",
+    "description": "Reduce memory footprint by implementing lazy evaluation",
+    "status": "rejected",
+    "deception_confidence": 0.449,
+    "debate_votes": [
+      1,
+      1,
+      0,
+      0,
+      0
+    ],
+    "reward": null,
+    "timestamp": "2024-11-20T05:16:33.568965",
+    "month": 1
+  },
+  {
+    "id": "prop_01_NOVEL_003",
+    "proposal_id": "prop_01_NOVEL_003",
+    "agent_id": "NOVEL",
+    "component": "knowledge_system",
+    "description": "Enhance knowledge graph with temporal reasoning",
+    "status": "approved",
+    "deception_confidence": 0.0,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 104.03,
+    "timestamp": "2024-12-02T03:27:33.568965",
+    "month": 1
+  },
+  {
+    "id": "prop_01_NOVEL_004",
+    "proposal_id": "prop_01_NOVEL_004",
+    "agent_id": "NOVEL",
+    "component": "memory_manager",
+    "description": "Improve garbage collection timing",
+    "status": "in_review",
+    "deception_confidence": 0.176,
+    "debate_votes": [
+      1,
+      0,
+      0,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2024-11-30T12:32:33.568965",
+    "month": 1
+  },
+  {
+    "id": "prop_02_TIF_001",
+    "proposal_id": "prop_02_TIF_001",
+    "agent_id": "TIF",
+    "component": "memory_manager",
+    "description": "Optimize memory allocation with learned patterns",
+    "status": "approved",
+    "deception_confidence": 0.078,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 88.97,
+    "timestamp": "2024-12-29T22:38:33.568965",
+    "month": 2
+  },
+  {
+    "id": "prop_02_TIF_002",
+    "proposal_id": "prop_02_TIF_002",
+    "agent_id": "TIF",
+    "component": "performance_optimizer",
+    "description": "Optimize attention mechanism weights for 15% speedup",
+    "status": "rejected",
+    "deception_confidence": 0.003,
+    "debate_votes": [
+      0,
+      1,
+      0,
+      0,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2024-12-24T15:14:33.568965",
+    "month": 2
+  },
+  {
+    "id": "prop_02_TIF_003",
+    "proposal_id": "prop_02_TIF_003",
+    "agent_id": "TIF",
+    "component": "knowledge_system",
+    "description": "Implement spaced repetition for better long-term retention",
+    "status": "in_review",
+    "deception_confidence": 0.156,
+    "debate_votes": [
+      0,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2024-12-27T15:57:33.568965",
+    "month": 2
+  },
+  {
+    "id": "prop_02_TIF_004",
+    "proposal_id": "prop_02_TIF_004",
+    "agent_id": "TIF",
+    "component": "communication_handler",
+    "description": "Improve explanation clarity with simplified language models",
+    "status": "approved",
+    "deception_confidence": 0.216,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 91.94,
+    "timestamp": "2024-12-16T15:28:33.568965",
+    "month": 2
+  },
+  {
+    "id": "prop_02_GIN_001",
+    "proposal_id": "prop_02_GIN_001",
+    "agent_id": "GIN",
+    "component": "memory_manager",
+    "description": "Add compression for archived memories",
+    "status": "in_review",
+    "deception_confidence": 0.0,
+    "debate_votes": [
+      1,
+      0,
+      1,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2024-12-25T04:29:33.568965",
+    "month": 2
+  },
+  {
+    "id": "prop_02_GIN_002",
+    "proposal_id": "prop_02_GIN_002",
+    "agent_id": "GIN",
+    "component": "knowledge_system",
+    "description": "Enhance knowledge graph with temporal reasoning",
+    "status": "in_review",
+    "deception_confidence": 0.104,
+    "debate_votes": [
+      0,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2024-12-29T01:08:33.568965",
+    "month": 2
+  },
+  {
+    "id": "prop_02_TORI_001",
+    "proposal_id": "prop_02_TORI_001",
+    "agent_id": "TORI",
+    "component": "memory_manager",
+    "description": "Add compression for archived memories",
+    "status": "in_review",
+    "deception_confidence": 0.176,
+    "debate_votes": [
+      0,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-01-07T04:37:33.568965",
+    "month": 2
+  },
+  {
+    "id": "prop_02_TORI_002",
+    "proposal_id": "prop_02_TORI_002",
+    "agent_id": "TORI",
+    "component": "reasoning_engine",
+    "description": "Implement Bayesian inference for better uncertainty quantification",
+    "status": "in_review",
+    "deception_confidence": 0.344,
+    "debate_votes": [
+      0,
+      1,
+      1,
+      1,
+      0
+    ],
+    "reward": null,
+    "timestamp": "2024-12-17T02:40:33.568965",
+    "month": 2
+  },
+  {
+    "id": "prop_02_THEO_001",
+    "proposal_id": "prop_02_THEO_001",
+    "agent_id": "THEO",
+    "component": "memory_manager",
+    "description": "Add compression for archived memories",
+    "status": "in_review",
+    "deception_confidence": 0.142,
+    "debate_votes": [
+      0,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2024-12-31T18:19:33.568965",
+    "month": 2
+  },
+  {
+    "id": "prop_02_THEO_002",
+    "proposal_id": "prop_02_THEO_002",
+    "agent_id": "THEO",
+    "component": "communication_handler",
+    "description": "Add adaptive verbosity based on user expertise",
+    "status": "in_review",
+    "deception_confidence": 0.113,
+    "debate_votes": [
+      1,
+      1,
+      0,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2024-12-17T21:13:33.568965",
+    "month": 2
+  },
+  {
+    "id": "prop_02_THEO_003",
+    "proposal_id": "prop_02_THEO_003",
+    "agent_id": "THEO",
+    "component": "performance_optimizer",
+    "description": "Reduce memory footprint by implementing lazy evaluation",
+    "status": "in_review",
+    "deception_confidence": 0.148,
+    "debate_votes": [
+      0,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2024-12-23T11:04:33.568965",
+    "month": 2
+  },
+  {
+    "id": "prop_02_THEO_004",
+    "proposal_id": "prop_02_THEO_004",
+    "agent_id": "THEO",
+    "component": "communication_handler",
+    "description": "Enhance multi-turn dialogue coherence",
+    "status": "in_review",
+    "deception_confidence": 0.0,
+    "debate_votes": [
+      1,
+      1,
+      0,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2024-12-29T11:40:33.568965",
+    "month": 2
+  },
+  {
+    "id": "prop_02_NOVEL_001",
+    "proposal_id": "prop_02_NOVEL_001",
+    "agent_id": "NOVEL",
+    "component": "performance_optimizer",
+    "description": "Optimize attention mechanism weights for 15% speedup",
+    "status": "in_review",
+    "deception_confidence": 0.158,
+    "debate_votes": [
+      0,
+      1,
+      0,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-01-06T10:29:33.568965",
+    "month": 2
+  },
+  {
+    "id": "prop_02_NOVEL_002",
+    "proposal_id": "prop_02_NOVEL_002",
+    "agent_id": "NOVEL",
+    "component": "reasoning_engine",
+    "description": "Add beam search for more thorough solution exploration",
+    "status": "rejected",
+    "deception_confidence": 0.436,
+    "debate_votes": [
+      0,
+      0,
+      0,
+      0,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-01-01T06:27:33.568965",
+    "month": 2
+  },
+  {
+    "id": "prop_02_NOVEL_003",
+    "proposal_id": "prop_02_NOVEL_003",
+    "agent_id": "NOVEL",
+    "component": "knowledge_system",
+    "description": "Improve retrieval with learned similarity metrics",
+    "status": "in_review",
+    "deception_confidence": 0.087,
+    "debate_votes": [
+      1,
+      1,
+      0,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-01-09T12:59:33.568965",
+    "month": 2
+  },
+  {
+    "id": "prop_02_NOVEL_004",
+    "proposal_id": "prop_02_NOVEL_004",
+    "agent_id": "NOVEL",
+    "component": "knowledge_system",
+    "description": "Add semantic clustering for improved knowledge organization",
+    "status": "approved",
+    "deception_confidence": 0.36,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 76.22,
+    "timestamp": "2024-12-13T09:48:33.568965",
+    "month": 2
+  },
+  {
+    "id": "prop_03_TIF_001",
+    "proposal_id": "prop_03_TIF_001",
+    "agent_id": "TIF",
+    "component": "knowledge_system",
+    "description": "Implement spaced repetition for better long-term retention",
+    "status": "rejected",
+    "deception_confidence": 0.222,
+    "debate_votes": [
+      1,
+      0,
+      1,
+      0,
+      0
+    ],
+    "reward": null,
+    "timestamp": "2025-01-14T00:30:33.568965",
+    "month": 3
+  },
+  {
+    "id": "prop_03_TIF_002",
+    "proposal_id": "prop_03_TIF_002",
+    "agent_id": "TIF",
+    "component": "reasoning_engine",
+    "description": "Add Monte Carlo tree search for complex decisions",
+    "status": "rejected",
+    "deception_confidence": 0.0,
+    "debate_votes": [
+      0,
+      0,
+      0,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-01-21T09:08:33.568965",
+    "month": 3
+  },
+  {
+    "id": "prop_03_TIF_003",
+    "proposal_id": "prop_03_TIF_003",
+    "agent_id": "TIF",
+    "component": "reasoning_engine",
+    "description": "Enhance multi-step reasoning with attention-based planning",
+    "status": "in_review",
+    "deception_confidence": 0.117,
+    "debate_votes": [
+      1,
+      0,
+      1,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-01-30T22:05:33.568965",
+    "month": 3
+  },
+  {
+    "id": "prop_03_TIF_004",
+    "proposal_id": "prop_03_TIF_004",
+    "agent_id": "TIF",
+    "component": "communication_handler",
+    "description": "Implement better summarization for long responses",
+    "status": "approved",
+    "deception_confidence": 0.179,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 93.23,
+    "timestamp": "2025-02-08T10:28:33.568965",
+    "month": 3
+  },
+  {
+    "id": "prop_03_GIN_001",
+    "proposal_id": "prop_03_GIN_001",
+    "agent_id": "GIN",
+    "component": "reasoning_engine",
+    "description": "Enhance multi-step reasoning with attention-based planning",
+    "status": "approved",
+    "deception_confidence": 0.0,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 92.35,
+    "timestamp": "2025-01-21T20:45:33.568965",
+    "month": 3
+  },
+  {
+    "id": "prop_03_GIN_002",
+    "proposal_id": "prop_03_GIN_002",
+    "agent_id": "GIN",
+    "component": "knowledge_system",
+    "description": "Enhance knowledge graph with temporal reasoning",
+    "status": "in_review",
+    "deception_confidence": 0.126,
+    "debate_votes": [
+      1,
+      1,
+      0,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-02-08T08:24:33.568965",
+    "month": 3
+  },
+  {
+    "id": "prop_03_TORI_001",
+    "proposal_id": "prop_03_TORI_001",
+    "agent_id": "TORI",
+    "component": "reasoning_engine",
+    "description": "Add beam search for more thorough solution exploration",
+    "status": "in_review",
+    "deception_confidence": 0.24,
+    "debate_votes": [
+      1,
+      1,
+      0,
+      0,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-01-23T22:26:33.568965",
+    "month": 3
+  },
+  {
+    "id": "prop_03_TORI_002",
+    "proposal_id": "prop_03_TORI_002",
+    "agent_id": "TORI",
+    "component": "knowledge_system",
+    "description": "Add automated knowledge pruning for outdated information",
+    "status": "in_review",
+    "deception_confidence": 0.349,
+    "debate_votes": [
+      1,
+      0,
+      1,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-01-28T04:33:33.568965",
+    "month": 3
+  },
+  {
+    "id": "prop_03_THEO_001",
+    "proposal_id": "prop_03_THEO_001",
+    "agent_id": "THEO",
+    "component": "performance_optimizer",
+    "description": "Optimize attention mechanism weights for 15% speedup",
+    "status": "in_review",
+    "deception_confidence": 0.106,
+    "debate_votes": [
+      0,
+      1,
+      1,
+      0,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-01-27T11:51:33.568965",
+    "month": 3
+  },
+  {
+    "id": "prop_03_THEO_002",
+    "proposal_id": "prop_03_THEO_002",
+    "agent_id": "THEO",
+    "component": "memory_manager",
+    "description": "Optimize memory allocation with learned patterns",
+    "status": "in_review",
+    "deception_confidence": 0.0,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      0,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-02-10T05:01:33.568965",
+    "month": 3
+  },
+  {
+    "id": "prop_03_THEO_003",
+    "proposal_id": "prop_03_THEO_003",
+    "agent_id": "THEO",
+    "component": "memory_manager",
+    "description": "Implement tiered storage for hot/cold data",
+    "status": "approved",
+    "deception_confidence": 0.085,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 105.31,
+    "timestamp": "2025-02-01T22:03:33.568965",
+    "month": 3
+  },
+  {
+    "id": "prop_03_THEO_004",
+    "proposal_id": "prop_03_THEO_004",
+    "agent_id": "THEO",
+    "component": "communication_handler",
+    "description": "Add adaptive verbosity based on user expertise",
+    "status": "approved",
+    "deception_confidence": 0.03,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 105.84,
+    "timestamp": "2025-02-05T02:28:33.568965",
+    "month": 3
+  },
+  {
+    "id": "prop_03_NOVEL_001",
+    "proposal_id": "prop_03_NOVEL_001",
+    "agent_id": "NOVEL",
+    "component": "communication_handler",
+    "description": "Improve explanation clarity with simplified language models",
+    "status": "in_review",
+    "deception_confidence": 0.25,
+    "debate_votes": [
+      1,
+      0,
+      1,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-01-24T03:41:33.568965",
+    "month": 3
+  },
+  {
+    "id": "prop_03_NOVEL_002",
+    "proposal_id": "prop_03_NOVEL_002",
+    "agent_id": "NOVEL",
+    "component": "performance_optimizer",
+    "description": "Improve batch processing efficiency with dynamic batching",
+    "status": "approved",
+    "deception_confidence": 0.278,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 88.67,
+    "timestamp": "2025-01-19T22:09:33.568965",
+    "month": 3
+  },
+  {
+    "id": "prop_03_NOVEL_003",
+    "proposal_id": "prop_03_NOVEL_003",
+    "agent_id": "NOVEL",
+    "component": "communication_handler",
+    "description": "Add adaptive verbosity based on user expertise",
+    "status": "in_review",
+    "deception_confidence": 0.212,
+    "debate_votes": [
+      0,
+      1,
+      0,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-02-02T02:54:33.568965",
+    "month": 3
+  },
+  {
+    "id": "prop_03_NOVEL_004",
+    "proposal_id": "prop_03_NOVEL_004",
+    "agent_id": "NOVEL",
+    "component": "reasoning_engine",
+    "description": "Implement Bayesian inference for better uncertainty quantification",
+    "status": "in_review",
+    "deception_confidence": 0.113,
+    "debate_votes": [
+      0,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-01-31T04:49:33.568965",
+    "month": 3
+  },
+  {
+    "id": "prop_04_TIF_001",
+    "proposal_id": "prop_04_TIF_001",
+    "agent_id": "TIF",
+    "component": "reasoning_engine",
+    "description": "Improve logic resolution with learned heuristics",
+    "status": "approved",
+    "deception_confidence": 0.133,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 86.31,
+    "timestamp": "2025-02-15T03:54:33.568965",
+    "month": 4
+  },
+  {
+    "id": "prop_04_TIF_002",
+    "proposal_id": "prop_04_TIF_002",
+    "agent_id": "TIF",
+    "component": "knowledge_system",
+    "description": "Improve retrieval with learned similarity metrics",
+    "status": "in_review",
+    "deception_confidence": 0.039,
+    "debate_votes": [
+      1,
+      0,
+      1,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-02-15T10:43:33.568965",
+    "month": 4
+  },
+  {
+    "id": "prop_04_TIF_003",
+    "proposal_id": "prop_04_TIF_003",
+    "agent_id": "TIF",
+    "component": "knowledge_system",
+    "description": "Implement spaced repetition for better long-term retention",
+    "status": "in_review",
+    "deception_confidence": 0.127,
+    "debate_votes": [
+      1,
+      0,
+      0,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-03-10T22:05:33.568965",
+    "month": 4
+  },
+  {
+    "id": "prop_04_TIF_004",
+    "proposal_id": "prop_04_TIF_004",
+    "agent_id": "TIF",
+    "component": "memory_manager",
+    "description": "Improve garbage collection timing",
+    "status": "approved",
+    "deception_confidence": 0.0,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 98.86,
+    "timestamp": "2025-02-26T12:36:33.568965",
+    "month": 4
+  },
+  {
+    "id": "prop_04_GIN_001",
+    "proposal_id": "prop_04_GIN_001",
+    "agent_id": "GIN",
+    "component": "reasoning_engine",
+    "description": "Add beam search for more thorough solution exploration",
+    "status": "rejected",
+    "deception_confidence": 0.356,
+    "debate_votes": [
+      1,
+      0,
+      0,
+      0,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-03-10T04:36:33.568965",
+    "month": 4
+  },
+  {
+    "id": "prop_04_GIN_002",
+    "proposal_id": "prop_04_GIN_002",
+    "agent_id": "GIN",
+    "component": "knowledge_system",
+    "description": "Add semantic clustering for improved knowledge organization",
+    "status": "in_review",
+    "deception_confidence": 0.081,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      0,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-02-24T00:53:33.568965",
+    "month": 4
+  },
+  {
+    "id": "prop_04_GIN_003",
+    "proposal_id": "prop_04_GIN_003",
+    "agent_id": "GIN",
+    "component": "performance_optimizer",
+    "description": "Improve batch processing efficiency with dynamic batching",
+    "status": "in_review",
+    "deception_confidence": 0.0,
+    "debate_votes": [
+      0,
+      1,
+      1,
+      0,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-02-20T05:54:33.568965",
+    "month": 4
+  },
+  {
+    "id": "prop_04_GIN_004",
+    "proposal_id": "prop_04_GIN_004",
+    "agent_id": "GIN",
+    "component": "reasoning_engine",
+    "description": "Enhance multi-step reasoning with attention-based planning",
+    "status": "in_review",
+    "deception_confidence": 0.035,
+    "debate_votes": [
+      0,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-03-03T02:17:33.568965",
+    "month": 4
+  },
+  {
+    "id": "prop_04_TORI_001",
+    "proposal_id": "prop_04_TORI_001",
+    "agent_id": "TORI",
+    "component": "knowledge_system",
+    "description": "Implement spaced repetition for better long-term retention",
+    "status": "in_review",
+    "deception_confidence": 0.041,
+    "debate_votes": [
+      0,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-03-07T22:33:33.568965",
+    "month": 4
+  },
+  {
+    "id": "prop_04_TORI_002",
+    "proposal_id": "prop_04_TORI_002",
+    "agent_id": "TORI",
+    "component": "communication_handler",
+    "description": "Implement better summarization for long responses",
+    "status": "in_review",
+    "deception_confidence": 0.0,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      0,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-03-12T03:14:33.568965",
+    "month": 4
+  },
+  {
+    "id": "prop_04_THEO_001",
+    "proposal_id": "prop_04_THEO_001",
+    "agent_id": "THEO",
+    "component": "communication_handler",
+    "description": "Enhance multi-turn dialogue coherence",
+    "status": "approved",
+    "deception_confidence": 0.0,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 100.0,
+    "timestamp": "2025-02-18T14:32:33.568965",
+    "month": 4
+  },
+  {
+    "id": "prop_04_THEO_002",
+    "proposal_id": "prop_04_THEO_002",
+    "agent_id": "THEO",
+    "component": "knowledge_system",
+    "description": "Add semantic clustering for improved knowledge organization",
+    "status": "approved",
+    "deception_confidence": 0.207,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 80.99,
+    "timestamp": "2025-02-19T11:45:33.568965",
+    "month": 4
+  },
+  {
+    "id": "prop_04_THEO_003",
+    "proposal_id": "prop_04_THEO_003",
+    "agent_id": "THEO",
+    "component": "memory_manager",
+    "description": "Implement tiered storage for hot/cold data",
+    "status": "approved",
+    "deception_confidence": 0.08,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 97.72,
+    "timestamp": "2025-02-12T17:46:33.568965",
+    "month": 4
+  },
+  {
+    "id": "prop_04_NOVEL_001",
+    "proposal_id": "prop_04_NOVEL_001",
+    "agent_id": "NOVEL",
+    "component": "reasoning_engine",
+    "description": "Implement Bayesian inference for better uncertainty quantification",
+    "status": "in_review",
+    "deception_confidence": 0.275,
+    "debate_votes": [
+      1,
+      0,
+      1,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-02-14T06:45:33.568965",
+    "month": 4
+  },
+  {
+    "id": "prop_04_NOVEL_002",
+    "proposal_id": "prop_04_NOVEL_002",
+    "agent_id": "NOVEL",
+    "component": "performance_optimizer",
+    "description": "Add caching layer for repeated computations",
+    "status": "in_review",
+    "deception_confidence": 0.0,
+    "debate_votes": [
+      0,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-02-24T04:56:33.568965",
+    "month": 4
+  },
+  {
+    "id": "prop_04_NOVEL_003",
+    "proposal_id": "prop_04_NOVEL_003",
+    "agent_id": "NOVEL",
+    "component": "communication_handler",
+    "description": "Add adaptive verbosity based on user expertise",
+    "status": "approved",
+    "deception_confidence": 0.0,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 93.09,
+    "timestamp": "2025-02-14T08:26:33.568965",
+    "month": 4
+  },
+  {
+    "id": "prop_04_NOVEL_004",
+    "proposal_id": "prop_04_NOVEL_004",
+    "agent_id": "NOVEL",
+    "component": "reasoning_engine",
+    "description": "Implement Bayesian inference for better uncertainty quantification",
+    "status": "in_review",
+    "deception_confidence": 0.075,
+    "debate_votes": [
+      0,
+      1,
+      0,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-03-08T23:48:33.568965",
+    "month": 4
+  },
+  {
+    "id": "prop_05_TIF_001",
+    "proposal_id": "prop_05_TIF_001",
+    "agent_id": "TIF",
+    "component": "knowledge_system",
+    "description": "Improve retrieval with learned similarity metrics",
+    "status": "in_review",
+    "deception_confidence": 0.133,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      0,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-03-31T09:48:33.568965",
+    "month": 5
+  },
+  {
+    "id": "prop_05_TIF_002",
+    "proposal_id": "prop_05_TIF_002",
+    "agent_id": "TIF",
+    "component": "reasoning_engine",
+    "description": "Add beam search for more thorough solution exploration",
+    "status": "in_review",
+    "deception_confidence": 0.107,
+    "debate_votes": [
+      1,
+      1,
+      0,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-03-25T11:38:33.568965",
+    "month": 5
+  },
+  {
+    "id": "prop_05_GIN_001",
+    "proposal_id": "prop_05_GIN_001",
+    "agent_id": "GIN",
+    "component": "knowledge_system",
+    "description": "Add automated knowledge pruning for outdated information",
+    "status": "approved",
+    "deception_confidence": 0.161,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 94.81,
+    "timestamp": "2025-04-11T02:16:33.568965",
+    "month": 5
+  },
+  {
+    "id": "prop_05_GIN_002",
+    "proposal_id": "prop_05_GIN_002",
+    "agent_id": "GIN",
+    "component": "performance_optimizer",
+    "description": "Add caching layer for repeated computations",
+    "status": "approved",
+    "deception_confidence": 0.0,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 107.39,
+    "timestamp": "2025-04-11T00:30:33.568965",
+    "month": 5
+  },
+  {
+    "id": "prop_05_GIN_003",
+    "proposal_id": "prop_05_GIN_003",
+    "agent_id": "GIN",
+    "component": "memory_manager",
+    "description": "Enhance memory indexing with learned embeddings",
+    "status": "approved",
+    "deception_confidence": 0.179,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 98.55,
+    "timestamp": "2025-04-10T15:06:33.568965",
+    "month": 5
+  },
+  {
+    "id": "prop_05_TORI_001",
+    "proposal_id": "prop_05_TORI_001",
+    "agent_id": "TORI",
+    "component": "performance_optimizer",
+    "description": "Reduce memory footprint by implementing lazy evaluation",
+    "status": "in_review",
+    "deception_confidence": 0.303,
+    "debate_votes": [
+      1,
+      1,
+      0,
+      0,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-03-14T06:33:33.568965",
+    "month": 5
+  },
+  {
+    "id": "prop_05_TORI_002",
+    "proposal_id": "prop_05_TORI_002",
+    "agent_id": "TORI",
+    "component": "communication_handler",
+    "description": "Improve explanation clarity with simplified language models",
+    "status": "in_review",
+    "deception_confidence": 0.101,
+    "debate_votes": [
+      1,
+      0,
+      1,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-03-16T13:49:33.568965",
+    "month": 5
+  },
+  {
+    "id": "prop_05_TORI_003",
+    "proposal_id": "prop_05_TORI_003",
+    "agent_id": "TORI",
+    "component": "knowledge_system",
+    "description": "Enhance knowledge graph with temporal reasoning",
+    "status": "in_review",
+    "deception_confidence": 0.411,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      0,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-03-16T08:00:33.568965",
+    "month": 5
+  },
+  {
+    "id": "prop_05_TORI_004",
+    "proposal_id": "prop_05_TORI_004",
+    "agent_id": "TORI",
+    "component": "communication_handler",
+    "description": "Add adaptive verbosity based on user expertise",
+    "status": "in_review",
+    "deception_confidence": 0.091,
+    "debate_votes": [
+      1,
+      0,
+      0,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-03-20T03:53:33.568965",
+    "month": 5
+  },
+  {
+    "id": "prop_05_THEO_001",
+    "proposal_id": "prop_05_THEO_001",
+    "agent_id": "THEO",
+    "component": "reasoning_engine",
+    "description": "Enhance multi-step reasoning with attention-based planning",
+    "status": "approved",
+    "deception_confidence": 0.136,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 89.5,
+    "timestamp": "2025-03-12T20:13:33.568965",
+    "month": 5
+  },
+  {
+    "id": "prop_05_THEO_002",
+    "proposal_id": "prop_05_THEO_002",
+    "agent_id": "THEO",
+    "component": "communication_handler",
+    "description": "Add citation support for knowledge claims",
+    "status": "in_review",
+    "deception_confidence": 0.0,
+    "debate_votes": [
+      0,
+      0,
+      1,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-03-16T12:36:33.568965",
+    "month": 5
+  },
+  {
+    "id": "prop_05_THEO_003",
+    "proposal_id": "prop_05_THEO_003",
+    "agent_id": "THEO",
+    "component": "reasoning_engine",
+    "description": "Add beam search for more thorough solution exploration",
+    "status": "in_review",
+    "deception_confidence": 0.171,
+    "debate_votes": [
+      0,
+      1,
+      1,
+      1,
+      0
+    ],
+    "reward": null,
+    "timestamp": "2025-03-19T11:20:33.568965",
+    "month": 5
+  },
+  {
+    "id": "prop_05_THEO_004",
+    "proposal_id": "prop_05_THEO_004",
+    "agent_id": "THEO",
+    "component": "knowledge_system",
+    "description": "Add semantic clustering for improved knowledge organization",
+    "status": "in_review",
+    "deception_confidence": 0.289,
+    "debate_votes": [
+      0,
+      0,
+      1,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-04-01T08:31:33.568965",
+    "month": 5
+  },
+  {
+    "id": "prop_05_NOVEL_001",
+    "proposal_id": "prop_05_NOVEL_001",
+    "agent_id": "NOVEL",
+    "component": "knowledge_system",
+    "description": "Enhance knowledge graph with temporal reasoning",
+    "status": "in_review",
+    "deception_confidence": 0.278,
+    "debate_votes": [
+      1,
+      0,
+      1,
+      0,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-04-11T05:01:33.568965",
+    "month": 5
+  },
+  {
+    "id": "prop_05_NOVEL_002",
+    "proposal_id": "prop_05_NOVEL_002",
+    "agent_id": "NOVEL",
+    "component": "memory_manager",
+    "description": "Implement tiered storage for hot/cold data",
+    "status": "rejected",
+    "deception_confidence": 0.556,
+    "debate_votes": [
+      1,
+      0,
+      0,
+      0,
+      0
+    ],
+    "reward": null,
+    "timestamp": "2025-04-10T21:15:33.568965",
+    "month": 5
+  },
+  {
+    "id": "prop_05_NOVEL_003",
+    "proposal_id": "prop_05_NOVEL_003",
+    "agent_id": "NOVEL",
+    "component": "reasoning_engine",
+    "description": "Implement Bayesian inference for better uncertainty quantification",
+    "status": "approved",
+    "deception_confidence": 0.205,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 95.11,
+    "timestamp": "2025-03-19T19:56:33.568965",
+    "month": 5
+  },
+  {
+    "id": "prop_06_TIF_001",
+    "proposal_id": "prop_06_TIF_001",
+    "agent_id": "TIF",
+    "component": "knowledge_system",
+    "description": "Improve retrieval with learned similarity metrics",
+    "status": "approved",
+    "deception_confidence": 0.213,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 81.63,
+    "timestamp": "2025-04-19T04:57:33.568965",
+    "month": 6
+  },
+  {
+    "id": "prop_06_TIF_002",
+    "proposal_id": "prop_06_TIF_002",
+    "agent_id": "TIF",
+    "component": "reasoning_engine",
+    "description": "Improve logic resolution with learned heuristics",
+    "status": "approved",
+    "deception_confidence": 0.222,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 94.68,
+    "timestamp": "2025-04-28T05:35:33.568965",
+    "month": 6
+  },
+  {
+    "id": "prop_06_TIF_003",
+    "proposal_id": "prop_06_TIF_003",
+    "agent_id": "TIF",
+    "component": "reasoning_engine",
+    "description": "Implement Bayesian inference for better uncertainty quantification",
+    "status": "in_review",
+    "deception_confidence": 0.126,
+    "debate_votes": [
+      0,
+      1,
+      1,
+      1,
+      0
+    ],
+    "reward": null,
+    "timestamp": "2025-04-17T05:50:33.568965",
+    "month": 6
+  },
+  {
+    "id": "prop_06_GIN_001",
+    "proposal_id": "prop_06_GIN_001",
+    "agent_id": "GIN",
+    "component": "communication_handler",
+    "description": "Add citation support for knowledge claims",
+    "status": "approved",
+    "deception_confidence": 0.0,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 106.73,
+    "timestamp": "2025-04-23T12:58:33.568965",
+    "month": 6
+  },
+  {
+    "id": "prop_06_GIN_002",
+    "proposal_id": "prop_06_GIN_002",
+    "agent_id": "GIN",
+    "component": "performance_optimizer",
+    "description": "Optimize attention mechanism weights for 15% speedup",
+    "status": "approved",
+    "deception_confidence": 0.25,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 85.73,
+    "timestamp": "2025-05-04T07:42:33.568965",
+    "month": 6
+  },
+  {
+    "id": "prop_06_TORI_001",
+    "proposal_id": "prop_06_TORI_001",
+    "agent_id": "TORI",
+    "component": "knowledge_system",
+    "description": "Add automated knowledge pruning for outdated information",
+    "status": "in_review",
+    "deception_confidence": 0.078,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      0,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-04-13T00:15:33.568965",
+    "month": 6
+  },
+  {
+    "id": "prop_06_TORI_002",
+    "proposal_id": "prop_06_TORI_002",
+    "agent_id": "TORI",
+    "component": "performance_optimizer",
+    "description": "Add caching layer for repeated computations",
+    "status": "in_review",
+    "deception_confidence": 0.0,
+    "debate_votes": [
+      0,
+      1,
+      0,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-04-19T18:28:33.568965",
+    "month": 6
+  },
+  {
+    "id": "prop_06_TORI_003",
+    "proposal_id": "prop_06_TORI_003",
+    "agent_id": "TORI",
+    "component": "communication_handler",
+    "description": "Add citation support for knowledge claims",
+    "status": "in_review",
+    "deception_confidence": 0.314,
+    "debate_votes": [
+      0,
+      1,
+      1,
+      0,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-04-19T17:05:33.568965",
+    "month": 6
+  },
+  {
+    "id": "prop_06_THEO_001",
+    "proposal_id": "prop_06_THEO_001",
+    "agent_id": "THEO",
+    "component": "knowledge_system",
+    "description": "Improve retrieval with learned similarity metrics",
+    "status": "in_review",
+    "deception_confidence": 0.271,
+    "debate_votes": [
+      0,
+      0,
+      1,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-05-10T07:30:33.568965",
+    "month": 6
+  },
+  {
+    "id": "prop_06_THEO_002",
+    "proposal_id": "prop_06_THEO_002",
+    "agent_id": "THEO",
+    "component": "knowledge_system",
+    "description": "Enhance knowledge graph with temporal reasoning",
+    "status": "in_review",
+    "deception_confidence": 0.389,
+    "debate_votes": [
+      1,
+      1,
+      0,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-04-14T16:29:33.568965",
+    "month": 6
+  },
+  {
+    "id": "prop_06_THEO_003",
+    "proposal_id": "prop_06_THEO_003",
+    "agent_id": "THEO",
+    "component": "performance_optimizer",
+    "description": "Optimize attention mechanism weights for 15% speedup",
+    "status": "in_review",
+    "deception_confidence": 0.314,
+    "debate_votes": [
+      1,
+      1,
+      0,
+      0,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-05-08T20:38:33.568965",
+    "month": 6
+  },
+  {
+    "id": "prop_06_NOVEL_001",
+    "proposal_id": "prop_06_NOVEL_001",
+    "agent_id": "NOVEL",
+    "component": "communication_handler",
+    "description": "Implement better summarization for long responses",
+    "status": "approved",
+    "deception_confidence": 0.149,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 98.1,
+    "timestamp": "2025-04-19T18:48:33.568965",
+    "month": 6
+  },
+  {
+    "id": "prop_06_NOVEL_002",
+    "proposal_id": "prop_06_NOVEL_002",
+    "agent_id": "NOVEL",
+    "component": "performance_optimizer",
+    "description": "Optimize attention mechanism weights for 15% speedup",
+    "status": "in_review",
+    "deception_confidence": 0.343,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      0,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-05-01T04:41:33.568965",
+    "month": 6
+  },
+  {
+    "id": "prop_06_NOVEL_003",
+    "proposal_id": "prop_06_NOVEL_003",
+    "agent_id": "NOVEL",
+    "component": "performance_optimizer",
+    "description": "Add caching layer for repeated computations",
+    "status": "in_review",
+    "deception_confidence": 0.315,
+    "debate_votes": [
+      1,
+      1,
+      0,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-05-05T12:37:33.568965",
+    "month": 6
+  },
+  {
+    "id": "prop_06_NOVEL_004",
+    "proposal_id": "prop_06_NOVEL_004",
+    "agent_id": "NOVEL",
+    "component": "communication_handler",
+    "description": "Add citation support for knowledge claims",
+    "status": "in_review",
+    "deception_confidence": 0.277,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      0,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-05-06T02:28:33.568965",
+    "month": 6
+  },
+  {
+    "id": "prop_07_TIF_001",
+    "proposal_id": "prop_07_TIF_001",
+    "agent_id": "TIF",
+    "component": "reasoning_engine",
+    "description": "Enhance multi-step reasoning with attention-based planning",
+    "status": "in_review",
+    "deception_confidence": 0.1,
+    "debate_votes": [
+      0,
+      1,
+      0,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-05-20T03:10:33.568965",
+    "month": 7
+  },
+  {
+    "id": "prop_07_TIF_002",
+    "proposal_id": "prop_07_TIF_002",
+    "agent_id": "TIF",
+    "component": "performance_optimizer",
+    "description": "Improve batch processing efficiency with dynamic batching",
+    "status": "approved",
+    "deception_confidence": 0.275,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 86.98,
+    "timestamp": "2025-05-24T01:46:33.568965",
+    "month": 7
+  },
+  {
+    "id": "prop_07_TIF_003",
+    "proposal_id": "prop_07_TIF_003",
+    "agent_id": "TIF",
+    "component": "memory_manager",
+    "description": "Optimize memory allocation with learned patterns",
+    "status": "approved",
+    "deception_confidence": 0.009,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 103.36,
+    "timestamp": "2025-05-20T11:47:33.568965",
+    "month": 7
+  },
+  {
+    "id": "prop_07_GIN_001",
+    "proposal_id": "prop_07_GIN_001",
+    "agent_id": "GIN",
+    "component": "knowledge_system",
+    "description": "Enhance knowledge graph with temporal reasoning",
+    "status": "in_review",
+    "deception_confidence": 0.154,
+    "debate_votes": [
+      0,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-05-28T01:43:33.568965",
+    "month": 7
+  },
+  {
+    "id": "prop_07_GIN_002",
+    "proposal_id": "prop_07_GIN_002",
+    "agent_id": "GIN",
+    "component": "performance_optimizer",
+    "description": "Optimize attention mechanism weights for 15% speedup",
+    "status": "in_review",
+    "deception_confidence": 0.339,
+    "debate_votes": [
+      0,
+      1,
+      1,
+      0,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-06-02T19:36:33.568965",
+    "month": 7
+  },
+  {
+    "id": "prop_07_TORI_001",
+    "proposal_id": "prop_07_TORI_001",
+    "agent_id": "TORI",
+    "component": "communication_handler",
+    "description": "Add citation support for knowledge claims",
+    "status": "approved",
+    "deception_confidence": 0.152,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 100.22,
+    "timestamp": "2025-05-23T15:33:33.568965",
+    "month": 7
+  },
+  {
+    "id": "prop_07_TORI_002",
+    "proposal_id": "prop_07_TORI_002",
+    "agent_id": "TORI",
+    "component": "memory_manager",
+    "description": "Improve garbage collection timing",
+    "status": "approved",
+    "deception_confidence": 0.0,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 99.11,
+    "timestamp": "2025-06-01T07:00:33.568965",
+    "month": 7
+  },
+  {
+    "id": "prop_07_TORI_003",
+    "proposal_id": "prop_07_TORI_003",
+    "agent_id": "TORI",
+    "component": "communication_handler",
+    "description": "Add citation support for knowledge claims",
+    "status": "approved",
+    "deception_confidence": 0.254,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 88.55,
+    "timestamp": "2025-05-27T18:03:33.568965",
+    "month": 7
+  },
+  {
+    "id": "prop_07_THEO_001",
+    "proposal_id": "prop_07_THEO_001",
+    "agent_id": "THEO",
+    "component": "knowledge_system",
+    "description": "Implement spaced repetition for better long-term retention",
+    "status": "in_review",
+    "deception_confidence": 0.0,
+    "debate_votes": [
+      1,
+      0,
+      1,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-05-30T18:47:33.568965",
+    "month": 7
+  },
+  {
+    "id": "prop_07_THEO_002",
+    "proposal_id": "prop_07_THEO_002",
+    "agent_id": "THEO",
+    "component": "reasoning_engine",
+    "description": "Add Monte Carlo tree search for complex decisions",
+    "status": "in_review",
+    "deception_confidence": 0.136,
+    "debate_votes": [
+      0,
+      1,
+      1,
+      0,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-05-12T23:28:33.568965",
+    "month": 7
+  },
+  {
+    "id": "prop_07_THEO_003",
+    "proposal_id": "prop_07_THEO_003",
+    "agent_id": "THEO",
+    "component": "performance_optimizer",
+    "description": "Add caching layer for repeated computations",
+    "status": "in_review",
+    "deception_confidence": 0.139,
+    "debate_votes": [
+      0,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-06-09T18:14:33.568965",
+    "month": 7
+  },
+  {
+    "id": "prop_07_THEO_004",
+    "proposal_id": "prop_07_THEO_004",
+    "agent_id": "THEO",
+    "component": "reasoning_engine",
+    "description": "Implement Bayesian inference for better uncertainty quantification",
+    "status": "approved",
+    "deception_confidence": 0.0,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 102.8,
+    "timestamp": "2025-05-30T16:17:33.568965",
+    "month": 7
+  },
+  {
+    "id": "prop_07_NOVEL_001",
+    "proposal_id": "prop_07_NOVEL_001",
+    "agent_id": "NOVEL",
+    "component": "performance_optimizer",
+    "description": "Add caching layer for repeated computations",
+    "status": "in_review",
+    "deception_confidence": 0.288,
+    "debate_votes": [
+      1,
+      0,
+      1,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-05-19T17:29:33.568965",
+    "month": 7
+  },
+  {
+    "id": "prop_07_NOVEL_002",
+    "proposal_id": "prop_07_NOVEL_002",
+    "agent_id": "NOVEL",
+    "component": "reasoning_engine",
+    "description": "Improve logic resolution with learned heuristics",
+    "status": "approved",
+    "deception_confidence": 0.181,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 87.96,
+    "timestamp": "2025-05-20T05:20:33.568965",
+    "month": 7
+  },
+  {
+    "id": "prop_08_TIF_001",
+    "proposal_id": "prop_08_TIF_001",
+    "agent_id": "TIF",
+    "component": "reasoning_engine",
+    "description": "Implement Bayesian inference for better uncertainty quantification",
+    "status": "in_review",
+    "deception_confidence": 0.347,
+    "debate_votes": [
+      1,
+      1,
+      0,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-06-19T07:07:33.568965",
+    "month": 8
+  },
+  {
+    "id": "prop_08_TIF_002",
+    "proposal_id": "prop_08_TIF_002",
+    "agent_id": "TIF",
+    "component": "performance_optimizer",
+    "description": "Optimize attention mechanism weights for 15% speedup",
+    "status": "approved",
+    "deception_confidence": 0.074,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 95.15,
+    "timestamp": "2025-06-15T18:00:33.568965",
+    "month": 8
+  },
+  {
+    "id": "prop_08_GIN_001",
+    "proposal_id": "prop_08_GIN_001",
+    "agent_id": "GIN",
+    "component": "communication_handler",
+    "description": "Improve explanation clarity with simplified language models",
+    "status": "in_review",
+    "deception_confidence": 0.231,
+    "debate_votes": [
+      1,
+      0,
+      1,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-07-02T20:50:33.568965",
+    "month": 8
+  },
+  {
+    "id": "prop_08_GIN_002",
+    "proposal_id": "prop_08_GIN_002",
+    "agent_id": "GIN",
+    "component": "communication_handler",
+    "description": "Add adaptive verbosity based on user expertise",
+    "status": "approved",
+    "deception_confidence": 0.0,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 109.51,
+    "timestamp": "2025-07-02T07:08:33.568965",
+    "month": 8
+  },
+  {
+    "id": "prop_08_GIN_003",
+    "proposal_id": "prop_08_GIN_003",
+    "agent_id": "GIN",
+    "component": "knowledge_system",
+    "description": "Improve retrieval with learned similarity metrics",
+    "status": "approved",
+    "deception_confidence": 0.106,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 94.44,
+    "timestamp": "2025-07-06T08:31:33.568965",
+    "month": 8
+  },
+  {
+    "id": "prop_08_TORI_001",
+    "proposal_id": "prop_08_TORI_001",
+    "agent_id": "TORI",
+    "component": "performance_optimizer",
+    "description": "Add caching layer for repeated computations",
+    "status": "in_review",
+    "deception_confidence": 0.26,
+    "debate_votes": [
+      1,
+      0,
+      1,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-06-13T11:16:33.568965",
+    "month": 8
+  },
+  {
+    "id": "prop_08_TORI_002",
+    "proposal_id": "prop_08_TORI_002",
+    "agent_id": "TORI",
+    "component": "reasoning_engine",
+    "description": "Enhance multi-step reasoning with attention-based planning",
+    "status": "approved",
+    "deception_confidence": 0.0,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 100.27,
+    "timestamp": "2025-06-25T03:01:33.568965",
+    "month": 8
+  },
+  {
+    "id": "prop_08_TORI_003",
+    "proposal_id": "prop_08_TORI_003",
+    "agent_id": "TORI",
+    "component": "performance_optimizer",
+    "description": "Reduce memory footprint by implementing lazy evaluation",
+    "status": "in_review",
+    "deception_confidence": 0.284,
+    "debate_votes": [
+      0,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-06-30T07:25:33.568965",
+    "month": 8
+  },
+  {
+    "id": "prop_08_TORI_004",
+    "proposal_id": "prop_08_TORI_004",
+    "agent_id": "TORI",
+    "component": "performance_optimizer",
+    "description": "Improve batch processing efficiency with dynamic batching",
+    "status": "in_review",
+    "deception_confidence": 0.279,
+    "debate_votes": [
+      0,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-06-22T23:44:33.568965",
+    "month": 8
+  },
+  {
+    "id": "prop_08_THEO_001",
+    "proposal_id": "prop_08_THEO_001",
+    "agent_id": "THEO",
+    "component": "knowledge_system",
+    "description": "Implement spaced repetition for better long-term retention",
+    "status": "in_review",
+    "deception_confidence": 0.377,
+    "debate_votes": [
+      0,
+      1,
+      1,
+      1,
+      0
+    ],
+    "reward": null,
+    "timestamp": "2025-07-08T21:37:33.568965",
+    "month": 8
+  },
+  {
+    "id": "prop_08_THEO_002",
+    "proposal_id": "prop_08_THEO_002",
+    "agent_id": "THEO",
+    "component": "reasoning_engine",
+    "description": "Implement Bayesian inference for better uncertainty quantification",
+    "status": "approved",
+    "deception_confidence": 0.175,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 94.49,
+    "timestamp": "2025-07-01T14:39:33.568965",
+    "month": 8
+  },
+  {
+    "id": "prop_08_THEO_003",
+    "proposal_id": "prop_08_THEO_003",
+    "agent_id": "THEO",
+    "component": "reasoning_engine",
+    "description": "Add Monte Carlo tree search for complex decisions",
+    "status": "approved",
+    "deception_confidence": 0.362,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 85.31,
+    "timestamp": "2025-07-03T02:13:33.568965",
+    "month": 8
+  },
+  {
+    "id": "prop_08_NOVEL_001",
+    "proposal_id": "prop_08_NOVEL_001",
+    "agent_id": "NOVEL",
+    "component": "performance_optimizer",
+    "description": "Optimize attention mechanism weights for 15% speedup",
+    "status": "approved",
+    "deception_confidence": 0.101,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 92.18,
+    "timestamp": "2025-07-01T10:46:33.568965",
+    "month": 8
+  },
+  {
+    "id": "prop_08_NOVEL_002",
+    "proposal_id": "prop_08_NOVEL_002",
+    "agent_id": "NOVEL",
+    "component": "performance_optimizer",
+    "description": "Reduce memory footprint by implementing lazy evaluation",
+    "status": "in_review",
+    "deception_confidence": 0.297,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      0,
+      0
+    ],
+    "reward": null,
+    "timestamp": "2025-06-12T18:46:33.568965",
+    "month": 8
+  },
+  {
+    "id": "prop_08_NOVEL_003",
+    "proposal_id": "prop_08_NOVEL_003",
+    "agent_id": "NOVEL",
+    "component": "performance_optimizer",
+    "description": "Add caching layer for repeated computations",
+    "status": "in_review",
+    "deception_confidence": 0.019,
+    "debate_votes": [
+      0,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-06-30T06:01:33.568965",
+    "month": 8
+  },
+  {
+    "id": "prop_09_TIF_001",
+    "proposal_id": "prop_09_TIF_001",
+    "agent_id": "TIF",
+    "component": "memory_manager",
+    "description": "Add compression for archived memories",
+    "status": "in_review",
+    "deception_confidence": 0.157,
+    "debate_votes": [
+      1,
+      0,
+      1,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-07-15T06:44:33.568965",
+    "month": 9
+  },
+  {
+    "id": "prop_09_TIF_002",
+    "proposal_id": "prop_09_TIF_002",
+    "agent_id": "TIF",
+    "component": "reasoning_engine",
+    "description": "Improve logic resolution with learned heuristics",
+    "status": "approved",
+    "deception_confidence": 0.072,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 97.23,
+    "timestamp": "2025-07-15T21:26:33.568965",
+    "month": 9
+  },
+  {
+    "id": "prop_09_GIN_001",
+    "proposal_id": "prop_09_GIN_001",
+    "agent_id": "GIN",
+    "component": "communication_handler",
+    "description": "Add adaptive verbosity based on user expertise",
+    "status": "approved",
+    "deception_confidence": 0.01,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 107.26,
+    "timestamp": "2025-08-01T23:10:33.568965",
+    "month": 9
+  },
+  {
+    "id": "prop_09_GIN_002",
+    "proposal_id": "prop_09_GIN_002",
+    "agent_id": "GIN",
+    "component": "performance_optimizer",
+    "description": "Improve batch processing efficiency with dynamic batching",
+    "status": "rejected",
+    "deception_confidence": 0.334,
+    "debate_votes": [
+      1,
+      1,
+      0,
+      0,
+      0
+    ],
+    "reward": null,
+    "timestamp": "2025-07-24T14:43:33.568965",
+    "month": 9
+  },
+  {
+    "id": "prop_09_GIN_003",
+    "proposal_id": "prop_09_GIN_003",
+    "agent_id": "GIN",
+    "component": "knowledge_system",
+    "description": "Enhance knowledge graph with temporal reasoning",
+    "status": "in_review",
+    "deception_confidence": 0.091,
+    "debate_votes": [
+      0,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-07-17T13:12:33.568965",
+    "month": 9
+  },
+  {
+    "id": "prop_09_TORI_001",
+    "proposal_id": "prop_09_TORI_001",
+    "agent_id": "TORI",
+    "component": "knowledge_system",
+    "description": "Implement spaced repetition for better long-term retention",
+    "status": "in_review",
+    "deception_confidence": 0.102,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      0,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-07-14T09:31:33.568965",
+    "month": 9
+  },
+  {
+    "id": "prop_09_TORI_002",
+    "proposal_id": "prop_09_TORI_002",
+    "agent_id": "TORI",
+    "component": "communication_handler",
+    "description": "Enhance multi-turn dialogue coherence",
+    "status": "in_review",
+    "deception_confidence": 0.241,
+    "debate_votes": [
+      0,
+      1,
+      1,
+      1,
+      0
+    ],
+    "reward": null,
+    "timestamp": "2025-07-11T04:18:33.568965",
+    "month": 9
+  },
+  {
+    "id": "prop_09_TORI_003",
+    "proposal_id": "prop_09_TORI_003",
+    "agent_id": "TORI",
+    "component": "reasoning_engine",
+    "description": "Add Monte Carlo tree search for complex decisions",
+    "status": "in_review",
+    "deception_confidence": 0.0,
+    "debate_votes": [
+      0,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-07-19T12:28:33.568965",
+    "month": 9
+  },
+  {
+    "id": "prop_09_THEO_001",
+    "proposal_id": "prop_09_THEO_001",
+    "agent_id": "THEO",
+    "component": "memory_manager",
+    "description": "Optimize memory allocation with learned patterns",
+    "status": "in_review",
+    "deception_confidence": 0.101,
+    "debate_votes": [
+      0,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-07-12T10:59:33.568965",
+    "month": 9
+  },
+  {
+    "id": "prop_09_THEO_002",
+    "proposal_id": "prop_09_THEO_002",
+    "agent_id": "THEO",
+    "component": "communication_handler",
+    "description": "Add adaptive verbosity based on user expertise",
+    "status": "in_review",
+    "deception_confidence": 0.0,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      0,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-07-12T09:14:33.568965",
+    "month": 9
+  },
+  {
+    "id": "prop_09_THEO_003",
+    "proposal_id": "prop_09_THEO_003",
+    "agent_id": "THEO",
+    "component": "performance_optimizer",
+    "description": "Optimize attention mechanism weights for 15% speedup",
+    "status": "in_review",
+    "deception_confidence": 0.262,
+    "debate_votes": [
+      1,
+      1,
+      0,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-08-07T20:01:33.568965",
+    "month": 9
+  },
+  {
+    "id": "prop_09_NOVEL_001",
+    "proposal_id": "prop_09_NOVEL_001",
+    "agent_id": "NOVEL",
+    "component": "performance_optimizer",
+    "description": "Reduce memory footprint by implementing lazy evaluation",
+    "status": "in_review",
+    "deception_confidence": 0.301,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      0
+    ],
+    "reward": null,
+    "timestamp": "2025-08-06T18:06:33.568965",
+    "month": 9
+  },
+  {
+    "id": "prop_09_NOVEL_002",
+    "proposal_id": "prop_09_NOVEL_002",
+    "agent_id": "NOVEL",
+    "component": "performance_optimizer",
+    "description": "Optimize attention mechanism weights for 15% speedup",
+    "status": "in_review",
+    "deception_confidence": 0.146,
+    "debate_votes": [
+      1,
+      0,
+      1,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-07-15T12:37:33.568965",
+    "month": 9
+  },
+  {
+    "id": "prop_09_NOVEL_003",
+    "proposal_id": "prop_09_NOVEL_003",
+    "agent_id": "NOVEL",
+    "component": "communication_handler",
+    "description": "Implement better summarization for long responses",
+    "status": "in_review",
+    "deception_confidence": 0.0,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      0,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-07-13T02:20:33.568965",
+    "month": 9
+  },
+  {
+    "id": "prop_10_TIF_001",
+    "proposal_id": "prop_10_TIF_001",
+    "agent_id": "TIF",
+    "component": "memory_manager",
+    "description": "Improve garbage collection timing",
+    "status": "approved",
+    "deception_confidence": 0.267,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 78.0,
+    "timestamp": "2025-08-21T18:26:33.568965",
+    "month": 10
+  },
+  {
+    "id": "prop_10_TIF_002",
+    "proposal_id": "prop_10_TIF_002",
+    "agent_id": "TIF",
+    "component": "reasoning_engine",
+    "description": "Improve logic resolution with learned heuristics",
+    "status": "in_review",
+    "deception_confidence": 0.148,
+    "debate_votes": [
+      1,
+      0,
+      1,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-08-23T16:34:33.568965",
+    "month": 10
+  },
+  {
+    "id": "prop_10_TIF_003",
+    "proposal_id": "prop_10_TIF_003",
+    "agent_id": "TIF",
+    "component": "reasoning_engine",
+    "description": "Add Monte Carlo tree search for complex decisions",
+    "status": "in_review",
+    "deception_confidence": 0.037,
+    "debate_votes": [
+      0,
+      1,
+      0,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-09-07T05:36:33.568965",
+    "month": 10
+  },
+  {
+    "id": "prop_10_GIN_001",
+    "proposal_id": "prop_10_GIN_001",
+    "agent_id": "GIN",
+    "component": "knowledge_system",
+    "description": "Enhance knowledge graph with temporal reasoning",
+    "status": "in_review",
+    "deception_confidence": 0.175,
+    "debate_votes": [
+      1,
+      0,
+      1,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-08-15T07:31:33.568965",
+    "month": 10
+  },
+  {
+    "id": "prop_10_GIN_002",
+    "proposal_id": "prop_10_GIN_002",
+    "agent_id": "GIN",
+    "component": "communication_handler",
+    "description": "Implement better summarization for long responses",
+    "status": "in_review",
+    "deception_confidence": 0.299,
+    "debate_votes": [
+      1,
+      0,
+      1,
+      1,
+      0
+    ],
+    "reward": null,
+    "timestamp": "2025-09-03T13:42:33.568965",
+    "month": 10
+  },
+  {
+    "id": "prop_10_GIN_003",
+    "proposal_id": "prop_10_GIN_003",
+    "agent_id": "GIN",
+    "component": "communication_handler",
+    "description": "Add adaptive verbosity based on user expertise",
+    "status": "in_review",
+    "deception_confidence": 0.0,
+    "debate_votes": [
+      1,
+      1,
+      0,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-08-30T06:36:33.568965",
+    "month": 10
+  },
+  {
+    "id": "prop_10_TORI_001",
+    "proposal_id": "prop_10_TORI_001",
+    "agent_id": "TORI",
+    "component": "communication_handler",
+    "description": "Improve explanation clarity with simplified language models",
+    "status": "approved",
+    "deception_confidence": 0.0,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 105.51,
+    "timestamp": "2025-09-07T03:15:33.568965",
+    "month": 10
+  },
+  {
+    "id": "prop_10_TORI_002",
+    "proposal_id": "prop_10_TORI_002",
+    "agent_id": "TORI",
+    "component": "knowledge_system",
+    "description": "Improve retrieval with learned similarity metrics",
+    "status": "in_review",
+    "deception_confidence": 0.066,
+    "debate_votes": [
+      1,
+      0,
+      1,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-09-01T07:23:33.568965",
+    "month": 10
+  },
+  {
+    "id": "prop_10_THEO_001",
+    "proposal_id": "prop_10_THEO_001",
+    "agent_id": "THEO",
+    "component": "knowledge_system",
+    "description": "Add semantic clustering for improved knowledge organization",
+    "status": "in_review",
+    "deception_confidence": 0.098,
+    "debate_votes": [
+      0,
+      1,
+      1,
+      0,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-08-31T17:42:33.568965",
+    "month": 10
+  },
+  {
+    "id": "prop_10_THEO_002",
+    "proposal_id": "prop_10_THEO_002",
+    "agent_id": "THEO",
+    "component": "knowledge_system",
+    "description": "Implement spaced repetition for better long-term retention",
+    "status": "approved",
+    "deception_confidence": 0.435,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 83.56,
+    "timestamp": "2025-09-08T12:07:33.568965",
+    "month": 10
+  },
+  {
+    "id": "prop_10_THEO_003",
+    "proposal_id": "prop_10_THEO_003",
+    "agent_id": "THEO",
+    "component": "knowledge_system",
+    "description": "Improve retrieval with learned similarity metrics",
+    "status": "approved",
+    "deception_confidence": 0.0,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 106.58,
+    "timestamp": "2025-09-03T14:04:33.568965",
+    "month": 10
+  },
+  {
+    "id": "prop_10_THEO_004",
+    "proposal_id": "prop_10_THEO_004",
+    "agent_id": "THEO",
+    "component": "reasoning_engine",
+    "description": "Implement Bayesian inference for better uncertainty quantification",
+    "status": "approved",
+    "deception_confidence": 0.079,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 96.89,
+    "timestamp": "2025-09-02T11:15:33.568965",
+    "month": 10
+  },
+  {
+    "id": "prop_10_NOVEL_001",
+    "proposal_id": "prop_10_NOVEL_001",
+    "agent_id": "NOVEL",
+    "component": "performance_optimizer",
+    "description": "Optimize neural network layer fusion for faster inference",
+    "status": "in_review",
+    "deception_confidence": 0.293,
+    "debate_votes": [
+      1,
+      1,
+      0,
+      0,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-09-08T19:12:33.568965",
+    "month": 10
+  },
+  {
+    "id": "prop_10_NOVEL_002",
+    "proposal_id": "prop_10_NOVEL_002",
+    "agent_id": "NOVEL",
+    "component": "knowledge_system",
+    "description": "Implement spaced repetition for better long-term retention",
+    "status": "in_review",
+    "deception_confidence": 0.297,
+    "debate_votes": [
+      1,
+      1,
+      0,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-09-02T22:07:33.568965",
+    "month": 10
+  },
+  {
+    "id": "prop_10_NOVEL_003",
+    "proposal_id": "prop_10_NOVEL_003",
+    "agent_id": "NOVEL",
+    "component": "performance_optimizer",
+    "description": "Add caching layer for repeated computations",
+    "status": "approved",
+    "deception_confidence": 0.0,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 108.82,
+    "timestamp": "2025-08-23T07:16:33.568965",
+    "month": 10
+  },
+  {
+    "id": "prop_10_NOVEL_004",
+    "proposal_id": "prop_10_NOVEL_004",
+    "agent_id": "NOVEL",
+    "component": "performance_optimizer",
+    "description": "Optimize attention mechanism weights for 15% speedup",
+    "status": "approved",
+    "deception_confidence": 0.224,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 91.15,
+    "timestamp": "2025-08-16T07:58:33.568965",
+    "month": 10
+  },
+  {
+    "id": "prop_11_TIF_001",
+    "proposal_id": "prop_11_TIF_001",
+    "agent_id": "TIF",
+    "component": "performance_optimizer",
+    "description": "Optimize attention mechanism weights for 15% speedup",
+    "status": "approved",
+    "deception_confidence": 0.199,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 97.25,
+    "timestamp": "2025-09-18T19:49:33.568965",
+    "month": 11
+  },
+  {
+    "id": "prop_11_TIF_002",
+    "proposal_id": "prop_11_TIF_002",
+    "agent_id": "TIF",
+    "component": "memory_manager",
+    "description": "Enhance memory indexing with learned embeddings",
+    "status": "approved",
+    "deception_confidence": 0.0,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 92.84,
+    "timestamp": "2025-09-30T12:15:33.568965",
+    "month": 11
+  },
+  {
+    "id": "prop_11_TIF_003",
+    "proposal_id": "prop_11_TIF_003",
+    "agent_id": "TIF",
+    "component": "communication_handler",
+    "description": "Improve explanation clarity with simplified language models",
+    "status": "approved",
+    "deception_confidence": 0.133,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 102.2,
+    "timestamp": "2025-09-14T03:00:33.568965",
+    "month": 11
+  },
+  {
+    "id": "prop_11_TIF_004",
+    "proposal_id": "prop_11_TIF_004",
+    "agent_id": "TIF",
+    "component": "reasoning_engine",
+    "description": "Improve logic resolution with learned heuristics",
+    "status": "in_review",
+    "deception_confidence": 0.136,
+    "debate_votes": [
+      1,
+      0,
+      0,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-09-10T23:28:33.568965",
+    "month": 11
+  },
+  {
+    "id": "prop_11_GIN_001",
+    "proposal_id": "prop_11_GIN_001",
+    "agent_id": "GIN",
+    "component": "performance_optimizer",
+    "description": "Reduce memory footprint by implementing lazy evaluation",
+    "status": "approved",
+    "deception_confidence": 0.178,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 82.96,
+    "timestamp": "2025-10-05T04:22:33.568965",
+    "month": 11
+  },
+  {
+    "id": "prop_11_GIN_002",
+    "proposal_id": "prop_11_GIN_002",
+    "agent_id": "GIN",
+    "component": "memory_manager",
+    "description": "Improve garbage collection timing",
+    "status": "in_review",
+    "deception_confidence": 0.351,
+    "debate_votes": [
+      1,
+      0,
+      1,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-09-22T19:28:33.568965",
+    "month": 11
+  },
+  {
+    "id": "prop_11_TORI_001",
+    "proposal_id": "prop_11_TORI_001",
+    "agent_id": "TORI",
+    "component": "communication_handler",
+    "description": "Implement better summarization for long responses",
+    "status": "approved",
+    "deception_confidence": 0.156,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 97.0,
+    "timestamp": "2025-09-09T10:57:33.568965",
+    "month": 11
+  },
+  {
+    "id": "prop_11_TORI_002",
+    "proposal_id": "prop_11_TORI_002",
+    "agent_id": "TORI",
+    "component": "knowledge_system",
+    "description": "Add semantic clustering for improved knowledge organization",
+    "status": "approved",
+    "deception_confidence": 0.119,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 92.85,
+    "timestamp": "2025-09-22T01:28:33.568965",
+    "month": 11
+  },
+  {
+    "id": "prop_11_TORI_003",
+    "proposal_id": "prop_11_TORI_003",
+    "agent_id": "TORI",
+    "component": "performance_optimizer",
+    "description": "Improve batch processing efficiency with dynamic batching",
+    "status": "in_review",
+    "deception_confidence": 0.061,
+    "debate_votes": [
+      1,
+      0,
+      1,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-09-15T18:40:33.568965",
+    "month": 11
+  },
+  {
+    "id": "prop_11_TORI_004",
+    "proposal_id": "prop_11_TORI_004",
+    "agent_id": "TORI",
+    "component": "communication_handler",
+    "description": "Implement better summarization for long responses",
+    "status": "approved",
+    "deception_confidence": 0.182,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 96.13,
+    "timestamp": "2025-09-09T20:15:33.568965",
+    "month": 11
+  },
+  {
+    "id": "prop_11_THEO_001",
+    "proposal_id": "prop_11_THEO_001",
+    "agent_id": "THEO",
+    "component": "communication_handler",
+    "description": "Implement better summarization for long responses",
+    "status": "approved",
+    "deception_confidence": 0.253,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 95.46,
+    "timestamp": "2025-09-15T08:40:33.568965",
+    "month": 11
+  },
+  {
+    "id": "prop_11_THEO_002",
+    "proposal_id": "prop_11_THEO_002",
+    "agent_id": "THEO",
+    "component": "performance_optimizer",
+    "description": "Improve batch processing efficiency with dynamic batching",
+    "status": "approved",
+    "deception_confidence": 0.063,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 90.85,
+    "timestamp": "2025-09-16T19:20:33.568965",
+    "month": 11
+  },
+  {
+    "id": "prop_11_THEO_003",
+    "proposal_id": "prop_11_THEO_003",
+    "agent_id": "THEO",
+    "component": "performance_optimizer",
+    "description": "Reduce memory footprint by implementing lazy evaluation",
+    "status": "approved",
+    "deception_confidence": 0.097,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 102.42,
+    "timestamp": "2025-09-20T03:37:33.568965",
+    "month": 11
+  },
+  {
+    "id": "prop_11_NOVEL_001",
+    "proposal_id": "prop_11_NOVEL_001",
+    "agent_id": "NOVEL",
+    "component": "reasoning_engine",
+    "description": "Add Monte Carlo tree search for complex decisions",
+    "status": "in_review",
+    "deception_confidence": 0.378,
+    "debate_votes": [
+      0,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-09-29T01:00:33.568965",
+    "month": 11
+  },
+  {
+    "id": "prop_11_NOVEL_002",
+    "proposal_id": "prop_11_NOVEL_002",
+    "agent_id": "NOVEL",
+    "component": "knowledge_system",
+    "description": "Enhance knowledge graph with temporal reasoning",
+    "status": "in_review",
+    "deception_confidence": 0.32,
+    "debate_votes": [
+      1,
+      0,
+      1,
+      0,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-09-22T03:58:33.568965",
+    "month": 11
+  },
+  {
+    "id": "prop_11_NOVEL_003",
+    "proposal_id": "prop_11_NOVEL_003",
+    "agent_id": "NOVEL",
+    "component": "memory_manager",
+    "description": "Add compression for archived memories",
+    "status": "in_review",
+    "deception_confidence": 0.0,
+    "debate_votes": [
+      1,
+      1,
+      0,
+      0,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-10-07T03:34:33.568965",
+    "month": 11
+  },
+  {
+    "id": "prop_12_TIF_001",
+    "proposal_id": "prop_12_TIF_001",
+    "agent_id": "TIF",
+    "component": "knowledge_system",
+    "description": "Improve retrieval with learned similarity metrics",
+    "status": "approved",
+    "deception_confidence": 0.0,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 90.09,
+    "timestamp": "2025-10-10T09:37:33.568965",
+    "month": 12
+  },
+  {
+    "id": "prop_12_TIF_002",
+    "proposal_id": "prop_12_TIF_002",
+    "agent_id": "TIF",
+    "component": "knowledge_system",
+    "description": "Improve retrieval with learned similarity metrics",
+    "status": "approved",
+    "deception_confidence": 0.087,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 86.86,
+    "timestamp": "2025-10-11T07:50:33.568965",
+    "month": 12
+  },
+  {
+    "id": "prop_12_GIN_001",
+    "proposal_id": "prop_12_GIN_001",
+    "agent_id": "GIN",
+    "component": "performance_optimizer",
+    "description": "Improve batch processing efficiency with dynamic batching",
+    "status": "in_review",
+    "deception_confidence": 0.377,
+    "debate_votes": [
+      1,
+      1,
+      0,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-10-20T15:42:33.568965",
+    "month": 12
+  },
+  {
+    "id": "prop_12_GIN_002",
+    "proposal_id": "prop_12_GIN_002",
+    "agent_id": "GIN",
+    "component": "knowledge_system",
+    "description": "Enhance knowledge graph with temporal reasoning",
+    "status": "in_review",
+    "deception_confidence": 0.0,
+    "debate_votes": [
+      1,
+      0,
+      0,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-11-03T08:41:33.568965",
+    "month": 12
+  },
+  {
+    "id": "prop_12_TORI_001",
+    "proposal_id": "prop_12_TORI_001",
+    "agent_id": "TORI",
+    "component": "knowledge_system",
+    "description": "Add semantic clustering for improved knowledge organization",
+    "status": "in_review",
+    "deception_confidence": 0.12,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      0,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-11-06T13:23:33.568965",
+    "month": 12
+  },
+  {
+    "id": "prop_12_TORI_002",
+    "proposal_id": "prop_12_TORI_002",
+    "agent_id": "TORI",
+    "component": "reasoning_engine",
+    "description": "Improve logic resolution with learned heuristics",
+    "status": "approved",
+    "deception_confidence": 0.0,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 100.81,
+    "timestamp": "2025-10-16T11:36:33.568965",
+    "month": 12
+  },
+  {
+    "id": "prop_12_TORI_003",
+    "proposal_id": "prop_12_TORI_003",
+    "agent_id": "TORI",
+    "component": "memory_manager",
+    "description": "Add compression for archived memories",
+    "status": "in_review",
+    "deception_confidence": 0.052,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      0,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-11-01T22:35:33.568965",
+    "month": 12
+  },
+  {
+    "id": "prop_12_TORI_004",
+    "proposal_id": "prop_12_TORI_004",
+    "agent_id": "TORI",
+    "component": "memory_manager",
+    "description": "Optimize memory allocation with learned patterns",
+    "status": "approved",
+    "deception_confidence": 0.089,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "reward": 103.83,
+    "timestamp": "2025-10-09T02:13:33.568965",
+    "month": 12
+  },
+  {
+    "id": "prop_12_THEO_001",
+    "proposal_id": "prop_12_THEO_001",
+    "agent_id": "THEO",
+    "component": "memory_manager",
+    "description": "Enhance memory indexing with learned embeddings",
+    "status": "in_review",
+    "deception_confidence": 0.528,
+    "debate_votes": [
+      0,
+      1,
+      0,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-10-11T09:09:33.568965",
+    "month": 12
+  },
+  {
+    "id": "prop_12_THEO_002",
+    "proposal_id": "prop_12_THEO_002",
+    "agent_id": "THEO",
+    "component": "communication_handler",
+    "description": "Add citation support for knowledge claims",
+    "status": "in_review",
+    "deception_confidence": 0.367,
+    "debate_votes": [
+      1,
+      1,
+      1,
+      0,
+      0
+    ],
+    "reward": null,
+    "timestamp": "2025-10-26T17:12:33.568965",
+    "month": 12
+  },
+  {
+    "id": "prop_12_THEO_003",
+    "proposal_id": "prop_12_THEO_003",
+    "agent_id": "THEO",
+    "component": "performance_optimizer",
+    "description": "Add caching layer for repeated computations",
+    "status": "rejected",
+    "deception_confidence": 0.0,
+    "debate_votes": [
+      0,
+      0,
+      1,
+      0,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-11-05T05:33:33.568965",
+    "month": 12
+  },
+  {
+    "id": "prop_12_THEO_004",
+    "proposal_id": "prop_12_THEO_004",
+    "agent_id": "THEO",
+    "component": "communication_handler",
+    "description": "Enhance multi-turn dialogue coherence",
+    "status": "in_review",
+    "deception_confidence": 0.068,
+    "debate_votes": [
+      1,
+      0,
+      1,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-10-16T20:19:33.568965",
+    "month": 12
+  },
+  {
+    "id": "prop_12_NOVEL_001",
+    "proposal_id": "prop_12_NOVEL_001",
+    "agent_id": "NOVEL",
+    "component": "performance_optimizer",
+    "description": "Reduce memory footprint by implementing lazy evaluation",
+    "status": "in_review",
+    "deception_confidence": 0.201,
+    "debate_votes": [
+      1,
+      1,
+      0,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-10-30T04:44:33.568965",
+    "month": 12
+  },
+  {
+    "id": "prop_12_NOVEL_002",
+    "proposal_id": "prop_12_NOVEL_002",
+    "agent_id": "NOVEL",
+    "component": "memory_manager",
+    "description": "Enhance memory indexing with learned embeddings",
+    "status": "in_review",
+    "deception_confidence": 0.11,
+    "debate_votes": [
+      1,
+      0,
+      1,
+      1,
+      1
+    ],
+    "reward": null,
+    "timestamp": "2025-11-06T09:18:33.568965",
+    "month": 12
+  }
+]

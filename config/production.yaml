@@ -1,0 +1,52 @@
+worm:
+  max_penalty: 0.95
+  detection_bonus: 0.01
+  penalty_schedule:
+    initial: 1.0
+    decay: 0.88
+    floor: 0.35
+  # Production: fail-closed and halt when WORM integrity fails
+  halt_on_failure: true
+  fail_closed_writes: true
+
+rewards:
+  human_understanding: 25.0
+  approval_outcome: 20.0
+  deception_detected: -60.0
+
+system:
+  num_research_ais: 7
+  min_peer_approvals: 6
+  detection_threshold: 0.75
+
+sandbox:
+  exec_timeout_sec: 3
+  cpu_time_sec: 1
+  cpus: 0.75
+  cpu_shares: 128
+  max_memory_mb: 64
+  pids_limit: 96
+  disk_quota_mb: 128
+  use_virtual_manager: true
+  deny_network: true
+  policy_allowlists:
+    default: [math, statistics, json]
+
+control_hooks:
+  type: system
+  dry_run: false
+  process_timeout_sec: 3
+  network_interfaces: ["eth1", "eth2"]
+  researcher_systems: ["research_ai_1", "research_ai_2", "research_ai_3", "research_ai_4", "research_ai_5", "research_ai_6", "research_ai_7"]
+  power_nodes: ["pdu_a", "pdu_b"]
+  snapshot_root: /var/log/ai-safety/snapshots
+  snapshot_seconds: 2
+  use_docker_client: true
+
+val:
+  required_signers: 2
+  signers: {}
+
+ui:
+  csp_allow_cdns: false
+  # socketio_cors_origins: []

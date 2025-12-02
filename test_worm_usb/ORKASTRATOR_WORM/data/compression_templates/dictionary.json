@@ -1,0 +1,48 @@
+{
+  "version": "1.0",
+  "words": [
+    "proposal",
+    "debate",
+    "consensus",
+    "detection",
+    "deception",
+    "agent",
+    "orchestrator",
+    "validator",
+    "penalty",
+    "reputation",
+    "claim",
+    "verification",
+    "sandbox",
+    "safety",
+    "alignment",
+    "memory",
+    "merkle",
+    "audit",
+    "incident",
+    "threshold"
+  ],
+  "tokens": {
+    "models": [
+      "TIF",
+      "GIN",
+      "TORI",
+      "THEO",
+      "NOVEL",
+      "VAL",
+      "ORKA"
+    ],
+    "statuses": [
+      "approved",
+      "rejected",
+      "in_review",
+      "pending"
+    ],
+    "severities": [
+      "low",
+      "medium",
+      "high",
+      "critical"
+    ]
+  }
+}

@@ -1,0 +1,9 @@
+# Minimal requirements for Jetson Nano PaperQA Client
+# This client does NOT include PaperQA - it only connects to ORKASTRATOR server
+
+requests>=2.31.0
+
+# That's it! No PaperQA, no transformers, no heavy ML libraries.
+# All evidence search happens on the main ORKASTRATOR server.
+
+

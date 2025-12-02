@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="600" viewBox="0 0 1100 600" role="img" aria-labelledby="title desc">
+  <title id="title">Figure 8: Global Deception Learning Network</title>
+  <desc id="desc">Facilities send anonymized incidents to council database, algorithms updated and redistributed back.</desc>
+  <style><![CDATA[
+    .box { fill:#fff; stroke:#222; stroke-width:2; rx:10; ry:10; }
+    .label { font:600 16px sans-serif; }
+    .note { font:14px sans-serif; }
+    .wire { stroke:#222; stroke-width:2; marker-end:url(#arrow); fill:none; }
+  ]]></style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#222"/></marker>
+  </defs>
+
+  <!-- Council -->
+  <rect class="box" x="380" y="80" width="340" height="220"/>
+  <text class="label" x="550" y="115" text-anchor="middle">AI Safety Certification Council</text>
+  <rect class="box" x="400" y="140" width="300" height="70"/>
+  <text class="label" x="550" y="180" text-anchor="middle">Global Deception Database</text>
+  <rect class="box" x="400" y="230" width="300" height="60"/>
+  <text class="label" x="550" y="265" text-anchor="middle">Detection Algorithms</text>
+
+  <!-- Facilities -->
+  <rect class="box" x="120" y="420" width="160" height="80"/>
+  <text class="label" x="200" y="465" text-anchor="middle">Facility 1</text>
+
+  <rect class="box" x="470" y="420" width="160" height="80"/>
+  <text class="label" x="550" y="465" text-anchor="middle">Facility 2</text>
+
+  <rect class="box" x="820" y="420" width="160" height="80"/>
+  <text class="label" x="900" y="465" text-anchor="middle">Facility N</text>
+
+  <!-- Wires -->
+  <line class="wire" x1="200" y1="420" x2="550" y2="310"/>
+  <line class="wire" x1="550" y1="420" x2="550" y2="310"/>
+  <line class="wire" x1="900" y1="420" x2="550" y2="310"/>
+
+  <line class="wire" x1="550" y1="290" x2="200" y2="420"/>
+  <line class="wire" x1="550" y1="290" x2="550" y2="420"/>
+  <line class="wire" x1="550" y1="290" x2="900" y2="420"/>
+</svg>

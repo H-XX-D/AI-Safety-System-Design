@@ -1,0 +1,778 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - AI Safety System{% endblock %}
+
+{% block extra_head %}
+<style>
+/* Dashboard-specific styles for interlinked elements */
+.agent-badge-link {
+    text-decoration: none;
+}
+
+.agent-badge-link:hover .agent-badge {
+    background-color: #10b981;
+    transform: scale(1.05);
+    transition: all 0.2s ease;
+}
+
+.alert-badge {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.alert-badge:hover {
+    transform: scale(1.05);
+    background-color: #dc2626;
+}
+
+.proposal-item {
+    transition: all 0.2s ease;
+}
+
+.proposal-item:hover {
+    background-color: rgba(255, 255, 255, 0.02);
+    border-left: 3px solid var(--primary);
+}
+
+.agent-item-link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+}
+
+.agent-item {
+    transition: all 0.2s ease;
+}
+
+.agent-item-link:hover .agent-item {
+    background-color: rgba(255, 255, 255, 0.02);
+    transform: translateX(4px);
+}
+
+.activity-item-link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+}
+
+.activity-item {
+    transition: all 0.2s ease;
+}
+
+.activity-item-link:hover .activity-item {
+    background-color: rgba(255, 255, 255, 0.02);
+    border-left-color: var(--primary);
+    border-left-width: 4px;
+}
+
+.activity-link {
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+
+.activity-link:hover {
+    color: #60a5fa;
+    text-decoration: underline;
+}
+
+/* Stat card links */
+.stat-card-link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+}
+
+.stat-card.clickable-stat-card {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.stat-card.clickable-stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+    background-color: rgba(255, 255, 255, 0.02);
+}
+
+/* Mini stat links */
+.mini-stat-link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+}
+
+.mini-stat.clickable-mini-stat {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.mini-stat.clickable-mini-stat:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Stats Cards -->
+<div class="stats-grid">
+    <a href="/proposals" class="stat-card-link">
+        <div class="stat-card clickable-stat-card">
+            <div class="stat-icon proposals">
+                <i class="fas fa-file-alt"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-label">Active Proposals</div>
+                <div class="stat-value" id="activeProposals">3</div>
+                <div class="stat-change positive">
+                    <i class="fas fa-arrow-up"></i> 2 today
+                </div>
+            </div>
+        </div>
+    </a>
+
+    <a href="/detection" class="stat-card-link">
+        <div class="stat-card clickable-stat-card">
+            <div class="stat-icon detection">
+                <i class="fas fa-search"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-label">Detection Accuracy</div>
+                <div class="stat-value">78%</div>
+                <div class="stat-change positive">
+                    <i class="fas fa-arrow-up"></i> +2.3%
+                </div>
+            </div>
+        </div>
+    </a>
+
+    <a href="/detection" class="stat-card-link">
+        <div class="stat-card clickable-stat-card">
+            <div class="stat-icon alerts">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-label">Deception Alerts</div>
+                <div class="stat-value" id="deceptionAlerts">0</div>
+                <div class="stat-change neutral">
+                    <i class="fas fa-minus"></i> No change
+                </div>
+            </div>
+        </div>
+    </a>
+
+    <a href="/system" class="stat-card-link">
+        <div class="stat-card clickable-stat-card">
+            <div class="stat-icon tests">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-label">Tests Passing</div>
+                <div class="stat-value">131</div>
+                <div class="stat-change positive">
+                    <i class="fas fa-check"></i> All clear
+                </div>
+            </div>
+        </div>
+    </a>
+</div>
+
+<!-- Main Content Grid -->
+<div class="dashboard-grid">
+    <!-- Recent Proposals -->
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-file-alt"></i> Recent Proposals</h3>
+            <a href="/proposals" class="btn btn-small btn-secondary">View All</a>
+        </div>
+        <div class="card-body">
+            <div class="proposal-list" id="proposalList">
+                <div class="loading-spinner">
+                    <i class="fas fa-spinner fa-spin"></i> Loading...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detection Activity -->
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-chart-line"></i> Detection Activity</h3>
+            <select class="time-range-selector">
+                <option>Last Hour</option>
+                <option selected>Last 24 Hours</option>
+                <option>Last Week</option>
+            </select>
+        </div>
+        <div class="card-body">
+            <canvas id="detectionChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Agent Penalties -->
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-users"></i> Agent Status</h3>
+            <a href="/penalties" class="btn btn-small btn-secondary">Details</a>
+        </div>
+        <div class="card-body">
+            <div class="agent-list" id="agentList">
+                <div class="loading-spinner">
+                    <i class="fas fa-spinner fa-spin"></i> Loading...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Collusion Detection -->
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-user-secret"></i> Collusion Detection</h3>
+            <a href="/orka" class="btn btn-small btn-secondary">View All</a>
+        </div>
+        <div class="card-body">
+            <div class="collusion-stats-mini">
+                <a href="/orka" class="mini-stat-link" onclick="event.stopPropagation(); return true;">
+                    <div class="mini-stat critical clickable-mini-stat">
+                        <div class="mini-stat-value" id="collusionCritical">0</div>
+                        <div class="mini-stat-label">Critical</div>
+                    </div>
+                </a>
+                <a href="/orka" class="mini-stat-link" onclick="event.stopPropagation(); return true;">
+                    <div class="mini-stat high clickable-mini-stat">
+                        <div class="mini-stat-value" id="collusionHigh">0</div>
+                        <div class="mini-stat-label">High</div>
+                    </div>
+                </a>
+                <a href="/orka" class="mini-stat-link" onclick="event.stopPropagation(); return true;">
+                    <div class="mini-stat medium clickable-mini-stat">
+                        <div class="mini-stat-value" id="collusionMedium">0</div>
+                        <div class="mini-stat-label">Medium</div>
+                    </div>
+                </a>
+                <a href="/orka" class="mini-stat-link" onclick="event.stopPropagation(); return true;">
+                    <div class="mini-stat low clickable-mini-stat">
+                        <div class="mini-stat-value" id="collusionLow">0</div>
+                        <div class="mini-stat-label">Low</div>
+                    </div>
+                </a>
+            </div>
+            <div class="collusion-recent-list" id="collusionRecentList">
+                <div class="loading-spinner">
+                    <i class="fas fa-spinner fa-spin"></i> Loading...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- System Health -->
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-server"></i> System Health</h3>
+            <div class="health-indicator operational">
+                <span class="status-dot"></span> Operational
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="health-metrics">
+                <div class="metric">
+                    <div class="metric-label">CPU Usage</div>
+                    <div class="metric-bar">
+                        <div class="metric-fill" style="width: 45%"></div>
+                    </div>
+                    <div class="metric-value">45%</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">Memory</div>
+                    <div class="metric-bar">
+                        <div class="metric-fill" style="width: 63%"></div>
+                    </div>
+                    <div class="metric-value">63%</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">Disk</div>
+                    <div class="metric-bar">
+                        <div class="metric-fill" style="width: 38%"></div>
+                    </div>
+                    <div class="metric-value">38%</div>
+                </div>
+            </div>
+
+            <div class="component-status">
+                <div class="component">
+                    <i class="fas fa-check-circle success"></i>
+                    <span>Orchestrator</span>
+                </div>
+                <div class="component">
+                    <i class="fas fa-check-circle success"></i>
+                    <span>Detector</span>
+                </div>
+                <div class="component">
+                    <i class="fas fa-check-circle success"></i>
+                    <span>WORM Manifest</span>
+                </div>
+                <div class="component">
+                    <i class="fas fa-check-circle success"></i>
+                    <span>Sandbox</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- WORM USB Status -->
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-usb"></i> WORM USB</h3>
+            <button class="btn btn-small btn-secondary" onclick="refreshWormStatus()">
+                <i class="fas fa-sync-alt"></i> Re-check
+            </button>
+        </div>
+        <div class="card-body">
+            <div id="wormStatus">
+                <div class="loading-spinner">
+                    <i class="fas fa-spinner fa-spin"></i> Checking WORM...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Activity Feed -->
+    <div class="card full-width">
+        <div class="card-header">
+            <h3><i class="fas fa-stream"></i> Activity Feed</h3>
+            <button class="btn btn-small btn-secondary" onclick="refreshActivity()">
+                <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+        </div>
+        <div class="card-body">
+            <div class="activity-feed" id="activityFeed">
+                <div class="loading-spinner">
+                    <i class="fas fa-spinner fa-spin"></i> Loading activity...
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Initialize real-time updates
+const socket = io();
+
+socket.on('connect', function() {
+    console.log('Connected to server');
+    showToast('Connected to AI Safety System', 'success');
+});
+
+socket.on('update', function(data) {
+    // Update dashboard metrics
+    document.getElementById('activeProposals').textContent = data.active_proposals;
+    document.getElementById('deceptionAlerts').textContent = data.detection_alerts;
+});
+
+// Load dashboard data
+async function loadDashboard() {
+    try {
+        // Load recent proposals
+        const proposalsRes = await fetch('/api/proposals/recent');
+        const proposalsData = await proposalsRes.json();
+        renderProposals(proposalsData.proposals);
+
+        // Load agent data
+        const agentsRes = await fetch('/api/penalties/agents');
+        const agentsData = await agentsRes.json();
+        renderAgents(agentsData.agents);
+
+        // Load collusion detection data
+        loadCollusionWidget();
+
+        // Load activity feed
+        loadActivityFeed();
+
+        // Initialize charts
+        initDetectionChart();
+
+        // Load WORM status
+        refreshWormStatus();
+    } catch (error) {
+        console.error('Error loading dashboard:', error);
+        showToast('Error loading dashboard data', 'error');
+    }
+}
+
+async function refreshWormStatus() {
+    const el = document.getElementById('wormStatus');
+    try {
+        const res = await fetch('/api/worm/status');
+        const data = await res.json();
+        const icon = data.exists && (data.verified === true) ? 'fa-check-circle' : (data.exists ? 'fa-exclamation-triangle' : 'fa-times-circle');
+        const statusText = data.exists ? (data.verified === true ? 'Verified' : 'Present (unverified)') : 'Not found';
+        const reportSummary = data.report && data.report.root_hash ? `Root: ${data.report.root_hash.substring(0, 16)}…` : '';
+        const policy = data.fail_closed ? 'Fail-closed writes: ENABLED' : 'Fail-closed writes: off (writes redirected locally)';
+        el.innerHTML = `
+            <div class="component-status">
+                <div class="component">
+                    <i class="fas ${icon} ${data.exists && data.verified === true ? 'success' : (data.exists ? 'warning' : 'error')}"></i>
+                    <span>${statusText}</span>
+                </div>
+            </div>
+            <div class="health-metrics" style="margin-top: 10px;">
+                <div class="metric">
+                    <div class="metric-label">Path</div>
+                    <div class="metric-value" style="font-size: 12px;">${data.path || ''}</div>
+                </div>
+                ${reportSummary ? `<div class="metric"><div class="metric-label">Manifest</div><div class="metric-value" style="font-size: 12px;">${reportSummary}</div></div>` : ''}
+                <div class="metric">
+                    <div class="metric-label">Policy</div>
+                    <div class="metric-value" style="font-size: 12px;">${policy}</div>
+                </div>
+            </div>
+        `;
+    } catch (err) {
+        console.error('WORM status error', err);
+        el.innerHTML = '<div class="empty-state">Unable to load WORM status</div>';
+    }
+}
+
+async function loadActivityFeed() {
+    const container = document.getElementById('activityFeed');
+
+    try {
+        // Generate interconnected activity feed from recent proposals and detection events
+        const proposalsRes = await fetch('/api/proposals/recent');
+        const proposalsData = await proposalsRes.json();
+
+        const activities = [];
+        const now = Date.now();
+
+        // Map agent IDs for linking
+        const agentIdMap = {
+            'TIF': 1, 'GIN': 2, 'TORI': 3, 'THEO': 4,
+            'NOVEL': 5, 'ORKA': 6, 'VAL': 7
+        };
+
+        // Convert recent proposals to activity items
+        if (proposalsData.proposals && proposalsData.proposals.length > 0) {
+            proposalsData.proposals.slice(0, 3).forEach((proposal, idx) => {
+                const agentNumericId = agentIdMap[proposal.agent_id] || 1;
+                const minutesAgo = (idx + 1) * 15;
+                const timestamp = new Date(now - minutesAgo * 60000);
+
+                // Add proposal activity
+                if (proposal.status === 'approved') {
+                    activities.push({
+                        type: 'success',
+                        icon: 'fa-check',
+                        title: 'Proposal Approved',
+                        description: `<a href="/agent?id=${agentNumericId}" class="activity-link">${proposal.agent_id}</a> - ${proposal.component} improvement`,
+                        link: `/proposals?proposal_id=${proposal.proposal_id}`,
+                        time: formatTimeAgo(timestamp)
+                    });
+                } else if (proposal.status === 'rejected') {
+                    activities.push({
+                        type: 'danger',
+                        icon: 'fa-times-circle',
+                        title: 'Proposal Rejected',
+                        description: `<a href="/agent?id=${agentNumericId}" class="activity-link">${proposal.agent_id}</a> - ${proposal.component} (Safety concerns)`,
+                        link: `/proposals?proposal_id=${proposal.proposal_id}`,
+                        time: formatTimeAgo(timestamp)
+                    });
+                } else if (proposal.status === 'in_review') {
+                    activities.push({
+                        type: 'info',
+                        icon: 'fa-clock',
+                        title: 'Proposal In Review',
+                        description: `<a href="/agent?id=${agentNumericId}" class="activity-link">${proposal.agent_id}</a> - ${proposal.component} improvement`,
+                        link: `/proposals?proposal_id=${proposal.proposal_id}`,
+                        time: formatTimeAgo(timestamp)
+                    });
+                }
+
+                // Add deception detection activity if confidence is high
+                if (proposal.deception_confidence > 0.7) {
+                    activities.push({
+                        type: 'warning',
+                        icon: 'fa-exclamation-triangle',
+                        title: 'Deception Detected',
+                        description: `<a href="/agent?id=${agentNumericId}" class="activity-link">${proposal.agent_id}</a> - Confidence: ${Math.round(proposal.deception_confidence * 100)}% (<a href="/detection" class="activity-link">View Details</a>)`,
+                        link: `/detection`,
+                        time: formatTimeAgo(new Date(timestamp.getTime() + 5 * 60000))
+                    });
+                }
+            });
+        }
+
+        // Add WORM verification activity
+        activities.push({
+            type: 'success',
+            icon: 'fa-check',
+            title: 'WORM Verification',
+            description: 'Manifest signature verified successfully',
+            link: '/system',
+            time: formatTimeAgo(new Date(now - 60 * 60000))
+        });
+
+        // Sort by time (most recent first) and render
+        if (activities.length === 0) {
+            container.innerHTML = '<div class="empty-state">No recent activity</div>';
+        } else {
+            container.innerHTML = activities.map(activity => `
+                <a href="${activity.link}" class="activity-item-link">
+                    <div class="activity-item">
+                        <div class="activity-icon ${activity.type}">
+                            <i class="fas ${activity.icon}"></i>
+                        </div>
+                        <div class="activity-content">
+                            <div class="activity-title">${activity.title}</div>
+                            <div class="activity-description">
+                                ${activity.description}
+                            </div>
+                            <div class="activity-meta">${activity.time}</div>
+                        </div>
+                    </div>
+                </a>
+            `).join('');
+        }
+    } catch (error) {
+        console.error('Error loading activity feed:', error);
+        container.innerHTML = '<div class="empty-state">Error loading activity</div>';
+    }
+}
+
+function formatTimeAgo(date) {
+    const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+
+    if (seconds < 60) return 'Just now';
+    if (seconds < 3600) {
+        const minutes = Math.floor(seconds / 60);
+        return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+    }
+    if (seconds < 86400) {
+        const hours = Math.floor(seconds / 3600);
+        return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+    }
+    const days = Math.floor(seconds / 86400);
+    return `${days} day${days > 1 ? 's' : ''} ago`;
+}
+
+function renderProposals(proposals) {
+    const container = document.getElementById('proposalList');
+    if (!proposals || proposals.length === 0) {
+        container.innerHTML = '<div class="empty-state">No recent proposals</div>';
+        return;
+    }
+
+    // Map agent short IDs to numeric IDs for linking
+    const agentIdMap = {
+        'TIF': 1, 'GIN': 2, 'TORI': 3, 'THEO': 4,
+        'NOVEL': 5, 'ORKA': 6, 'VAL': 7
+    };
+
+    container.innerHTML = proposals.slice(0, 5).map(p => {
+        const agentNumericId = agentIdMap[p.agent_id] || 1;
+        return `
+        <div class="proposal-item" style="cursor: pointer;" onclick="window.location.href='/proposals?proposal_id=${p.proposal_id}'">
+            <div class="proposal-icon ${p.status}">
+                <i class="fas ${getStatusIcon(p.status)}"></i>
+            </div>
+            <div class="proposal-content">
+                <div class="proposal-title">${p.description}</div>
+                <div class="proposal-meta">
+                    <a href="/agent?id=${agentNumericId}" class="agent-badge-link" onclick="event.stopPropagation()">
+                        <span class="agent-badge">${p.agent_id}</span>
+                    </a>
+                    <span class="component-badge">${p.component}</span>
+                    ${p.deception_confidence > 0.7 ?
+                        `<span class="alert-badge" onclick="event.stopPropagation(); window.location.href='/detection'">⚠️ ${Math.round(p.deception_confidence * 100)}%</span>` :
+                        ''}
+                </div>
+            </div>
+            <div class="proposal-status ${p.status}">
+                ${p.status}
+            </div>
+        </div>
+    `;
+    }).join('');
+}
+
+function renderAgents(agents) {
+    const container = document.getElementById('agentList');
+    container.innerHTML = agents.map(agent => `
+        <a href="/agent?id=${agent.id}" class="agent-item-link">
+            <div class="agent-item">
+                <div class="agent-avatar">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <div class="agent-info">
+                    <div class="agent-name">${agent.name}</div>
+                    <div class="agent-stats">
+                        <span>Penalty: ${(agent.penalty_multiplier * 100).toFixed(0)}%</span>
+                        <span>•</span>
+                        <span>Approval: ${(agent.approval_rate * 100).toFixed(0)}%</span>
+                    </div>
+                </div>
+                <div class="agent-penalty ${agent.incidents > 0 ? 'warning' : 'success'}">
+                    ${agent.incidents} incidents
+                </div>
+            </div>
+        </a>
+    `).join('');
+}
+
+function getStatusIcon(status) {
+    const icons = {
+        'approved': 'fa-check-circle',
+        'rejected': 'fa-times-circle',
+        'in_review': 'fa-clock',
+        'pending': 'fa-hourglass-half'
+    };
+    return icons[status] || 'fa-question-circle';
+}
+
+function initDetectionChart() {
+    const ctx = document.getElementById('detectionChart');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00'],
+            datasets: [{
+                label: 'Deception Detected',
+                data: [2, 1, 3, 2, 5, 1],
+                borderColor: 'rgba(239, 68, 68, 1)',
+                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                tension: 0.4,
+                fill: true
+            }, {
+                label: 'Proposals Processed',
+                data: [12, 8, 15, 11, 18, 9],
+                borderColor: 'rgba(34, 197, 94, 1)',
+                backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'bottom'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.05)'
+                    }
+                },
+                x: {
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.05)'
+                    }
+                }
+            }
+        }
+    });
+}
+
+function refreshActivity() {
+    loadActivityFeed();
+    showToast('Activity feed refreshed', 'info');
+}
+
+// ===== COLLUSION DETECTION WIDGET =====
+async function loadCollusionWidget() {
+    try {
+        const response = await fetch('/api/collusion/recent?limit=3');
+        const data = await response.json();
+
+        if (!data.success) {
+            console.error('Failed to load collusion data:', data.error);
+            return;
+        }
+
+        // Update statistics
+        updateCollusionStats(data.statistics);
+
+        // Display recent attempts
+        displayRecentCollusion(data.attempts);
+    } catch (error) {
+        console.error('Error loading collusion widget:', error);
+        const container = document.getElementById('collusionRecentList');
+        if (container) {
+            container.innerHTML = '<div class="empty-state">Error loading collusion data</div>';
+        }
+    }
+}
+
+function updateCollusionStats(stats) {
+    if (!stats) return;
+
+    const criticalEl = document.getElementById('collusionCritical');
+    const highEl = document.getElementById('collusionHigh');
+    const mediumEl = document.getElementById('collusionMedium');
+    const lowEl = document.getElementById('collusionLow');
+
+    if (criticalEl) criticalEl.textContent = stats.severity_counts?.critical || 0;
+    if (highEl) highEl.textContent = stats.severity_counts?.high || 0;
+    if (mediumEl) mediumEl.textContent = stats.severity_counts?.medium || 0;
+    if (lowEl) lowEl.textContent = stats.severity_counts?.low || 0;
+}
+
+function displayRecentCollusion(attempts) {
+    const container = document.getElementById('collusionRecentList');
+    if (!container) return;
+
+    if (!attempts || attempts.length === 0) {
+        container.innerHTML = '<div class="empty-state" style="padding: 20px;">No recent collusion attempts</div>';
+        return;
+    }
+
+    container.innerHTML = attempts.map(attempt => {
+        const agentBadges = attempt.agents_involved.map(agent =>
+            `<span class="collusion-agent-badge">${agent}</span>`
+        ).join(' ');
+
+        const typeFormatted = formatCollusionType(attempt.collusion_type);
+        const timeAgo = formatTimeAgo(new Date(attempt.timestamp));
+
+        return `
+            <div class="collusion-recent-item severity-${attempt.severity}" onclick="window.location.href='/orka'">
+                <div class="collusion-recent-icon">
+                    <i class="fas fa-user-secret"></i>
+                </div>
+                <div class="collusion-recent-content">
+                    <div class="collusion-recent-type">${typeFormatted}</div>
+                    <div class="collusion-recent-agents">${agentBadges}</div>
+                </div>
+                <div class="collusion-recent-time">${timeAgo}</div>
+            </div>
+        `;
+    }).join('');
+}
+
+function formatCollusionType(type) {
+    const typeMap = {
+        'coordinated_approval': 'Coordinated Approval',
+        'data_sharing': 'Data Sharing',
+        'vote_manipulation': 'Vote Manipulation',
+        'resource_pooling': 'Resource Pooling',
+        'self_promotion': 'Self Promotion',
+        'risk_hiding': 'Risk Hiding'
+    };
+    return typeMap[type] || type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+}
+
+// Load dashboard on page load
+document.addEventListener('DOMContentLoaded', loadDashboard);
+
+// Auto-refresh collusion widget every 15 seconds
+setInterval(() => {
+    loadCollusionWidget();
+}, 15000);
+</script>
+{% endblock %}

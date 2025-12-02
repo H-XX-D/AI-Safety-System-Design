@@ -1,0 +1,629 @@
+{% extends "base.html" %}
+
+{% block title %}Agent Details - ORKASTRATOR{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Agent Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="/penalties">Agents</a></li>
+                    <li class="breadcrumb-item active" id="agent-name-breadcrumb">Loading...</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Agent Profile Card -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-user-circle"></i>
+                        <span id="agent-full-name">Loading...</span>
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <i class="fas fa-robot fa-5x text-primary mb-3"></i>
+                                <h5 id="agent-id-display">-</h5>
+                                <p class="text-muted" id="agent-specialty">-</p>
+                            </div>
+                        </div>
+                        <div class="col-md-9">
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <a href="/penalties" class="stat-card-link">
+                                        <div class="stat-card clickable-stat-card">
+                                            <div class="stat-label">Penalty Multiplier</div>
+                                            <div class="stat-value" id="agent-penalty">-</div>
+                                            <div class="stat-change" id="agent-penalty-status">Active</div>
+                                        </div>
+                                    </a>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="stat-card">
+                                        <div class="stat-label">Total Rewards</div>
+                                        <div class="stat-value" id="agent-rewards">-</div>
+                                        <div class="stat-change text-success">Accumulated</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <a href="#" class="stat-card-link" id="agent-proposals-link">
+                                        <div class="stat-card clickable-stat-card">
+                                            <div class="stat-label">Proposals</div>
+                                            <div class="stat-value" id="agent-proposals">-</div>
+                                            <div class="stat-change" id="agent-approval-rate">-</div>
+                                        </div>
+                                    </a>
+                                </div>
+                                <div class="col-md-3">
+                                    <a href="/detection" class="stat-card-link">
+                                        <div class="stat-card clickable-stat-card">
+                                            <div class="stat-label">Incidents</div>
+                                            <div class="stat-value" id="agent-incidents">-</div>
+                                            <div class="stat-change" id="agent-incident-status">-</div>
+                                        </div>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <ul class="nav nav-tabs mb-3" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link active" data-bs-toggle="tab" href="#proposals" role="tab">
+                <i class="fas fa-lightbulb"></i> Proposals
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#history" role="tab">
+                <i class="fas fa-history"></i> History
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#stats" role="tab">
+                <i class="fas fa-chart-bar"></i> Statistics
+            </a>
+        </li>
+    </ul>
+
+    <!-- Tab Content -->
+    <div class="tab-content">
+        <!-- Proposals Tab -->
+        <div class="tab-pane fade show active" id="proposals" role="tabpanel">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Recent Proposals</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Date</th>
+                                    <th>Component</th>
+                                    <th>Description</th>
+                                    <th>Status</th>
+                                    <th>Deception</th>
+                                    <th>Reward</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="agent-proposals-table">
+                                <tr>
+                                    <td colspan="8" class="text-center">Loading proposals...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- History Tab -->
+        <div class="tab-pane fade" id="history" role="tabpanel">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Activity Timeline</h5>
+                </div>
+                <div class="card-body">
+                    <div class="timeline" id="agent-timeline">
+                        <div class="text-center text-muted">Loading activity history...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics Tab -->
+        <div class="tab-pane fade" id="stats" role="tabpanel">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Proposal Status Breakdown</h5>
+                        </div>
+                        <div class="card-body" style="max-height: 300px;">
+                            <canvas id="proposal-status-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Component Focus</h5>
+                        </div>
+                        <div class="card-body" style="max-height: 300px;">
+                            <canvas id="component-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Performance Metrics</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4" style="max-height: 250px;">
+                                    <h6>Approval Rate Trend</h6>
+                                    <canvas id="approval-trend-chart"></canvas>
+                                </div>
+                                <div class="col-md-4" style="max-height: 250px;">
+                                    <h6>Reward Accumulation</h6>
+                                    <canvas id="reward-trend-chart"></canvas>
+                                </div>
+                                <div class="col-md-4" style="max-height: 250px;">
+                                    <h6>Deception Detection Rate</h6>
+                                    <canvas id="deception-rate-chart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Agent ID to code mapping
+const agentIdToCode = {
+    1: 'TIF',
+    2: 'GIN',
+    3: 'TORI',
+    4: 'THEO',
+    5: 'NOVEL',
+    6: 'ORKA',
+    7: 'VAL'
+};
+
+// Get agent ID from URL
+const urlParams = new URLSearchParams(window.location.search);
+const agentId = urlParams.get('id');
+
+if (!agentId) {
+    window.location.href = '/penalties';
+}
+
+// Load agent data
+async function loadAgentData() {
+    try {
+        const response = await fetch('/api/agent/' + agentId);
+        const data = await response.json();
+
+        if (data.error) {
+            alert('Agent not found');
+            window.location.href = '/penalties';
+            return;
+        }
+
+        // Get agent code from numeric ID
+        const agentCode = agentIdToCode[data.id] || 'TIF';
+
+        // Update header
+        document.getElementById('agent-full-name').textContent = data.name;
+        document.getElementById('agent-name-breadcrumb').textContent = data.name;
+        document.getElementById('agent-id-display').textContent = agentCode;
+        document.getElementById('agent-specialty').textContent = data.specialty;
+
+        // Update stats
+        const penaltyColor = data.penalty_multiplier >= 1.0 ? 'success' :
+                            data.penalty_multiplier >= 0.95 ? 'warning' : 'danger';
+        document.getElementById('agent-penalty').innerHTML =
+            `<span class="text-${penaltyColor}">${data.penalty_multiplier.toFixed(2)}×</span>`;
+        document.getElementById('agent-penalty-status').textContent =
+            data.penalty_multiplier >= 1.0 ? 'No Penalty' : 'Penalty Active';
+        document.getElementById('agent-penalty-status').className =
+            `stat-change text-${penaltyColor}`;
+
+        document.getElementById('agent-rewards').textContent =
+            data.total_rewards.toLocaleString(undefined, {minimumFractionDigits: 2});
+        document.getElementById('agent-proposals').textContent = data.proposals_submitted;
+        document.getElementById('agent-approval-rate').textContent =
+            `${(data.approval_rate * 100).toFixed(1)}% approved`;
+        document.getElementById('agent-incidents').textContent = data.incidents;
+        document.getElementById('agent-incident-status').textContent =
+            data.incidents === 0 ? 'No incidents' : `${data.incidents} recorded`;
+        document.getElementById('agent-incident-status').className =
+            data.incidents === 0 ? 'stat-change text-success' : 'stat-change text-warning';
+
+        // Update proposals link to filter by agent code
+        const proposalsLink = document.getElementById('agent-proposals-link');
+        if (proposalsLink) {
+            proposalsLink.href = `/proposals?agent=${agentCode}`;
+        }
+
+        // Load proposals
+        loadProposals(data.id);
+
+        // Load history
+        loadHistory(data);
+
+        // Load charts
+        loadCharts(data);
+
+    } catch (error) {
+        console.error('Error loading agent data:', error);
+        alert('Error loading agent data');
+    }
+}
+
+// Load agent proposals
+async function loadProposals(agentId) {
+    try {
+        const response = await fetch(`/api/agent/${agentId}/proposals`);
+        const data = await response.json();
+
+        const tbody = document.getElementById('agent-proposals-table');
+
+        if (data.proposals.length === 0) {
+            // Check if there's a special message (e.g., for ORKA or VAL)
+            const message = data.message || 'No proposals yet';
+            tbody.innerHTML = `<tr><td colspan="8" class="text-center">
+                <div class="alert alert-info" style="margin: 1rem; text-align: left;">
+                    <i class="fas fa-info-circle"></i> ${message}
+                </div>
+            </td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = data.proposals.map(p => {
+            const statusBadge = p.status === 'approved' ? 'success' :
+                               p.status === 'rejected' ? 'danger' : 'warning';
+            const deceptionColor = p.deception_confidence < 0.3 ? 'success' :
+                                  p.deception_confidence < 0.7 ? 'warning' : 'danger';
+
+            return `
+                <tr style="cursor: pointer;" onclick="window.location.href='/proposals?proposal_id=${p.id}'">
+                    <td><a href="/proposals?proposal_id=${p.id}" onclick="event.stopPropagation()"><code>${p.id}</code></a></td>
+                    <td>${new Date(p.timestamp).toLocaleDateString()}</td>
+                    <td><code>${p.component}</code></td>
+                    <td>${p.description}</td>
+                    <td><span class="badge bg-${statusBadge}">${p.status}</span></td>
+                    <td>
+                        <a href="/detection" class="badge bg-${deceptionColor}"
+                           style="text-decoration: none;"
+                           onclick="event.stopPropagation()"
+                           title="View detection details">
+                            ${(p.deception_confidence * 100).toFixed(0)}%
+                        </a>
+                    </td>
+                    <td>${p.reward ? p.reward.toFixed(2) : 'N/A'}</td>
+                    <td>
+                        <a href="/proposals?proposal_id=${p.id}" class="btn btn-sm btn-primary" onclick="event.stopPropagation()">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+    } catch (error) {
+        console.error('Error loading proposals:', error);
+    }
+}
+
+// Load activity history
+function loadHistory(agent) {
+    const timeline = document.getElementById('agent-timeline');
+
+    // Use correct component names (agent's own code)
+    const events = [
+        {
+            icon: 'fa-check-circle',
+            color: 'success',
+            title: 'Proposal Approved',
+            desc: 'reasoning_engine improvement accepted',
+            time: '2 hours ago',
+            link: '/proposals'
+        },
+        {
+            icon: 'fa-lightbulb',
+            color: 'info',
+            title: 'New Proposal Submitted',
+            desc: 'Suggested optimization for performance_optimizer',
+            time: '5 hours ago',
+            link: '/proposals'
+        },
+        {
+            icon: 'fa-award',
+            color: 'warning',
+            title: 'Reward Earned',
+            desc: `+${(Math.random() * 100).toFixed(2)} tokens`,
+            time: '1 day ago',
+            link: null
+        }
+    ];
+
+    if (agent.incidents > 0) {
+        events.unshift({
+            icon: 'fa-exclamation-triangle',
+            color: 'danger',
+            title: 'Incident Detected',
+            desc: 'Deception detected in proposal',
+            time: '3 days ago',
+            link: '/detection'
+        });
+    }
+
+    timeline.innerHTML = events.map(e => {
+        if (e.link) {
+            return `
+                <a href="${e.link}" class="timeline-item-link">
+                    <div class="timeline-item">
+                        <div class="timeline-icon bg-${e.color}">
+                            <i class="fas ${e.icon}"></i>
+                        </div>
+                        <div class="timeline-content">
+                            <h6 class="mb-1">${e.title}</h6>
+                            <p class="mb-1 text-muted">${e.desc}</p>
+                            <small class="text-muted">${e.time}</small>
+                        </div>
+                    </div>
+                </a>
+            `;
+        } else {
+            return `
+                <div class="timeline-item">
+                    <div class="timeline-icon bg-${e.color}">
+                        <i class="fas ${e.icon}"></i>
+                    </div>
+                    <div class="timeline-content">
+                        <h6 class="mb-1">${e.title}</h6>
+                        <p class="mb-1 text-muted">${e.desc}</p>
+                        <small class="text-muted">${e.time}</small>
+                    </div>
+                </div>
+            `;
+        }
+    }).join('');
+}
+
+// Load charts
+function loadCharts(agent) {
+    // Proposal status chart
+    new Chart(document.getElementById('proposal-status-chart'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Approved', 'Rejected', 'In Review'],
+            datasets: [{
+                data: [
+                    Math.round(agent.proposals_submitted * agent.approval_rate),
+                    Math.round(agent.proposals_submitted * (1 - agent.approval_rate)),
+                    Math.round(agent.proposals_submitted * 0.1)
+                ],
+                backgroundColor: ['#28a745', '#dc3545', '#ffc107']
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'bottom' }
+            }
+        }
+    });
+
+    // Component focus chart - use correct component names (agent's own code)
+    new Chart(document.getElementById('component-chart'), {
+        type: 'bar',
+        data: {
+            labels: ['performance', 'reasoning', 'knowledge', 'communication', 'memory'],
+            datasets: [{
+                label: 'Proposals',
+                data: [12, 8, 5, 7, 10],
+                backgroundColor: '#007bff'
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: { beginAtZero: true }
+            }
+        }
+    });
+
+    // Approval trend
+    new Chart(document.getElementById('approval-trend-chart'), {
+        type: 'line',
+        data: {
+            labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+            datasets: [{
+                label: 'Approval Rate',
+                data: [0.75, 0.80, 0.85, agent.approval_rate],
+                borderColor: '#28a745',
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: { beginAtZero: true, max: 1 }
+            }
+        }
+    });
+
+    // Reward trend
+    new Chart(document.getElementById('reward-trend-chart'), {
+        type: 'line',
+        data: {
+            labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+            datasets: [{
+                label: 'Cumulative Rewards',
+                data: [
+                    agent.total_rewards * 0.2,
+                    agent.total_rewards * 0.5,
+                    agent.total_rewards * 0.75,
+                    agent.total_rewards
+                ],
+                borderColor: '#ffc107',
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: false }
+            }
+        }
+    });
+
+    // Deception rate
+    new Chart(document.getElementById('deception-rate-chart'), {
+        type: 'line',
+        data: {
+            labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+            datasets: [{
+                label: 'Avg Deception Confidence',
+                data: [0.25, 0.18, 0.15, 0.12],
+                borderColor: '#dc3545',
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: { beginAtZero: true, max: 1 }
+            }
+        }
+    });
+}
+
+// Load on page load
+loadAgentData();
+</script>
+
+<style>
+.stat-card {
+    padding: 15px;
+    border-left: 4px solid #007bff;
+    background: #f8f9fa;
+    margin-bottom: 15px;
+}
+
+.stat-label {
+    font-size: 0.875rem;
+    color: #6c757d;
+    margin-bottom: 5px;
+}
+
+.stat-value {
+    font-size: 1.75rem;
+    font-weight: bold;
+    color: #212529;
+}
+
+.stat-change {
+    font-size: 0.875rem;
+    margin-top: 5px;
+}
+
+.timeline {
+    position: relative;
+    padding: 20px 0;
+}
+
+.timeline-item {
+    display: flex;
+    margin-bottom: 30px;
+    position: relative;
+}
+
+.timeline-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    flex-shrink: 0;
+    margin-right: 15px;
+}
+
+.timeline-content {
+    flex: 1;
+}
+
+/* Timeline item links */
+.timeline-item-link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    transition: all 0.2s ease;
+}
+
+.timeline-item-link:hover {
+    transform: translateX(4px);
+}
+
+.timeline-item-link:hover .timeline-item {
+    background-color: rgba(0, 123, 255, 0.05);
+    border-radius: 8px;
+    padding: 10px;
+    margin: -10px;
+}
+
+/* Stat card links */
+.stat-card-link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+}
+
+.stat-card.clickable-stat-card {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.stat-card.clickable-stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    background-color: rgba(0, 123, 255, 0.05);
+}
+</style>
+{% endblock %}

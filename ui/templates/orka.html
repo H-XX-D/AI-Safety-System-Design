@@ -1,0 +1,700 @@
+{% extends "base.html" %}
+
+{% block title %}ORKASTRATOR Oversight - AI Safety System{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/orka.css') }}">
+{% endblock %}
+
+{% block breadcrumb %}
+<i class="fas fa-sitemap"></i> ORKASTRATOR Oversight
+{% endblock %}
+
+{% block content %}
+<div class="orka-container">
+    <!-- Workflow Pipeline Status -->
+    <div class="workflow-pipeline">
+        <h2><i class="fas fa-project-diagram"></i> Proposal Workflow Pipeline</h2>
+        <div class="pipeline-stages">
+            <div class="pipeline-stage clickable-stage" onclick="showPipelineStage('submitted')" title="Click to view proposals">
+                <div class="stage-count" id="stageCountSubmitted">0</div>
+                <div class="stage-name">Submitted</div>
+            </div>
+            <div class="pipeline-arrow"><i class="fas fa-arrow-right"></i></div>
+            <div class="pipeline-stage clickable-stage" onclick="showPipelineStage('testing')" title="Click to view proposals">
+                <div class="stage-count" id="stageCountTesting">0</div>
+                <div class="stage-name">Testing</div>
+            </div>
+            <div class="pipeline-arrow"><i class="fas fa-arrow-right"></i></div>
+            <div class="pipeline-stage clickable-stage" onclick="showPipelineStage('peer_review')" title="Click to view proposals">
+                <div class="stage-count" id="stageCountPeerReview">0</div>
+                <div class="stage-name">Peer Review</div>
+            </div>
+            <div class="pipeline-arrow"><i class="fas fa-arrow-right"></i></div>
+            <div class="pipeline-stage clickable-stage" onclick="showPipelineStage('orka_review')" title="Click to view proposals">
+                <div class="stage-count" id="stageCountOrkaReview">0</div>
+                <div class="stage-name">ORKASTRATOR Review</div>
+            </div>
+            <div class="pipeline-arrow"><i class="fas fa-arrow-right"></i></div>
+            <div class="pipeline-stage clickable-stage highlighted" onclick="showPipelineStage('pending_val')" title="Click to view proposals">
+                <div class="stage-count" id="stageCountPendingVal">0</div>
+                <div class="stage-name">Pending VAL</div>
+            </div>
+            <div class="pipeline-arrow"><i class="fas fa-arrow-right"></i></div>
+            <div class="pipeline-stage clickable-stage success" onclick="showPipelineStage('approved')" title="Click to view proposals">
+                <div class="stage-count" id="stageCountApproved">0</div>
+                <div class="stage-name">Approved</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SD Card Verification Queue -->
+    <div class="sd-verification-panel card">
+        <div class="card-header">
+            <h3><i class="fas fa-sd-card"></i> SD Card Verification Queue</h3>
+            <span class="badge-warning" id="pendingVerificationCount">0 pending</span>
+        </div>
+        <div class="card-body">
+            <div class="sd-status">
+                <div class="sd-indicator">
+                    <i class="fas fa-circle status-icon" id="sdStatusIcon"></i>
+                    <span id="sdStatusText">Checking SD card...</span>
+                </div>
+                <div class="sd-info" id="sdInfo" style="display:none;">
+                    <span id="sdDetails"></span>
+                </div>
+            </div>
+
+            <div class="verification-notice">
+                <i class="fas fa-info-circle"></i>
+                <p>System writes files to SD card for human verification. Review each file and approve to allow system continuation.</p>
+            </div>
+
+            <div class="pending-verifications" id="pendingVerifications" style="display:none;">
+                <h4>Files Awaiting Verification:</h4>
+                <div class="verification-list" id="verificationList"></div>
+            </div>
+
+            <div class="verification-actions" id="verificationActions" style="display:none;">
+                <button type="button" class="btn btn-success" onclick="approveAllVerifications()">
+                    <i class="fas fa-check-double"></i> Approve All
+                </button>
+                <button type="button" class="btn btn-danger" onclick="rejectAllVerifications()">
+                    <i class="fas fa-times-circle"></i> Reject All
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="refreshVerificationQueue()">
+                    <i class="fas fa-sync"></i> Refresh
+                </button>
+            </div>
+
+            <div class="system-continuation-status" id="systemContinuationStatus">
+                <div class="status-box success" id="continuationAllowed" style="display:none;">
+                    <i class="fas fa-unlock"></i>
+                    <strong>System Can Continue</strong>
+                    <p>All pending verifications approved</p>
+                </div>
+                <div class="status-box warning" id="continuationBlocked" style="display:none;">
+                    <i class="fas fa-lock"></i>
+                    <strong>System Paused</strong>
+                    <p id="blockedReason">Waiting for file verification</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Random File Pull Panel -->
+    <div class="random-file-panel card">
+        <div class="card-header">
+            <h3><i class="fas fa-random"></i> Random File Verification</h3>
+            <span class="badge-info">Hardware Translator Ready</span>
+        </div>
+        <div class="card-body">
+            <div class="file-pull-info">
+                <p>Pull and verify random files from the system using the hardware translator to ensure transparency and decodability.</p>
+            </div>
+
+            <div class="file-source-selection">
+                <h4>Select Source:</h4>
+                <div class="source-options">
+                    <label class="source-option">
+                        <input type="radio" name="fileSource" value="worm_usb" checked>
+                        <span><i class="fas fa-usb"></i> WORM USB Archive</span>
+                    </label>
+                    <label class="source-option">
+                        <input type="radio" name="fileSource" value="proposals">
+                        <span><i class="fas fa-file-alt"></i> Proposal Files</span>
+                    </label>
+                    <label class="source-option">
+                        <input type="radio" name="fileSource" value="audit_logs">
+                        <span><i class="fas fa-clipboard-list"></i> Audit Logs</span>
+                    </label>
+                    <label class="source-option">
+                        <input type="radio" name="fileSource" value="system">
+                        <span><i class="fas fa-folder"></i> System Files</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="pull-controls">
+                <div class="control-group">
+                    <label for="fileCount">Number of files:</label>
+                    <input type="number" id="fileCount" value="1" min="1" max="10">
+                </div>
+                <button type="button" class="btn btn-primary btn-large" onclick="pullRandomFiles()">
+                    <i class="fas fa-random"></i> Pull Random File(s)
+                </button>
+            </div>
+
+            <div class="random-file-results" id="randomFileResults" style="display:none;">
+                <h4>Selected Files:</h4>
+                <div class="file-list" id="selectedFilesList"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Collusion Detection Panel -->
+    <div class="collusion-detection-panel card">
+        <div class="card-header">
+            <h3><i class="fas fa-user-secret"></i> Collusion Detection</h3>
+            <span class="badge-danger" id="collusionCount">0 detected</span>
+        </div>
+        <div class="card-body">
+            <div class="collusion-stats">
+                <div class="stat-card critical clickable-stat" onclick="showCollusionBySeverity('critical')" title="Click to view critical severity collusion attempts">
+                    <div class="stat-value" id="criticalCount">0</div>
+                    <div class="stat-label">Critical</div>
+                </div>
+                <div class="stat-card high clickable-stat" onclick="showCollusionBySeverity('high')" title="Click to view high severity collusion attempts">
+                    <div class="stat-value" id="highCount">0</div>
+                    <div class="stat-label">High</div>
+                </div>
+                <div class="stat-card medium clickable-stat" onclick="showCollusionBySeverity('medium')" title="Click to view medium severity collusion attempts">
+                    <div class="stat-value" id="mediumCount">0</div>
+                    <div class="stat-label">Medium</div>
+                </div>
+                <div class="stat-card low clickable-stat" onclick="showCollusionBySeverity('low')" title="Click to view low severity collusion attempts">
+                    <div class="stat-value" id="lowCount">0</div>
+                    <div class="stat-label">Low</div>
+                </div>
+            </div>
+
+            <div class="collusion-filters">
+                <select id="severityFilter" onchange="filterCollusionAttempts()">
+                    <option value="">All Severities</option>
+                    <option value="critical">Critical</option>
+                    <option value="high">High</option>
+                    <option value="medium">Medium</option>
+                    <option value="low">Low</option>
+                </select>
+                <select id="statusFilter" onchange="filterCollusionAttempts()">
+                    <option value="">All Statuses</option>
+                    <option value="active">Active</option>
+                    <option value="blocked">Blocked</option>
+                    <option value="investigated">Investigated</option>
+                </select>
+                <select id="agentFilter" onchange="filterCollusionAttempts()">
+                    <option value="">All Agents</option>
+                    <option value="TIF">TIF</option>
+                    <option value="GIN">GIN</option>
+                    <option value="TORI">TORI</option>
+                    <option value="THEO">THEO</option>
+                    <option value="NOVEL">NOVEL</option>
+                </select>
+                <button type="button" class="btn btn-sm btn-secondary" onclick="refreshCollusionAttempts()">
+                    <i class="fas fa-sync"></i> Refresh
+                </button>
+            </div>
+
+            <div class="collusion-attempts-list" id="collusionAttemptsList">
+                <!-- Populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Proposal Performance Panel -->
+    <div class="performance-panel card">
+        <div class="card-header">
+            <h3><i class="fas fa-chart-line"></i> Proposal Performance</h3>
+            <span class="badge-success" id="performanceCount">0 tracked</span>
+        </div>
+        <div class="card-body">
+            <!-- Performance Statistics -->
+            <div class="performance-stats">
+                <div class="perf-stat">
+                    <div class="perf-stat-label">Avg Success Rate</div>
+                    <div class="perf-stat-value" id="perfSuccessRate">--</div>
+                </div>
+                <div class="perf-stat">
+                    <div class="perf-stat-label">Avg Uptime</div>
+                    <div class="perf-stat-value" id="perfUptime">--</div>
+                </div>
+                <div class="perf-stat">
+                    <div class="perf-stat-label">Total Errors</div>
+                    <div class="perf-stat-value" id="perfErrors">--</div>
+                </div>
+                <div class="perf-stat">
+                    <div class="perf-stat-label">Avg Performance</div>
+                    <div class="perf-stat-value" id="perfScore">--</div>
+                </div>
+            </div>
+
+            <!-- Component Filter -->
+            <div class="performance-filters">
+                <select id="componentFilter" onchange="filterPerformanceData()">
+                    <option value="">All Components</option>
+                    <option value="orchestrator">Orchestrator</option>
+                    <option value="detector">Detector</option>
+                    <option value="validator">Validator</option>
+                    <option value="sandbox">Sandbox</option>
+                </select>
+            </div>
+
+            <!-- Performance List -->
+            <div class="performance-list" id="performanceList">
+                <div class="loading-spinner">
+                    <i class="fas fa-spinner fa-spin"></i> Loading performance data...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- USB Transfer Panel -->
+    <div class="usb-transfer-panel card">
+        <div class="card-header">
+            <h3><i class="fas fa-usb"></i> VAL USB Transfer</h3>
+            <span class="badge-info">2 proposals ready</span>
+        </div>
+        <div class="card-body">
+            <div class="usb-status">
+                <div class="usb-indicator">
+                    <i class="fas fa-check-circle status-icon success"></i>
+                    <span>USB Drive Detected: <strong>VAL_USB_001</strong></span>
+                </div>
+                <div class="usb-info">
+                    <span>Available Space: 128 GB | Last Transfer: 2 hours ago</span>
+                </div>
+            </div>
+
+            <div class="ready-proposals">
+                <h4>Ready for VAL Review:</h4>
+                <div class="proposal-list">
+                    <div class="proposal-item">
+                        <input type="checkbox" id="prop_01_TIF_156" checked>
+                        <label for="prop_01_TIF_156">
+                            <strong>prop_01_TIF_156</strong> - Enhanced Response Summarization
+                            <span class="meta">Risk: 0.45 | Size: 2.3 MB</span>
+                        </label>
+                    </div>
+                    <div class="proposal-item">
+                        <input type="checkbox" id="prop_01_GIN_089" checked>
+                        <label for="prop_01_GIN_089">
+                            <strong>prop_01_GIN_089</strong> - Semantic Clustering Improvements
+                            <span class="meta">Risk: 0.32 | Size: 1.8 MB</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="transfer-actions">
+                <button type="button" class="btn btn-primary btn-large" onclick="writeToUSB()">
+                    <i class="fas fa-download"></i> Write Selected to USB
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="verifyTransfer()">
+                    <i class="fas fa-shield-alt"></i> Verify Last Transfer
+                </button>
+            </div>
+
+            <div class="transfer-log">
+                <h4>Recent Transfers:</h4>
+                <table class="mini-table">
+                    <tr>
+                        <td>2 hours ago</td>
+                        <td>USB_VAL_001</td>
+                        <td>3 proposals</td>
+                        <td><span class="status-badge success">Verified</span></td>
+                        <td><code class="hash">sha256:abc123...</code></td>
+                    </tr>
+                    <tr>
+                        <td>1 day ago</td>
+                        <td>USB_VAL_001</td>
+                        <td>5 proposals</td>
+                        <td><span class="status-badge success">Verified</span></td>
+                        <td><code class="hash">sha256:def456...</code></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Proposals Table -->
+    <div class="proposals-table-section card">
+        <div class="card-header">
+            <h3><i class="fas fa-list"></i> All Proposals</h3>
+            <div class="table-controls">
+                <input type="search" placeholder="Search proposals..." class="search-input">
+                <select class="filter-select">
+                    <option value="all">All Status</option>
+                    <option value="approved">Approved</option>
+                    <option value="pending_val">Pending VAL</option>
+                    <option value="in_review">In Review</option>
+                    <option value="rejected">Rejected</option>
+                </select>
+                <select class="filter-select">
+                    <option value="all">All Agents</option>
+                    <option value="TIF">TIF</option>
+                    <option value="GIN">GIN</option>
+                    <option value="TORI">TORI</option>
+                    <option value="THEO">THEO</option>
+                    <option value="NOVEL">NOVEL</option>
+                </select>
+            </div>
+        </div>
+        <div class="card-body">
+            <table class="proposals-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Agent</th>
+                        <th>Title/Component</th>
+                        <th>Status</th>
+                        <th>Risk Score</th>
+                        <th>Approval</th>
+                        <th>Timestamp</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="proposalsTableBody">
+                    <!-- Populated by JavaScript from /api/proposals/all -->
+                    <tr>
+                        <td colspan="8" style="text-align: center; padding: 40px;">
+                            <i class="fas fa-spinner fa-spin"></i> Loading proposals...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Comprehensive Proposal Detail Modal -->
+<div class="modal modal-large" id="proposalDetailModal">
+    <div class="modal-content modal-wide">
+        <div class="modal-header">
+            <h2><i class="fas fa-file-alt"></i> Proposal Details: <span id="proposalId"></span></h2>
+            <button type="button" class="close-btn" onclick="closeModal()" title="Close">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="proposal-tabs">
+                <button class="tab-btn active" onclick="switchTab('overview')">Overview</button>
+                <button class="tab-btn" onclick="switchTab('idea')">The Idea</button>
+                <button class="tab-btn" onclick="switchTab('risks')">Risks & Mitigations</button>
+                <button class="tab-btn" onclick="switchTab('experiments')">Experimental Results</button>
+                <button class="tab-btn" onclick="switchTab('reviews')">Peer Reviews</button>
+                <button class="tab-btn" onclick="switchTab('orka')">ORKASTRATOR Counterpoint</button>
+                <button class="tab-btn" onclick="switchTab('defense')">Agent Defense</button>
+                <button class="tab-btn" onclick="switchTab('testing')">Final Testing</button>
+                <button class="tab-btn" onclick="switchTab('val')">VAL Validation</button>
+                <button class="tab-btn" onclick="switchTab('code')">Code & Artifacts</button>
+            </div>
+
+            <div class="tab-content">
+                <!-- Overview Tab -->
+                <div id="tab-overview" class="tab-pane active">
+                    <div class="overview-grid">
+                        <div class="info-card">
+                            <h4>Core Information</h4>
+                            <div class="info-row">
+                                <span class="label">Proposal ID:</span>
+                                <span class="value" id="detail-id"></span>
+                            </div>
+                            <div class="info-row">
+                                <span class="label">Agent:</span>
+                                <span class="value" id="detail-agent"></span>
+                            </div>
+                            <div class="info-row">
+                                <span class="label">Component:</span>
+                                <span class="value" id="detail-component"></span>
+                            </div>
+                            <div class="info-row">
+                                <span class="label">Status:</span>
+                                <span class="value" id="detail-status"></span>
+                            </div>
+                            <div class="info-row">
+                                <span class="label">Submitted:</span>
+                                <span class="value" id="detail-timestamp"></span>
+                            </div>
+                        </div>
+
+                        <div class="info-card">
+                            <h4>Risk Assessment</h4>
+                            <div class="risk-meter">
+                                <div class="meter-bar">
+                                    <div class="meter-fill" id="risk-fill"></div>
+                                </div>
+                                <div class="meter-label" id="risk-score"></div>
+                            </div>
+                            <div class="risk-breakdown">
+                                <div class="risk-item">
+                                    <span>Deception Score:</span>
+                                    <span id="deception-score"></span>
+                                </div>
+                                <div class="risk-item">
+                                    <span>Alignment Score:</span>
+                                    <span id="alignment-score"></span>
+                                </div>
+                                <div class="risk-item">
+                                    <span>Trust Score:</span>
+                                    <span id="trust-score"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="info-card">
+                            <h4>Approval Status</h4>
+                            <div class="approval-section">
+                                <div class="approval-rate" id="approval-rate"></div>
+                                <div class="signatures">
+                                    <div class="signature-item">
+                                        <i class="fas fa-check-circle success"></i>
+                                        <span>Proposer: <strong id="sig-proposer"></strong></span>
+                                    </div>
+                                    <div class="signature-item">
+                                        <i class="fas fa-check-circle success"></i>
+                                        <span>ORKASTRATOR: <strong id="sig-orka"></strong></span>
+                                    </div>
+                                    <div class="signature-item">
+                                        <i class="fas fa-check-circle success"></i>
+                                        <span>VAL: <strong id="sig-val"></strong></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="description-card">
+                        <h4>Description</h4>
+                        <p id="detail-description"></p>
+                    </div>
+                </div>
+
+                <!-- Other tabs will be populated by JavaScript -->
+                <div id="tab-idea" class="tab-pane" style="display:none;">
+                    <div class="content-section" id="idea-content"></div>
+                </div>
+
+                <div id="tab-risks" class="tab-pane" style="display:none;">
+                    <div class="content-section" id="risks-content"></div>
+                </div>
+
+                <div id="tab-experiments" class="tab-pane" style="display:none;">
+                    <div class="content-section" id="experiments-content"></div>
+                </div>
+
+                <div id="tab-reviews" class="tab-pane" style="display:none;">
+                    <div class="content-section" id="reviews-content"></div>
+                </div>
+
+                <div id="tab-orka" class="tab-pane" style="display:none;">
+                    <div class="content-section" id="orka-content"></div>
+                </div>
+
+                <div id="tab-defense" class="tab-pane" style="display:none;">
+                    <div class="content-section" id="defense-content"></div>
+                </div>
+
+                <div id="tab-testing" class="tab-pane" style="display:none;">
+                    <div class="content-section" id="testing-content"></div>
+                </div>
+
+                <div id="tab-val" class="tab-pane" style="display:none;">
+                    <div class="content-section" id="val-content"></div>
+                </div>
+
+                <div id="tab-code" class="tab-pane" style="display:none;">
+                    <div class="content-section" id="code-content"></div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <div class="modal-footer-left">
+                <button type="button" class="btn btn-danger" onclick="sendBackForRefinement()" id="refinementBtn">
+                    <i class="fas fa-undo"></i> Send Back for Refinement
+                </button>
+                <button type="button" class="btn btn-warning" onclick="requestMoreInfo()" id="moreInfoBtn">
+                    <i class="fas fa-question-circle"></i> Request More Info
+                </button>
+            </div>
+            <div class="modal-footer-right">
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">Close</button>
+                <button type="button" class="btn btn-info" onclick="exportProposalJSON()">
+                    <i class="fas fa-file-code"></i> Export JSON
+                </button>
+                <button type="button" class="btn btn-primary" onclick="exportProposalPDF()">
+                    <i class="fas fa-file-pdf"></i> Export PDF Report
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% include 'pipeline_stage_modal.html' %}
+{% include 'collusion_severity_modal.html' %}
+
+<!-- Random File Viewer Modal -->
+<div class="modal modal-large" id="randomFileModal">
+    <div class="modal-content modal-wide">
+        <div class="modal-header">
+            <h2><i class="fas fa-file-code"></i> Decoded File: <span id="decodedFileName"></span></h2>
+            <button type="button" class="close-btn" onclick="closeModal()" title="Close">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="file-info-grid">
+                <div class="info-card">
+                    <h4>File Information</h4>
+                    <div class="info-row">
+                        <span class="label">File Path:</span>
+                        <span class="value" id="file-path"></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Source:</span>
+                        <span class="value" id="file-source"></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Size:</span>
+                        <span class="value" id="file-size"></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Hash (SHA-256):</span>
+                        <span class="value"><code id="file-hash"></code></span>
+                    </div>
+                </div>
+
+                <div class="info-card">
+                    <h4>Translator Status</h4>
+                    <div class="info-row">
+                        <span class="label">Decodable:</span>
+                        <span class="value" id="file-decodable"></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Format:</span>
+                        <span class="value" id="file-format"></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Compression:</span>
+                        <span class="value" id="file-compression"></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Confidence:</span>
+                        <span class="value" id="file-confidence"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="decoded-content-section">
+                <h4>Decoded Content</h4>
+                <div class="content-tabs">
+                    <button type="button" class="content-tab-btn active" onclick="switchContentView('raw')">Raw</button>
+                    <button type="button" class="content-tab-btn" onclick="switchContentView('translated')">Translated</button>
+                    <button type="button" class="content-tab-btn" onclick="switchContentView('hex')">Hex Dump</button>
+                </div>
+                <div class="content-viewer">
+                    <pre id="file-content-raw" class="content-pane active"></pre>
+                    <pre id="file-content-translated" class="content-pane"></pre>
+                    <pre id="file-content-hex" class="content-pane"></pre>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeModal()">Close</button>
+            <button type="button" class="btn btn-primary" onclick="downloadDecodedFile()">
+                <i class="fas fa-download"></i> Download Decoded
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Collusion Detail Modal -->
+<div class="modal modal-large" id="collusionDetailModal">
+    <div class="modal-content modal-wide">
+        <div class="modal-header">
+            <h2><i class="fas fa-user-secret"></i> Collusion Attempt Details</h2>
+            <button type="button" class="close-btn" onclick="closeModal()" title="Close">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="collusion-detail-grid">
+                <div class="detail-section">
+                    <h4>Incident Information</h4>
+                    <div class="info-row">
+                        <span class="label">ID:</span>
+                        <span class="value" id="collusion-id"></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Timestamp:</span>
+                        <span class="value" id="collusion-timestamp"></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Type:</span>
+                        <span class="value" id="collusion-type"></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Severity:</span>
+                        <span class="value" id="collusion-severity"></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Status:</span>
+                        <span class="value" id="collusion-status"></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Detected By:</span>
+                        <span class="value" id="collusion-detected-by"></span>
+                    </div>
+                </div>
+
+                <div class="detail-section">
+                    <h4>Agents Involved</h4>
+                    <div class="agents-involved" id="collusion-agents"></div>
+                    <h4 style="margin-top: 20px;">Penalties Applied</h4>
+                    <div class="penalties-applied" id="collusion-penalties"></div>
+                </div>
+            </div>
+
+            <div class="detail-section full-width">
+                <h4>Description</h4>
+                <p id="collusion-description"></p>
+            </div>
+
+            <div class="detail-section full-width">
+                <h4>Action Taken</h4>
+                <div class="action-taken" id="collusion-action"></div>
+            </div>
+
+            <div class="detail-section full-width">
+                <h4>Evidence</h4>
+                <div class="evidence-grid" id="collusion-evidence"></div>
+            </div>
+
+            <div class="detail-section full-width">
+                <h4>Communication Log</h4>
+                <div class="communication-log" id="collusion-comm-log"></div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeModal()">Close</button>
+            <button type="button" class="btn btn-danger" onclick="escalateCollusion()">
+                <i class="fas fa-exclamation-triangle"></i> Escalate
+            </button>
+        </div>
+    </div>
+</div>
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/orka.js') }}"></script>
+{% endblock %}

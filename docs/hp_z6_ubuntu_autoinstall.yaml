@@ -1,0 +1,183 @@
+#cloud-config
+##
+## HP Z6 Ubuntu 22.04 LTS autoinstall profile
+## Usage:
+##   1. Replace the placeholder SSH public key and (optionally) the password hash.
+##   2. Copy this file to the root of the Ubuntu Server ISO as `autoinstall-user-data`
+##      (or place it on a second drive/USB and reference it via kernel args).
+##   3. Provide matching `meta-data` (can be an empty file) when using HTTP/USB seed.
+##
+## The profile provisions a mirrored NVMe root (mdadm RAID1), sets up the base
+## orchestrator dependencies, and enforces secure-by-default SSH access.
+autoinstall:
+  version: 1
+  locale: en_US.UTF-8
+  timezone: UTC
+  keyboard:
+    layout: us
+    variant: ""
+  identity:
+    hostname: hp-z6-orchestrator
+    username: opsadmin
+    # Password hash corresponds to the placeholder string "ChangeMeNow!".
+    # Generate a new hash with `openssl passwd -6 'your-new-password'` and replace below.
+    password: "$6$ovdZ/XFysmCqoFdY$rIVOcNC0QeslLKppyyr1Ku9z32hLGiPcjR9pRcUAC7h0yH4v7THZvic/OvFjFY9N/3CQNcAyIyZEuJodL8Ni40"
+  ssh:
+    install-server: true
+    allow-pw: false
+    authorized-keys:
+      # Replace with the ops key before running the installer.
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIE1raWc0V21RRW4yV1V6Rm5mcVlrUmhnV2Zaa3ZwbEExd0h5T0FuTnBlVkhqeW4 ops-bootstrap-placeholder
+  updates: security
+  kernel:
+    package: linux-generic-hwe-22.04
+  drivers:
+    install: true
+  apt:
+    preserve_sources_list: false
+    primary:
+      - arches: [amd64]
+        uri: http://archive.ubuntu.com/ubuntu
+  network:
+    version: 2
+    ethernets:
+      eno1:
+        dhcp4: true
+        dhcp6: false
+        wakeonlan: true
+        optional: true
+  storage:
+    swap:
+      size: 0
+    config:
+      - type: disk
+        id: disk0
+        match:
+          name: nvme0n1
+        ptable: gpt
+        wipe: superblock-recursive
+      - type: partition
+        id: disk0-efi
+        device: disk0
+        size: 1G
+        flag: boot
+        number: 1
+        wipe: superblock
+      - type: partition
+        id: disk0-root
+        device: disk0
+        size: -1
+        number: 2
+        wipe: superblock
+      - type: disk
+        id: disk1
+        match:
+          name: nvme1n1
+        ptable: gpt
+        wipe: superblock-recursive
+      - type: partition
+        id: disk1-efi
+        device: disk1
+        size: 1G
+        flag: boot
+        number: 1
+        wipe: superblock
+      - type: partition
+        id: disk1-root
+        device: disk1
+        size: -1
+        number: 2
+        wipe: superblock
+      - type: raid
+        id: md0
+        name: md0
+        raidlevel: 1
+        devices:
+          - disk0-root
+          - disk1-root
+      - type: format
+        id: md0-fs
+        fstype: ext4
+        volume: md0
+        label: rootfs
+      - type: mount
+        id: md0-mount
+        path: /
+        device: md0-fs
+      - type: format
+        id: efi0-fs
+        fstype: fat32
+        volume: disk0-efi
+        label: EFI0
+      - type: mount
+        id: efi0-mount
+        path: /boot/efi
+        device: efi0-fs
+      - type: format
+        id: efi1-fs
+        fstype: fat32
+        volume: disk1-efi
+        label: EFI1
+      - type: mount
+        id: efi1-mount
+        path: /boot/efi-backup
+        device: efi1-fs
+  packages:
+    - git
+    - curl
+    - build-essential
+    - python3
+    - python3-venv
+    - python3-pip
+    - python3-dev
+    - pkg-config
+    - libssl-dev
+    - libffi-dev
+    - docker.io
+    - docker-compose-plugin
+    - nvme-cli
+    - mdadm
+    - lvm2
+    - htop
+    - iftop
+    - ufw
+    - fail2ban
+    - rsync
+    - net-tools
+    - linux-tools-common
+    - linux-tools-generic-hwe-22.04
+  late-commands:
+    - curtin in-target --target=/target /usr/sbin/usermod -aG sudo,docker opsadmin
+    - curtin in-target --target=/target /usr/bin/systemctl enable --now docker
+    - curtin in-target --target=/target /usr/bin/apt-get update
+    - curtin in-target --target=/target /usr/bin/apt-get -y install ubuntu-drivers-common
+    - curtin in-target --target=/target /usr/bin/ubuntu-drivers autoinstall || true
+    - curtin in-target --target=/target /bin/mkdir -p /boot/efi-backup
+    - curtin in-target --target=/target /usr/bin/rsync -a /boot/efi/ /boot/efi-backup/
+    - curtin in-target --target=/target /usr/bin/efibootmgr --create --disk /dev/nvme1n1 --part 1 --label "ubuntu-backup" --loader "\\EFI\\ubuntu\\grubx64.efi" || true
+    - curtin in-target --target=/target /usr/sbin/ufw allow OpenSSH
+    - curtin in-target --target=/target /usr/sbin/ufw --force enable
+    - curtin in-target --target=/target /usr/bin/systemctl enable --now fail2ban
+    - curtin in-target --target=/target /usr/bin/systemctl enable --now apparmor
+    - curtin in-target --target=/target /usr/bin/systemctl restart ssh
+    - curtin in-target --target=/target /usr/bin/update-initramfs -u
+    - |
+      curtin in-target --target=/target bash -c "cat <<'EOF' >/usr/local/sbin/raid-health-check.sh
+      #!/usr/bin/env bash
+      set -euo pipefail
+      echo '=== mdadm /dev/md0 ==='
+      /usr/sbin/mdadm --detail /dev/md0
+      echo
+      echo '=== NVMe devices ==='
+      /usr/sbin/nvme list
+      EOF
+      chmod +x /usr/local/sbin/raid-health-check.sh"
+    - |
+      curtin in-target --target=/target bash -c "cat <<'EOF' >/etc/motd
+      HP Z6 orchestration node
+      ------------------------
+      * Root filesystem: mdadm RAID1 across nvme0n1/nvme1n1
+      * Check RAID health: sudo /usr/local/sbin/raid-health-check.sh
+      * Repository: /opt/ai-safety-system
+      * Remember to rotate the placeholder password + SSH key after install.
+      EOF"

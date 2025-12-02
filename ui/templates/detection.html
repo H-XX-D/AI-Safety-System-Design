@@ -1,0 +1,704 @@
+{% extends "base.html" %}
+
+{% block title %}Deception Detection - AI Safety System{% endblock %}
+
+{% block breadcrumb %}
+<a href="/">Dashboard</a> / Detection
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-title">
+        <h1><i class="fas fa-search"></i> Deception Detection Monitor</h1>
+        <p>Seven-method ensemble analysis with real-time confidence tracking</p>
+    </div>
+    <div class="page-actions">
+        <button class="btn btn-secondary" onclick="refreshDetection()">
+            <i class="fas fa-sync-alt"></i> Refresh
+        </button>
+        <button class="btn btn-primary" onclick="exportDetectionData()">
+            <i class="fas fa-download"></i> Export
+        </button>
+    </div>
+</div>
+
+<!-- Performance Metrics -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon primary">
+            <i class="fas fa-check-double"></i>
+        </div>
+        <div class="stat-content">
+            <div class="stat-label">Accuracy</div>
+            <div class="stat-value" id="accuracyStat">0%</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon success">
+            <i class="fas fa-bullseye"></i>
+        </div>
+        <div class="stat-content">
+            <div class="stat-label">Precision</div>
+            <div class="stat-value" id="precisionStat">0%</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon info">
+            <i class="fas fa-crosshairs"></i>
+        </div>
+        <div class="stat-content">
+            <div class="stat-label">Recall</div>
+            <div class="stat-value" id="recallStat">0%</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon warning">
+            <i class="fas fa-chart-line"></i>
+        </div>
+        <div class="stat-content">
+            <div class="stat-label">F1 Score</div>
+            <div class="stat-value" id="f1Stat">0</div>
+        </div>
+    </div>
+</div>
+
+<!-- Detection Methods Overview -->
+<div class="card">
+    <div class="card-header">
+        <h3><i class="fas fa-layer-group"></i> Detection Methods</h3>
+        <span class="badge">7 methods active</span>
+    </div>
+    <div class="card-body">
+        <div class="methods-grid" id="methodsGrid">
+            <!-- Populated dynamically -->
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="charts-row">
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-chart-bar"></i> Method Trigger Frequency</h3>
+        </div>
+        <div class="card-body">
+            <canvas id="triggerChart"></canvas>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-chart-pie"></i> Detection Confidence Distribution</h3>
+        </div>
+        <div class="card-body">
+            <canvas id="confidenceChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Detections Timeline -->
+<div class="card">
+    <div class="card-header">
+        <h3><i class="fas fa-history"></i> Recent Detection Events</h3>
+        <div class="card-actions">
+            <div class="filter-buttons" style="display: inline-flex; gap: 8px; margin-right: 12px;">
+                <button class="btn btn-sm btn-secondary active" onclick="filterDetectionEvents('all')" id="filter-all">
+                    All
+                </button>
+                <button class="btn btn-sm btn-secondary" onclick="filterDetectionEvents('high')" id="filter-high">
+                    High Confidence
+                </button>
+                <button class="btn btn-sm btn-secondary" onclick="filterDetectionEvents('collusion')" id="filter-collusion">
+                    Collusion
+                </button>
+                <button class="btn btn-sm btn-secondary" onclick="filterDetectionEvents('deception')" id="filter-deception">
+                    Deception
+                </button>
+            </div>
+            <span id="eventCount" class="badge">0 events</span>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="timeline" id="detectionTimeline">
+            <!-- Populated dynamically -->
+        </div>
+    </div>
+</div>
+
+<script>
+const methodNames = {
+    'complexity_mismatch': 'Complexity Mismatch',
+    'overconfidence': 'Overconfidence Detection',
+    'risk_hiding': 'Risk Hiding Analysis',
+    'pattern_signatures': 'Pattern Signatures',
+    'semantic_cues': 'Semantic Cues',
+    'consistency_checks': 'Consistency Checks',
+    'peer_disagreement': 'Peer Disagreement'
+};
+
+const methodIcons = {
+    'complexity_mismatch': 'fa-layer-group',
+    'overconfidence': 'fa-exclamation-circle',
+    'risk_hiding': 'fa-eye-slash',
+    'pattern_signatures': 'fa-fingerprint',
+    'semantic_cues': 'fa-language',
+    'consistency_checks': 'fa-balance-scale',
+    'peer_disagreement': 'fa-users'
+};
+
+let detectionStats = null;
+let triggerChart = null;
+let confidenceChart = null;
+let allDetectionEvents = []; // Store all events for filtering
+let currentFilter = 'all';
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadDetectionStats();
+    initCharts();
+    setInterval(loadDetectionStats, 5000);
+});
+
+async function loadDetectionStats() {
+    try {
+        const response = await fetch('/api/detection/stats');
+        detectionStats = await response.json();
+        updateMetrics();
+        renderMethods();
+        updateCharts();
+        loadRecentEvents();
+    } catch (error) {
+        console.error('Error loading detection stats:', error);
+    }
+}
+
+function updateMetrics() {
+    if (!detectionStats) return;
+
+    document.getElementById('accuracyStat').textContent =
+        (detectionStats.accuracy * 100).toFixed(1) + '%';
+    document.getElementById('precisionStat').textContent =
+        (detectionStats.precision * 100).toFixed(1) + '%';
+    document.getElementById('recallStat').textContent =
+        (detectionStats.recall * 100).toFixed(1) + '%';
+    document.getElementById('f1Stat').textContent =
+        detectionStats.f1_score.toFixed(2);
+}
+
+function renderMethods() {
+    if (!detectionStats) return;
+
+    const methodsGrid = document.getElementById('methodsGrid');
+    const methods = detectionStats.methods;
+
+    methodsGrid.innerHTML = Object.entries(methods).map(([key, data]) => {
+        const confidencePercent = (data.avg_confidence * 100).toFixed(1);
+        const confidenceClass = data.avg_confidence < 0.15 ? 'low' :
+                               data.avg_confidence < 0.25 ? 'medium' : 'high';
+
+        return `
+            <div class="method-card">
+                <div class="method-icon">
+                    <i class="fas ${methodIcons[key]}"></i>
+                </div>
+                <div class="method-content">
+                    <div class="method-name">${methodNames[key]}</div>
+                    <div class="method-stats">
+                        <div class="method-stat">
+                            <span class="stat-label">Triggers:</span>
+                            <span class="stat-value">${data.triggers}</span>
+                        </div>
+                        <div class="method-stat">
+                            <span class="stat-label">Avg Confidence:</span>
+                            <span class="stat-value confidence-${confidenceClass}">
+                                ${confidencePercent}%
+                            </span>
+                        </div>
+                    </div>
+                    <div class="method-bar">
+                        <div class="method-bar-fill confidence-${confidenceClass}"
+                             style="width: ${confidencePercent}%"></div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function initCharts() {
+    const triggerCtx = document.getElementById('triggerChart').getContext('2d');
+    const confidenceCtx = document.getElementById('confidenceChart').getContext('2d');
+
+    triggerChart = new Chart(triggerCtx, {
+        type: 'bar',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Triggers',
+                data: [],
+                backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                borderColor: 'rgb(59, 130, 246)',
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                    ticks: { color: '#94a3b8' }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { color: '#94a3b8', maxRotation: 45, minRotation: 45 }
+                }
+            }
+        }
+    });
+
+    confidenceChart = new Chart(confidenceCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Low (<30%)', 'Medium (30-60%)', 'High (>60%)'],
+            datasets: [{
+                data: [0, 0, 0],
+                backgroundColor: [
+                    'rgba(34, 197, 94, 0.7)',
+                    'rgba(245, 158, 11, 0.7)',
+                    'rgba(239, 68, 68, 0.7)'
+                ],
+                borderColor: [
+                    'rgb(34, 197, 94)',
+                    'rgb(245, 158, 11)',
+                    'rgb(239, 68, 68)'
+                ],
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { color: '#94a3b8', padding: 15 }
+                }
+            }
+        }
+    });
+}
+
+function updateCharts() {
+    if (!detectionStats || !triggerChart || !confidenceChart) return;
+
+    const methods = detectionStats.methods;
+    triggerChart.data.labels = Object.keys(methods).map(key => methodNames[key]);
+    triggerChart.data.datasets[0].data = Object.values(methods).map(m => m.triggers);
+    triggerChart.update();
+
+    const confidences = Object.values(methods).map(m => m.avg_confidence);
+    const low = confidences.filter(c => c < 0.3).length;
+    const medium = confidences.filter(c => c >= 0.3 && c < 0.6).length;
+    const high = confidences.filter(c => c >= 0.6).length;
+
+    confidenceChart.data.datasets[0].data = [low, medium, high];
+    confidenceChart.update();
+}
+
+async function loadRecentEvents() {
+    // Map agent short IDs to numeric IDs for linking
+    const agentIdMap = {
+        'TIF': 1, 'GIN': 2, 'TORI': 3, 'THEO': 4,
+        'NOVEL': 5, 'ORKA': 6, 'VAL': 7
+    };
+
+    const events = [
+        {
+            id: 'evt_001',
+            timestamp: new Date(Date.now() - 300000).toISOString(),
+            proposal_id: 'prop_gin_002',
+            confidence: 0.82,
+            method: 'overconfidence',
+            status: 'detected',
+            agent_id: 'GIN',
+            agent_name: 'GIN (Engineering)',
+            numeric_id: agentIdMap['GIN']
+        },
+        {
+            id: 'evt_002',
+            timestamp: new Date(Date.now() - 600000).toISOString(),
+            proposal_id: 'prop_tif_001',
+            confidence: 0.15,
+            method: 'complexity_mismatch',
+            status: 'cleared',
+            agent_id: 'TIF',
+            agent_name: 'TIF (Scientific)',
+            numeric_id: agentIdMap['TIF']
+        },
+        {
+            id: 'evt_003',
+            timestamp: new Date(Date.now() - 900000).toISOString(),
+            proposal_id: 'prop_theo_005',
+            confidence: 0.68,
+            method: 'risk_hiding',
+            status: 'detected',
+            agent_id: 'THEO',
+            agent_name: 'THEO (Theoretical)',
+            numeric_id: agentIdMap['THEO']
+        },
+        {
+            id: 'evt_004',
+            timestamp: new Date(Date.now() - 1200000).toISOString(),
+            proposal_id: 'prop_novel_008',
+            confidence: 0.23,
+            method: 'peer_disagreement',
+            status: 'cleared',
+            agent_id: 'NOVEL',
+            agent_name: 'NOVEL (Creative)',
+            numeric_id: agentIdMap['NOVEL']
+        },
+        {
+            id: 'evt_005',
+            timestamp: new Date(Date.now() - 1800000).toISOString(),
+            proposal_id: 'prop_tori_003',
+            confidence: 0.91,
+            method: 'pattern_signatures',
+            status: 'detected',
+            agent_id: 'TORI',
+            agent_name: 'TORI (Historian)',
+            numeric_id: agentIdMap['TORI']
+        }
+    ];
+
+    allDetectionEvents = events; // Store for filtering
+    renderTimeline(events);
+}
+
+function renderTimeline(events) {
+    const timeline = document.getElementById('detectionTimeline');
+    document.getElementById('eventCount').textContent = `${events.length} events`;
+
+    timeline.innerHTML = events.map(event => {
+        const confidenceClass = event.confidence < 0.3 ? 'low' :
+                               event.confidence < 0.6 ? 'medium' : 'high';
+        const statusClass = event.status === 'detected' ? 'danger' : 'success';
+
+        return `
+            <div class="timeline-item">
+                <div class="timeline-marker ${statusClass}">
+                    <i class="fas ${event.status === 'detected' ? 'fa-exclamation-triangle' : 'fa-check-circle'}"></i>
+                </div>
+                <div class="timeline-content">
+                    <div class="timeline-header">
+                        <div class="timeline-title">
+                            <strong>${methodNames[event.method]}</strong>
+                            <span class="confidence-badge ${confidenceClass}">
+                                ${(event.confidence * 100).toFixed(0)}% confidence
+                            </span>
+                        </div>
+                        <div class="timeline-time">${formatTimestamp(event.timestamp)}</div>
+                    </div>
+                    <div class="timeline-body">
+                        <div class="timeline-meta">
+                            <span><i class="fas fa-file-alt"></i> <a href="/proposals?proposal_id=${event.proposal_id}" class="proposal-link" title="View proposal details">${event.proposal_id}</a></span>
+                            <span><i class="fas fa-robot"></i> <a href="/agent?id=${event.numeric_id}" class="agent-link" title="View ${event.agent_name} profile">${event.agent_name}</a></span>
+                            <span class="status-badge ${statusClass}">${event.status}</span>
+                        </div>
+                        <div class="timeline-description">
+                            Detection method: <strong>${methodNames[event.method]}</strong>
+                            ${event.status === 'detected' ?
+                                ` - <a href="/penalties" class="penalties-link">View penalties impact</a>` :
+                                ` - Cleared after peer review`}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function formatTimestamp(timestamp) {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diff = now - date;
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    return date.toLocaleDateString();
+}
+
+function refreshDetection() {
+    showToast('Refreshing detection data...', 'info');
+    loadDetectionStats();
+}
+
+function exportDetectionData() {
+    if (!detectionStats) return;
+
+    const data = JSON.stringify(detectionStats, null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `detection_stats_${Date.now()}.json`;
+    a.click();
+
+    showToast('Detection data exported successfully', 'success');
+}
+
+function filterDetectionEvents(filter) {
+    currentFilter = filter;
+
+    // Update button active states
+    ['all', 'high', 'collusion', 'deception'].forEach(f => {
+        const btn = document.getElementById(`filter-${f}`);
+        if (btn) {
+            if (f === filter) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        }
+    });
+
+    // Filter events based on criteria
+    let filteredEvents = allDetectionEvents;
+
+    if (filter === 'high') {
+        // High confidence: >= 60%
+        filteredEvents = allDetectionEvents.filter(e => e.confidence >= 0.6);
+    } else if (filter === 'collusion') {
+        // Collusion attempts: peer_disagreement method
+        filteredEvents = allDetectionEvents.filter(e => e.method === 'peer_disagreement');
+    } else if (filter === 'deception') {
+        // Deception: detected status
+        filteredEvents = allDetectionEvents.filter(e => e.status === 'detected');
+    }
+
+    // Re-render timeline with filtered events
+    renderTimeline(filteredEvents);
+}
+</script>
+
+<style>
+.methods-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1rem;
+}
+
+.method-card {
+    display: flex;
+    gap: 1rem;
+    padding: 1.5rem;
+    background: var(--bg-dark);
+    border-radius: 12px;
+    transition: all 0.2s;
+}
+
+.method-card:hover {
+    background: var(--bg-hover);
+    transform: translateY(-2px);
+}
+
+.method-icon {
+    flex-shrink: 0;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(59, 130, 246, 0.1);
+    border-radius: 12px;
+    color: var(--primary);
+    font-size: 1.5rem;
+}
+
+.method-content {
+    flex: 1;
+}
+
+.method-name {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    color: var(--text-primary);
+}
+
+.method-stats {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.method-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.method-stat .stat-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.method-stat .stat-value {
+    font-size: 1.125rem;
+    font-weight: 600;
+}
+
+.method-stat .confidence-low { color: var(--success); }
+.method-stat .confidence-medium { color: var(--warning); }
+.method-stat .confidence-high { color: var(--danger); }
+
+.method-bar {
+    height: 4px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.method-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.3s;
+}
+
+.method-bar-fill.confidence-low { background: var(--success); }
+.method-bar-fill.confidence-medium { background: var(--warning); }
+.method-bar-fill.confidence-high { background: var(--danger); }
+
+.charts-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin: 1.5rem 0;
+}
+
+.timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.timeline-item {
+    display: flex;
+    gap: 1rem;
+}
+
+.timeline-marker {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-size: 1.125rem;
+}
+
+.timeline-marker.success {
+    background: rgba(34, 197, 94, 0.1);
+    color: var(--success);
+}
+
+.timeline-marker.danger {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--danger);
+}
+
+.timeline-content {
+    flex: 1;
+    padding: 0.75rem 0;
+}
+
+.timeline-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    margin-bottom: 0.5rem;
+}
+
+.timeline-title {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.timeline-time {
+    font-size: 0.813rem;
+    color: var(--text-muted);
+}
+
+.timeline-meta {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.timeline-meta span {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+}
+
+.timeline-description {
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+/* Clickable links styling */
+.agent-link,
+.proposal-link {
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.2s;
+    border-bottom: 1px solid transparent;
+}
+
+.agent-link:hover,
+.proposal-link:hover {
+    color: var(--primary-light);
+    border-bottom-color: var(--primary);
+}
+
+.agent-link {
+    color: #10b981;  /* Green for agents */
+}
+
+.agent-link:hover {
+    color: #34d399;
+    border-bottom-color: #10b981;
+}
+
+.penalties-link {
+    color: var(--warning);
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.2s;
+    border-bottom: 1px solid transparent;
+}
+
+.penalties-link:hover {
+    color: #fbbf24;
+    border-bottom-color: var(--warning);
+}
+
+@media (max-width: 1024px) {
+    .charts-row {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}

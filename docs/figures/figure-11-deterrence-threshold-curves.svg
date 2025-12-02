@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="600" viewBox="0 0 900 600" role="img" aria-labelledby="title desc">
+  <title id="title">Figure 11: Deterrence Threshold Curves</title>
+  <desc id="desc">Illustrative curves of required detection probability p* vs permanent penalty fraction M for two discount factors.</desc>
+  <style><![CDATA[
+    .axis { stroke:#222; stroke-width:2; }
+    .tick { stroke:#999; stroke-width:1; }
+    .label { font:600 16px sans-serif; }
+    .note { font:14px sans-serif; }
+    .curve1 { fill:none; stroke:#2c7be5; stroke-width:2.5; }
+    .curve2 { fill:none; stroke:#8c6bd7; stroke-width:2.5; stroke-dasharray:6 6; }
+  ]]></style>
+
+  <!-- Axes -->
+  <line class="axis" x1="80" y1="520" x2="820" y2="520"/>
+  <line class="axis" x1="80" y1="520" x2="80" y2="80"/>
+  <text class="label" x="450" y="560" text-anchor="middle">M (Permanent Penalty Fraction)</text>
+  <text class="label" x="30" y="300" transform="rotate(-90,30,300)" text-anchor="middle">p* (Detection Probability Required)</text>
+
+  <!-- Curves (stylized) -->
+  <path class="curve1" d="M 80 480 C 240 420, 420 340, 820 180"/>
+  <path class="curve2" d="M 80 460 C 240 400, 420 320, 820 160"/>
+
+  <!-- Legend -->
+  <rect x="540" y="100" width="280" height="80" fill="#fff" stroke="#ccc"/>
+  <line class="curve1" x1="560" y1="130" x2="620" y2="130"/>
+  <text class="note" x="630" y="134">δ = 0.95</text>
+  <line class="curve2" x1="560" y1="160" x2="620" y2="160"/>
+  <text class="note" x="630" y="164">δ = 0.90</text>
+</svg>

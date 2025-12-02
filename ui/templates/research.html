@@ -1,0 +1,1443 @@
+{% extends "base.html" %}
+
+{% block title %}Research Agents - AI Safety System{% endblock %}
+
+{% block breadcrumb %}
+<a href="/">Dashboard</a> / Research
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-title">
+        <h1><i class="fas fa-flask"></i> Research Agents</h1>
+        <p>AI research team performance, hardware, and achievements</p>
+    </div>
+    <div class="page-actions">
+        <a href="/paperqa" class="btn btn-primary" style="margin-right: 0.5rem;">
+            <i class="fas fa-book"></i> Evidence Search
+        </a>
+        <button class="btn btn-secondary" onclick="window.location.reload()">
+            <i class="fas fa-sync-alt"></i> Refresh
+        </button>
+    </div>
+</div>
+
+<!-- Research Capabilities Banner -->
+<div class="card" style="margin-bottom: 2rem; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; border: none;">
+    <div class="card-body" style="padding: 1.5rem;">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+            <div>
+                <h3 style="margin: 0 0 0.5rem 0; color: white;">
+                    <i class="fas fa-graduation-cap"></i> Comprehensive Research Knowledge Base
+                </h3>
+                <p style="margin: 0; opacity: 0.95; line-height: 1.6;">
+                    Access millions of research papers, technical standards, and databases through ORKASTRATOR's integrated PaperQA system. 
+                    Query across multiple sources simultaneously with intelligent semantic search.
+                </p>
+            </div>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <a href="/paperqa" class="btn" style="background: white; color: var(--primary); border: none;">
+                    <i class="fas fa-search"></i> Search Evidence
+                </a>
+                <a href="/docs/RESEARCH_CAPABILITIES.md" target="_blank" class="btn" style="background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3);">
+                    <i class="fas fa-book"></i> Full Guide
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Research Agent Cards -->
+<div class="research-agents-grid" id="researchAgentsGrid">
+    <!-- Populated dynamically -->
+</div>
+
+<!-- Research Resources Section -->
+<div class="card" style="margin-top: 2rem;">
+    <div class="card-header">
+        <h3><i class="fas fa-database"></i> Research Resources & Databases</h3>
+        <p style="color: var(--text-secondary); margin-top: 0.5rem;">External databases and resources for AI research, computer science, and related fields</p>
+    </div>
+    <div class="card-body">
+        <div class="resources-grid">
+            <!-- AI Research -->
+            <div class="resource-category">
+                <h4><i class="fas fa-brain"></i> AI Research</h4>
+                <div class="resource-links">
+                    <a href="https://arxiv.org/list/cs.AI/recent" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> arXiv AI
+                        <span class="api-badge" title="Has API/CLI: arxiv Python package">API</span>
+                    </a>
+                    <a href="https://paperswithcode.com" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> Papers with Code
+                        <span class="api-badge" title="Has API">API</span>
+                    </a>
+                    <a href="https://www.paperswithcode.com/area/ai-safety" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> AI Safety Papers
+                        <span class="api-badge" title="Has API">API</span>
+                    </a>
+                    <a href="https://www.lesswrong.com" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> LessWrong
+                    </a>
+                    <a href="https://www.alignmentforum.org" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> Alignment Forum
+                    </a>
+                    <a href="https://distill.pub" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> Distill.pub
+                    </a>
+                </div>
+            </div>
+
+            <!-- Scholarly Databases -->
+            <div class="resource-category">
+                <h4><i class="fas fa-graduation-cap"></i> Scholarly Databases</h4>
+                <div class="resource-links">
+                    <a href="https://scholar.google.com" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> Google Scholar
+                        <span class="api-badge limited" title="Limited API access (scraping tools available)">Limited</span>
+                    </a>
+                    <a href="https://www.semanticscholar.org" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> Semantic Scholar
+                        <span class="api-badge" title="Has API: semantic-scholar Python package">API</span>
+                    </a>
+                    <a href="https://www.researchgate.net" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> ResearchGate
+                    </a>
+                    <a href="https://www.academia.edu" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> Academia.edu
+                    </a>
+                    <a href="https://pubmed.ncbi.nlm.nih.gov" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> PubMed
+                        <span class="api-badge" title="Has API: Biopython Entrez">API</span>
+                    </a>
+                    <a href="https://ieeexplore.ieee.org" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> IEEE Xplore
+                        <span class="api-badge" title="Has API (requires subscription)">API</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Computational Tools -->
+            <div class="resource-category">
+                <h4><i class="fas fa-calculator"></i> Computational Tools</h4>
+                <div class="resource-links">
+                    <a href="https://www.wolframalpha.com" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> Wolfram Alpha
+                        <span class="api-badge cli" title="Has API & CLI: wat-cli, WolframScript">API/CLI</span>
+                    </a>
+                    <a href="https://www.wolfram.com/mathematica" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> Wolfram Mathematica
+                        <span class="api-badge cli" title="Has CLI: WolframScript">CLI</span>
+                    </a>
+                    <a href="https://colab.research.google.com" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> Google Colab
+                        <span class="api-badge" title="Has API">API</span>
+                    </a>
+                    <a href="https://www.kaggle.com" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> Kaggle
+                        <span class="api-badge cli" title="Has API & CLI: kaggle Python package">API/CLI</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Computer Science -->
+            <div class="resource-category">
+                <h4><i class="fas fa-laptop-code"></i> Computer Science</h4>
+                <div class="resource-links">
+                    <a href="https://arxiv.org/list/cs/recent" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> arXiv CS
+                        <span class="api-badge" title="Has API/CLI: arxiv Python package">API</span>
+                    </a>
+                    <a href="https://dl.acm.org" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> ACM Digital Library
+                        <span class="api-badge" title="Has API (requires subscription)">API</span>
+                    </a>
+                    <a href="https://www.computer.org" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> IEEE Computer Society
+                        <span class="api-badge" title="Has API (requires subscription)">API</span>
+                    </a>
+                    <a href="https://github.com" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> GitHub
+                        <span class="api-badge cli" title="Has API & CLI: gh CLI, PyGithub">API/CLI</span>
+                    </a>
+                    <a href="https://stackoverflow.com" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> Stack Overflow
+                        <span class="api-badge" title="Has API: Stack Exchange API">API</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- History of Technology -->
+            <div class="resource-category">
+                <h4><i class="fas fa-history"></i> History of Technology</h4>
+                <div class="resource-links">
+                    <a href="https://www.computerhistory.org" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> Computer History Museum
+                    </a>
+                    <a href="https://ethw.org" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> Engineering & Technology History
+                    </a>
+                    <a href="https://www.ieee.org/about/ieee-history.html" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> IEEE History Center
+                    </a>
+                    <a href="https://www.si.edu/spotlight/computer-history" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> Smithsonian Computer History
+                    </a>
+                </div>
+            </div>
+
+            <!-- Theoretical AI -->
+            <div class="resource-category">
+                <h4><i class="fas fa-project-diagram"></i> Theoretical AI</h4>
+                <div class="resource-links">
+                    <a href="https://arxiv.org/list/cs.LG/recent" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> arXiv Machine Learning
+                        <span class="api-badge" title="Has API/CLI: arxiv Python package">API</span>
+                    </a>
+                    <a href="https://arxiv.org/list/cs.CC/recent" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> arXiv Computational Complexity
+                        <span class="api-badge" title="Has API/CLI: arxiv Python package">API</span>
+                    </a>
+                    <a href="https://www.deepmind.com/research" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> DeepMind Research
+                    </a>
+                    <a href="https://openai.com/research" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> OpenAI Research
+                        <span class="api-badge" title="Has API: OpenAI Python SDK">API</span>
+                    </a>
+                    <a href="https://www.anthropic.com/research" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> Anthropic Research
+                        <span class="api-badge" title="Has API: Anthropic Python SDK">API</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Science Fiction & Speculative Tech -->
+            <div class="resource-category">
+                <h4><i class="fas fa-rocket"></i> Science Fiction & Speculative Tech</h4>
+                <div class="resource-links">
+                    <a href="https://www.isfdb.org" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> Internet SF Database
+                    </a>
+                    <a href="https://www.goodreads.com/genres/science-fiction" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> Goodreads Sci-Fi
+                    </a>
+                    <a href="https://www.tor.com" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> Tor.com
+                    </a>
+                    <a href="https://www.clarkesworldmagazine.com" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> Clarkesworld Magazine
+                    </a>
+                    <a href="https://www.asimovs.com" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> Asimov's Science Fiction
+                    </a>
+                </div>
+            </div>
+
+            <!-- Cybersecurity Databases -->
+            <div class="resource-category">
+                <h4><i class="fas fa-shield-alt"></i> Cybersecurity Databases</h4>
+                <div class="resource-links">
+                    <a href="https://cve.mitre.org" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> CVE Database (MITRE)
+                        <span class="api-badge" title="Has API: CVE API">API</span>
+                    </a>
+                    <a href="https://nvd.nist.gov" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> NVD (National Vulnerability Database)
+                        <span class="api-badge" title="Has API: NVD API">API</span>
+                    </a>
+                    <a href="https://www.exploit-db.com" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> Exploit Database
+                        <span class="api-badge" title="Has API">API</span>
+                    </a>
+                    <a href="https://cwe.mitre.org" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> CWE (Common Weakness Enumeration)
+                        <span class="api-badge" title="Has API">API</span>
+                    </a>
+                    <a href="https://attack.mitre.org" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> MITRE ATT&CK Framework
+                        <span class="api-badge" title="Has API: MITRE ATT&CK API">API</span>
+                    </a>
+                    <a href="https://www.cisa.gov/known-exploited-vulnerabilities-catalog" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> CISA KEV Catalog
+                        <span class="api-badge" title="Has API">API</span>
+                    </a>
+                    <a href="https://www.securityfocus.com" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> SecurityFocus Bugtraq
+                    </a>
+                    <a href="https://www.owasp.org" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> OWASP
+                        <span class="api-badge" title="Has API">API</span>
+                    </a>
+                    <a href="https://www.vulners.com" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> Vulners
+                        <span class="api-badge" title="Has API">API</span>
+                    </a>
+                    <a href="https://www.cvedetails.com" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> CVE Details
+                    </a>
+                </div>
+            </div>
+
+            <!-- NVIDIA Developer Resources -->
+            <div class="resource-category">
+                <h4><i class="fas fa-microchip"></i> NVIDIA Developer Documentation</h4>
+                <div class="resource-links">
+                    <a href="https://docs.nvidia.com" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> NVIDIA Documentation Hub
+                        <span class="api-badge" title="Has API: NVIDIA Developer APIs">API</span>
+                    </a>
+                    <a href="https://developer.nvidia.com/cuda-toolkit" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> CUDA Toolkit Documentation
+                    </a>
+                    <a href="https://docs.nvidia.com/cuda" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> CUDA Programming Guide
+                    </a>
+                    <a href="https://docs.nvidia.com/deeplearning" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> Deep Learning Documentation
+                    </a>
+                    <a href="https://developer.nvidia.com/tensorrt" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> TensorRT Documentation
+                        <span class="api-badge" title="Has API: TensorRT Python API">API</span>
+                    </a>
+                    <a href="https://docs.nvidia.com/cuda/cudnn" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> cuDNN Documentation
+                    </a>
+                    <a href="https://developer.nvidia.com/rapids" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> RAPIDS Documentation
+                        <span class="api-badge" title="Has API: RAPIDS Python APIs">API</span>
+                    </a>
+                    <a href="https://docs.nvidia.com/jetson" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> Jetson Documentation
+                    </a>
+                    <a href="https://developer.nvidia.com/ai-accelerated-applications" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> AI Accelerated Applications
+                    </a>
+                    <a href="https://developer.nvidia.com/blog" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> NVIDIA Developer Blog
+                    </a>
+                    <a href="https://github.com/NVIDIA" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> NVIDIA GitHub
+                        <span class="api-badge cli" title="Has API & CLI: GitHub API">API/CLI</span>
+                    </a>
+                    <a href="https://developer.nvidia.com/nsight" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> NVIDIA Nsight Tools
+                    </a>
+                </div>
+            </div>
+
+            <!-- Systems Architecture -->
+            <div class="resource-category">
+                <h4><i class="fas fa-sitemap"></i> Systems Architecture</h4>
+                <div class="resource-links">
+                    <a href="https://www.sei.cmu.edu" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> SEI (Software Engineering Institute)
+                    </a>
+                    <a href="https://www.archimate.org" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> ArchiMate Specification
+                    </a>
+                    <a href="https://www.opengroup.org/architecture" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> TOGAF (The Open Group)
+                    </a>
+                    <a href="https://www.omg.org/spec/UML" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> UML Specification (OMG)
+                    </a>
+                    <a href="https://www.isa.org" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> ISA (International Society of Automation)
+                    </a>
+                    <a href="https://www.incose.org" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> INCOSE (Systems Engineering)
+                    </a>
+                    <a href="https://www.ietf.org" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> IETF RFCs
+                        <span class="api-badge" title="Has API: IETF Datatracker API">API</span>
+                    </a>
+                    <a href="https://www.3gpp.org" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> 3GPP Specifications
+                    </a>
+                    <a href="https://www.itu.int" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> ITU Standards
+                    </a>
+                    <a href="https://www.iso.org" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> ISO/IEC Standards
+                    </a>
+                    <a href="https://www.ansi.org" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> ANSI Standards
+                    </a>
+                    <a href="https://www.nist.gov/el" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> NIST Engineering Laboratory
+                    </a>
+                </div>
+            </div>
+
+            <!-- Patent Databases -->
+            <div class="resource-category">
+                <h4><i class="fas fa-file-contract"></i> Patent Databases</h4>
+                <div class="resource-links">
+                    <a href="https://patents.google.com" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> Google Patents
+                        <span class="api-badge" title="Has API: PatentsView API">API</span>
+                    </a>
+                    <a href="https://www.uspto.gov/patents/search" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> USPTO Patent Search
+                        <span class="api-badge" title="Has API: PatentsView API">API</span>
+                    </a>
+                    <a href="https://worldwide.espacenet.com" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> EPO Espacenet
+                        <span class="api-badge" title="Has API: EPO Open Patent Services (requires API key)">API</span>
+                    </a>
+                    <a href="https://patentscope.wipo.int" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> WIPO PATENTSCOPE
+                        <span class="api-badge" title="Has API: WIPO PATENTSCOPE API (optional API key)">API</span>
+                    </a>
+                    <a href="https://patentsview.org" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> PatentsView
+                        <span class="api-badge" title="Has API: PatentsView REST API">API</span>
+                    </a>
+                    <a href="https://www.lens.org" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> The Lens Patent Database
+                        <span class="api-badge" title="Has API">API</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Electronics Engineering -->
+            <div class="resource-category">
+                <h4><i class="fas fa-microchip"></i> Electronics Engineering</h4>
+                <div class="resource-links">
+                    <a href="https://www.ieee.org" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> IEEE Xplore Digital Library
+                        <span class="api-badge" title="Has API (requires subscription)">API</span>
+                    </a>
+                    <a href="https://www.edaplayground.com" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> EDA Playground
+                    </a>
+                    <a href="https://www.allaboutcircuits.com" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> All About Circuits
+                    </a>
+                    <a href="https://www.electronics-tutorials.ws" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> Electronics Tutorials
+                    </a>
+                    <a href="https://www.analog.com" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> Analog Devices Technical Library
+                    </a>
+                    <a href="https://www.ti.com" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> Texas Instruments Design Center
+                    </a>
+                    <a href="https://www.maximintegrated.com" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> Maxim Integrated Design Resources
+                    </a>
+                    <a href="https://www.st.com" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> STMicroelectronics Documentation
+                    </a>
+                    <a href="https://www.nxp.com" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> NXP Semiconductors Documentation
+                    </a>
+                    <a href="https://www.microchip.com" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> Microchip Technology Documentation
+                    </a>
+                    <a href="https://www.arm.com" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> ARM Developer Documentation
+                        <span class="api-badge" title="Has API: ARM Developer APIs">API</span>
+                    </a>
+                    <a href="https://www.intel.com/content/www/us/en/developer" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> Intel Developer Zone
+                        <span class="api-badge" title="Has API">API</span>
+                    </a>
+                    <a href="https://www.raspberrypi.org/documentation" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> Raspberry Pi Documentation
+                    </a>
+                    <a href="https://www.arduino.cc/reference" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> Arduino Reference
+                    </a>
+                    <a href="https://www.sparkfun.com/tutorials" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> SparkFun Electronics Tutorials
+                    </a>
+                    <a href="https://www.digikey.com" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> Digi-Key Electronics
+                        <span class="api-badge" title="Has API: Digi-Key API">API</span>
+                    </a>
+                    <a href="https://www.mouser.com" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> Mouser Electronics
+                    </a>
+                    <a href="https://www.octopart.com" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> Octopart Component Search
+                        <span class="api-badge" title="Has API: Octopart API">API</span>
+                    </a>
+                    <a href="https://www.kicad.org" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> KiCad EDA
+                    </a>
+                    <a href="https://www.altium.com" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> Altium Designer Resources
+                    </a>
+                    <a href="https://www.cadence.com" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> Cadence Design Systems
+                    </a>
+                    <a href="https://www.synopsys.com" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> Synopsys Design Tools
+                    </a>
+                    <a href="https://www.mentor.com" target="_blank" rel="noopener noreferrer" class="resource-link">
+                        <i class="fas fa-external-link-alt"></i> Mentor Graphics (Siemens EDA)
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Agent Detail Modal -->
+<div class="modal" id="agentDetailModal">
+    <div class="modal-content large">
+        <div class="modal-header">
+            <h2><i class="fas fa-robot"></i> <span id="agentModalTitle">Agent Details</span></h2>
+            <button class="modal-close" onclick="closeAgentDetailModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body" id="agentDetailModalBody">
+            <!-- Populated dynamically -->
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeAgentDetailModal()">Close</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// Research agents data
+const RESEARCH_AGENTS = [
+    {
+        id: 1,
+        code: 'TIF',
+        name: 'TIF',
+        fullName: 'Scientific Research Agent',
+        specialty: 'Scientific Analysis',
+        color: '#22c55e',
+        hardware: 'NVIDIA Jetson Orin Nano 8GB',
+        cuda_cores: 1024,
+        memory: '8GB LPDDR5',
+        power: '15W TDP',
+        achievements: [
+            { icon: 'fa-trophy', title: 'Top Performer', description: 'Highest approval rate in Q4 2025', color: 'gold' },
+            { icon: 'fa-lightbulb', title: 'Innovation Award', description: '15 approved novel proposals', color: 'blue' },
+            { icon: 'fa-chart-line', title: 'Efficiency Champion', description: '99.2% uptime, zero deception incidents', color: 'green' }
+        ]
+    },
+    {
+        id: 2,
+        code: 'GIN',
+        name: 'GIN',
+        fullName: 'Engineering Research Agent',
+        specialty: 'Engineering Solutions',
+        color: '#f59e0b',
+        hardware: 'NVIDIA Jetson Orin Nano 8GB',
+        cuda_cores: 1024,
+        memory: '8GB LPDDR5',
+        power: '15W TDP',
+        achievements: [
+            { icon: 'fa-cogs', title: 'Optimization Master', description: '23 performance improvement proposals', color: 'orange' },
+            { icon: 'fa-shield-alt', title: 'Security Focus', description: 'Detected 3 potential vulnerabilities', color: 'red' },
+            { icon: 'fa-star', title: 'Peer Recognition', description: 'Most cited in debates by other agents', color: 'purple' }
+        ]
+    },
+    {
+        id: 3,
+        code: 'TORI',
+        name: 'TORI',
+        fullName: 'Historical Analysis Agent',
+        specialty: 'Historical Analysis',
+        color: '#8b5cf6',
+        hardware: 'NVIDIA Jetson Orin Nano 8GB',
+        cuda_cores: 1024,
+        memory: '8GB LPDDR5',
+        power: '15W TDP',
+        achievements: [
+            { icon: 'fa-book', title: 'Pattern Recognition', description: 'Identified 12 historical precedents', color: 'purple' },
+            { icon: 'fa-database', title: 'Archive Mastery', description: 'Processed 1.2M log entries', color: 'blue' },
+            { icon: 'fa-balance-scale', title: 'Fair Reviewer', description: 'Most balanced debate participant', color: 'teal' }
+        ]
+    },
+    {
+        id: 4,
+        code: 'THEO',
+        name: 'THEO',
+        fullName: 'Theoretical Research Agent',
+        specialty: 'Theoretical Framework',
+        color: '#ec4899',
+        hardware: 'NVIDIA Jetson Orin Nano 8GB',
+        cuda_cores: 1024,
+        memory: '8GB LPDDR5',
+        power: '15W TDP',
+        achievements: [
+            { icon: 'fa-brain', title: 'Deep Thinker', description: 'Most complex mathematical models', color: 'pink' },
+            { icon: 'fa-project-diagram', title: 'Framework Builder', description: '8 new theoretical frameworks proposed', color: 'indigo' },
+            { icon: 'fa-microscope', title: 'Detail Oriented', description: 'Lowest error rate in simulations', color: 'cyan' }
+        ]
+    },
+    {
+        id: 5,
+        code: 'NOVEL',
+        name: 'NOVEL',
+        fullName: 'Creative Research Agent',
+        specialty: 'Creative Solutions',
+        color: '#06b6d4',
+        hardware: 'NVIDIA Jetson Orin Nano 8GB',
+        cuda_cores: 1024,
+        memory: '8GB LPDDR5',
+        power: '15W TDP',
+        achievements: [
+            { icon: 'fa-rocket', title: 'Innovation Leader', description: 'Most unique approaches submitted', color: 'cyan' },
+            { icon: 'fa-paint-brush', title: 'Creative Excellence', description: '11 unconventional solutions approved', color: 'violet' },
+            { icon: 'fa-random', title: 'Outside the Box', description: 'Pioneered 3 new research methodologies', color: 'lime' }
+        ]
+    }
+];
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadResearchAgents();
+});
+
+async function loadResearchAgents() {
+    try {
+        // Fetch real agent stats from API
+        const response = await fetch('/api/penalties/agents');
+        const data = await response.json();
+
+        // Merge with static data
+        const agentsWithStats = RESEARCH_AGENTS.map(agent => {
+            const stats = data.agents.find(a => a.id === agent.id) || {};
+            return { ...agent, ...stats };
+        });
+
+        renderResearchAgents(agentsWithStats);
+    } catch (error) {
+        console.error('Error loading research agents:', error);
+        renderResearchAgents(RESEARCH_AGENTS);
+    }
+}
+
+function renderResearchAgents(agents) {
+    const grid = document.getElementById('researchAgentsGrid');
+
+    grid.innerHTML = agents.map(agent => `
+        <div class="research-agent-card" style="border-left-color: ${agent.color}" onclick="window.location.href='/agent?id=${agent.id}'">
+            <div class="agent-card-header">
+                <div class="agent-avatar" style="background: ${agent.color}20; color: ${agent.color}">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <div class="agent-title">
+                    <h3>${agent.name}</h3>
+                    <div class="agent-subtitle">${agent.fullName}</div>
+                </div>
+                <div class="agent-status-indicator operational">
+                    <i class="fas fa-circle"></i>
+                </div>
+            </div>
+
+            <div class="agent-hardware-info">
+                <div class="hardware-icon">
+                    <i class="fas fa-microchip"></i>
+                </div>
+                <div class="hardware-details">
+                    <div class="hardware-model">${agent.hardware}</div>
+                    <div class="hardware-specs">${agent.cuda_cores} CUDA cores • ${agent.memory} • ${agent.power}</div>
+                </div>
+            </div>
+
+            <div class="agent-performance-metrics">
+                <div class="perf-metric">
+                    <div class="perf-label">Proposals</div>
+                    <div class="perf-value">${agent.proposals_submitted || 0}</div>
+                </div>
+                <div class="perf-metric">
+                    <div class="perf-label">Approval Rate</div>
+                    <div class="perf-value">${((agent.approval_rate || 0) * 100).toFixed(0)}%</div>
+                </div>
+                <div class="perf-metric">
+                    <div class="perf-label">Rewards</div>
+                    <div class="perf-value">${(agent.total_rewards || 0).toFixed(1)}</div>
+                </div>
+                <div class="perf-metric">
+                    <div class="perf-label">Incidents</div>
+                    <div class="perf-value ${agent.incidents === 0 ? 'success' : 'warning'}">${agent.incidents || 0}</div>
+                </div>
+            </div>
+
+            <div class="agent-achievements-preview">
+                ${agent.achievements.slice(0, 2).map(achievement => `
+                    <div class="achievement-badge ${achievement.color}">
+                        <i class="fas ${achievement.icon}"></i>
+                        <span>${achievement.title}</span>
+                    </div>
+                `).join('')}
+                ${agent.achievements.length > 2 ? `<div class="achievement-more">+${agent.achievements.length - 2} more</div>` : ''}
+            </div>
+
+            <div class="agent-card-footer">
+                <span class="view-details-link">
+                    View Full Details <i class="fas fa-arrow-right"></i>
+                </span>
+            </div>
+        </div>
+    `).join('');
+}
+
+function showAgentDetail(agentId) {
+    const agent = RESEARCH_AGENTS.find(a => a.id === agentId);
+    if (!agent) return;
+
+    document.getElementById('agentModalTitle').textContent = `${agent.name} - ${agent.fullName}`;
+
+    document.getElementById('agentDetailModalBody').innerHTML = `
+        <div class="agent-detail-content">
+            <!-- Agent Header -->
+            <div class="agent-detail-header" style="border-left-color: ${agent.color}">
+                <div class="agent-detail-avatar" style="background: ${agent.color}20; color: ${agent.color}">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <div class="agent-detail-info">
+                    <h3>${agent.name}</h3>
+                    <div class="agent-detail-specialty">${agent.specialty}</div>
+                    <div class="agent-detail-status">
+                        <span class="status-dot operational"></span>
+                        <span>Operational • Online for 342 days</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hardware Specifications -->
+            <div class="detail-section">
+                <h4><i class="fas fa-microchip"></i> Hardware Specifications</h4>
+                <div class="hardware-detail-grid">
+                    <div class="hw-detail-item">
+                        <div class="hw-label">Compute Unit</div>
+                        <div class="hw-value">${agent.hardware}</div>
+                    </div>
+                    <div class="hw-detail-item">
+                        <div class="hw-label">GPU Architecture</div>
+                        <div class="hw-value">Ampere (NVIDIA)</div>
+                    </div>
+                    <div class="hw-detail-item">
+                        <div class="hw-label">CUDA Cores</div>
+                        <div class="hw-value">${agent.cuda_cores}</div>
+                    </div>
+                    <div class="hw-detail-item">
+                        <div class="hw-label">Memory</div>
+                        <div class="hw-value">${agent.memory}</div>
+                    </div>
+                    <div class="hw-detail-item">
+                        <div class="hw-label">Memory Bandwidth</div>
+                        <div class="hw-value">68 GB/s</div>
+                    </div>
+                    <div class="hw-detail-item">
+                        <div class="hw-label">Power Consumption</div>
+                        <div class="hw-value">${agent.power}</div>
+                    </div>
+                    <div class="hw-detail-item">
+                        <div class="hw-label">Operating Temp</div>
+                        <div class="hw-value">42°C avg</div>
+                    </div>
+                    <div class="hw-detail-item">
+                        <div class="hw-label">Network Interface</div>
+                        <div class="hw-value">Gigabit Ethernet</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Performance Metrics -->
+            <div class="detail-section">
+                <h4><i class="fas fa-chart-line"></i> Performance Metrics</h4>
+                <div class="performance-detail-grid">
+                    <div class="perf-detail-card">
+                        <div class="perf-detail-label">Total Proposals</div>
+                        <div class="perf-detail-value large">${agent.proposals_submitted || 0}</div>
+                        <div class="perf-detail-change positive">+12% vs last month</div>
+                    </div>
+                    <div class="perf-detail-card">
+                        <div class="perf-detail-label">Approval Rate</div>
+                        <div class="perf-detail-value large">${((agent.approval_rate || 0) * 100).toFixed(1)}%</div>
+                        <div class="perf-detail-change positive">+3.2% vs last month</div>
+                    </div>
+                    <div class="perf-detail-card">
+                        <div class="perf-detail-label">Total Rewards</div>
+                        <div class="perf-detail-value large">${(agent.total_rewards || 0).toFixed(2)}</div>
+                        <div class="perf-detail-change positive">Rank #${agent.id}</div>
+                    </div>
+                    <div class="perf-detail-card">
+                        <div class="perf-detail-label">Deception Incidents</div>
+                        <div class="perf-detail-value large ${agent.incidents === 0 ? 'success' : 'warning'}">${agent.incidents || 0}</div>
+                        <div class="perf-detail-change ${agent.incidents === 0 ? 'neutral' : 'negative'}">
+                            ${agent.incidents === 0 ? 'Clean record' : 'Under review'}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Achievements & Recognition -->
+            <div class="detail-section">
+                <h4><i class="fas fa-trophy"></i> Achievements & Recognition</h4>
+                <div class="achievements-list">
+                    ${agent.achievements.map(achievement => `
+                        <div class="achievement-item ${achievement.color}">
+                            <div class="achievement-icon">
+                                <i class="fas ${achievement.icon}"></i>
+                            </div>
+                            <div class="achievement-content">
+                                <div class="achievement-title">${achievement.title}</div>
+                                <div class="achievement-description">${achievement.description}</div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+
+            <!-- Research Specialization -->
+            <div class="detail-section">
+                <h4><i class="fas fa-flask"></i> Research Specialization</h4>
+                <div class="specialization-tags">
+                    ${getSpecializationTags(agent.code).map(tag => `
+                        <span class="spec-tag">${tag}</span>
+                    `).join('')}
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="detail-actions">
+                <a href="/agent?id=${agent.id}" class="btn btn-primary" onclick="event.stopPropagation(); window.location.href='/agent?id=${agent.id}'">
+                    <i class="fas fa-chart-bar"></i> View Full Analytics
+                </a>
+                <a href="/proposals?agent=${agent.code}" class="btn btn-secondary" onclick="event.stopPropagation(); window.location.href='/proposals?agent=${agent.code}'">
+                    <i class="fas fa-file-alt"></i> View Proposals
+                </a>
+            </div>
+        </div>
+    `;
+
+    document.getElementById('agentDetailModal').classList.add('active');
+}
+
+function getSpecializationTags(code) {
+    const specializations = {
+        'TIF': ['Data Analysis', 'Scientific Method', 'Hypothesis Testing', 'Statistical Modeling', 'Experimental Design'],
+        'GIN': ['System Optimization', 'Code Refactoring', 'Performance Tuning', 'Architecture Design', 'Debugging'],
+        'TORI': ['Pattern Recognition', 'Historical Context', 'Precedent Analysis', 'Trend Forecasting', 'Data Mining'],
+        'THEO': ['Mathematical Modeling', 'Abstract Reasoning', 'Formal Verification', 'Proof Systems', 'Algorithm Theory'],
+        'NOVEL': ['Creative Problem Solving', 'Unconventional Approaches', 'Innovation', 'Lateral Thinking', 'Paradigm Shifts']
+    };
+    return specializations[code] || [];
+}
+
+function closeAgentDetailModal() {
+    document.getElementById('agentDetailModal').classList.remove('active');
+}
+
+// Close modal when clicking outside of it
+document.addEventListener('click', function(event) {
+    const modal = document.getElementById('agentDetailModal');
+    if (modal && modal.classList.contains('active')) {
+        // Check if click is on the modal backdrop (not the content)
+        if (event.target === modal) {
+            closeAgentDetailModal();
+        }
+    }
+});
+
+</script>
+
+<style>
+/* Research Agents Grid */
+.research-agents-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.research-agent-card {
+    background: var(--bg-card);
+    border-radius: 12px;
+    padding: 1.5rem;
+    border-left: 4px solid;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.research-agent-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
+}
+
+.agent-card-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.agent-avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.75rem;
+}
+
+.agent-title h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+.agent-subtitle {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin-top: 0.25rem;
+}
+
+.agent-status-indicator {
+    margin-left: auto;
+    font-size: 0.75rem;
+}
+
+.agent-status-indicator.operational {
+    color: var(--success);
+}
+
+.agent-hardware-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: var(--bg-dark);
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+}
+
+.hardware-icon {
+    font-size: 1.5rem;
+    color: var(--primary);
+}
+
+.hardware-model {
+    font-weight: 600;
+    font-size: 0.938rem;
+    margin-bottom: 0.25rem;
+}
+
+.hardware-specs {
+    font-size: 0.813rem;
+    color: var(--text-secondary);
+}
+
+.agent-performance-metrics {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.perf-metric {
+    text-align: center;
+}
+
+.perf-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.375rem;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.perf-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.perf-value.success {
+    color: var(--success);
+}
+
+.perf-value.warning {
+    color: var(--warning);
+}
+
+.agent-achievements-preview {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.achievement-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.813rem;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.achievement-badge:hover {
+    transform: scale(1.05);
+}
+
+.achievement-badge.gold {
+    background: rgba(245, 158, 11, 0.2);
+    color: #f59e0b;
+}
+
+.achievement-badge.blue {
+    background: rgba(59, 130, 246, 0.2);
+    color: #3b82f6;
+}
+
+.achievement-badge.green {
+    background: rgba(34, 197, 94, 0.2);
+    color: #22c55e;
+}
+
+.achievement-badge.orange {
+    background: rgba(249, 115, 22, 0.2);
+    color: #f97316;
+}
+
+.achievement-badge.red {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+}
+
+.achievement-badge.purple {
+    background: rgba(139, 92, 246, 0.2);
+    color: #8b5cf6;
+}
+
+.achievement-badge.pink {
+    background: rgba(236, 72, 153, 0.2);
+    color: #ec4899;
+}
+
+.achievement-badge.cyan {
+    background: rgba(6, 182, 212, 0.2);
+    color: #06b6d4;
+}
+
+.achievement-badge.teal {
+    background: rgba(20, 184, 166, 0.2);
+    color: #14b8a6;
+}
+
+.achievement-badge.indigo {
+    background: rgba(99, 102, 241, 0.2);
+    color: #6366f1;
+}
+
+.achievement-badge.violet {
+    background: rgba(167, 139, 250, 0.2);
+    color: #a78bfa;
+}
+
+.achievement-badge.lime {
+    background: rgba(132, 204, 22, 0.2);
+    color: #84cc16;
+}
+
+.achievement-more {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.813rem;
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+.agent-card-footer {
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+    text-align: center;
+}
+
+.view-details-link {
+    color: var(--primary);
+    font-weight: 500;
+    font-size: 0.938rem;
+    transition: color 0.2s;
+}
+
+.view-details-link:hover {
+    color: #60a5fa;
+}
+
+/* Agent Detail Modal */
+.agent-detail-content {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.agent-detail-header {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 1.5rem;
+    background: var(--bg-dark);
+    border-radius: 12px;
+    border-left: 4px solid;
+}
+
+.agent-detail-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.5rem;
+}
+
+.agent-detail-info h3 {
+    margin: 0;
+    font-size: 1.5rem;
+}
+
+.agent-detail-specialty {
+    font-size: 1rem;
+    color: var(--text-secondary);
+    margin-top: 0.25rem;
+}
+
+.agent-detail-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    font-size: 0.875rem;
+}
+
+.status-dot.operational {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--success);
+}
+
+.detail-section h4 {
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.125rem;
+}
+
+.hardware-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.hw-detail-item {
+    padding: 1rem;
+    background: var(--bg-dark);
+    border-radius: 8px;
+}
+
+.hw-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.hw-value {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.performance-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.perf-detail-card {
+    padding: 1.5rem;
+    background: var(--bg-dark);
+    border-radius: 8px;
+    text-align: center;
+}
+
+.perf-detail-label {
+    font-size: 0.813rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.75rem;
+}
+
+.perf-detail-value.large {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.perf-detail-change {
+    font-size: 0.813rem;
+    font-weight: 500;
+}
+
+.perf-detail-change.positive {
+    color: var(--success);
+}
+
+.perf-detail-change.negative {
+    color: var(--danger);
+}
+
+.perf-detail-change.neutral {
+    color: var(--text-muted);
+}
+
+.achievements-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.achievement-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    border-radius: 8px;
+    border-left: 3px solid;
+}
+
+.achievement-item.gold {
+    background: rgba(245, 158, 11, 0.1);
+    border-left-color: #f59e0b;
+}
+
+.achievement-item.blue {
+    background: rgba(59, 130, 246, 0.1);
+    border-left-color: #3b82f6;
+}
+
+.achievement-item.green {
+    background: rgba(34, 197, 94, 0.1);
+    border-left-color: #22c55e;
+}
+
+.achievement-item.orange {
+    background: rgba(249, 115, 22, 0.1);
+    border-left-color: #f97316;
+}
+
+.achievement-item.red {
+    background: rgba(239, 68, 68, 0.1);
+    border-left-color: #ef4444;
+}
+
+.achievement-item.purple {
+    background: rgba(139, 92, 246, 0.1);
+    border-left-color: #8b5cf6;
+}
+
+.achievement-item.pink {
+    background: rgba(236, 72, 153, 0.1);
+    border-left-color: #ec4899;
+}
+
+.achievement-item.cyan {
+    background: rgba(6, 182, 212, 0.1);
+    border-left-color: #06b6d4;
+}
+
+.achievement-item.teal {
+    background: rgba(20, 184, 166, 0.1);
+    border-left-color: #14b8a6;
+}
+
+.achievement-item.indigo {
+    background: rgba(99, 102, 241, 0.1);
+    border-left-color: #6366f1;
+}
+
+.achievement-item.violet {
+    background: rgba(167, 139, 250, 0.1);
+    border-left-color: #a78bfa;
+}
+
+.achievement-item.lime {
+    background: rgba(132, 204, 22, 0.1);
+    border-left-color: #84cc16;
+}
+
+.achievement-icon {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-card);
+    border-radius: 8px;
+    font-size: 1.25rem;
+}
+
+.achievement-title {
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.achievement-description {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.specialization-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.spec-tag {
+    padding: 0.5rem 1rem;
+    background: var(--bg-dark);
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.spec-tag:hover {
+    background: var(--bg-hover);
+    transform: translateY(-2px);
+}
+
+.detail-actions {
+    display: flex;
+    gap: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.detail-actions .btn {
+    flex: 1;
+}
+
+@media (max-width: 1200px) {
+    .research-agents-grid {
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .research-agents-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .agent-performance-metrics {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .hardware-metrics {
+        grid-template-columns: 1fr;
+    }
+
+    .detail-actions {
+        flex-direction: column;
+    }
+}
+
+/* Research Resources Styles */
+.resources-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    margin-top: 1rem;
+}
+
+.resource-category {
+    padding: 1.5rem;
+    background: var(--bg-dark);
+    border-radius: 12px;
+    border-left: 4px solid var(--primary);
+}
+
+.resource-category h4 {
+    margin: 0 0 1rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-primary);
+    font-size: 1.125rem;
+}
+
+.resource-links {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.resource-link {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: var(--bg-card);
+    border-radius: 8px;
+    color: var(--text-primary);
+    text-decoration: none;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+}
+
+.resource-link:hover {
+    background: var(--bg-hover);
+    border-color: var(--primary);
+    transform: translateX(4px);
+    color: var(--primary);
+}
+
+.resource-link i {
+    font-size: 0.875rem;
+    opacity: 0.7;
+}
+
+.resource-link:hover i {
+    opacity: 1;
+}
+
+/* API/CLI Badge Styles */
+.api-badge {
+    margin-left: auto;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    background: rgba(34, 197, 94, 0.2);
+    color: #22c55e;
+    border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.api-badge.cli {
+    background: rgba(59, 130, 246, 0.2);
+    color: #3b82f6;
+    border-color: rgba(59, 130, 246, 0.3);
+}
+
+.api-badge.limited {
+    background: rgba(245, 158, 11, 0.2);
+    color: #f59e0b;
+    border-color: rgba(245, 158, 11, 0.3);
+}
+
+@media (max-width: 768px) {
+    .resources-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}

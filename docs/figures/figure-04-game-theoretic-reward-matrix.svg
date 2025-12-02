@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="600" viewBox="0 0 1000 600" role="img" aria-labelledby="title desc">
+  <title id="title">Figure 4: Game-Theoretic Reward Matrix</title>
+  <desc id="desc">Matrix contrasting transparency vs deception outcomes with peer detection, illustrating dominance of transparency strategy.</desc>
+  <style><![CDATA[
+    .title { font:700 20px sans-serif; }
+    .matrix { font:16px sans-serif; }
+    .hdr { font:600 16px sans-serif; }
+    .cell { fill:#fdfdfd; stroke:#222; stroke-width:1.5; }
+    .note { font:14px sans-serif; }
+  ]]></style>
+
+  <text class="title" x="500" y="40" text-anchor="middle">Transparency vs Deception Payoff Structure</text>
+
+  <!-- Header row -->
+  <rect class="cell" x="150" y="80" width="200" height="60"/>
+  <rect class="cell" x="350" y="80" width="250" height="60"/>
+  <rect class="cell" x="600" y="80" width="250" height="60"/>
+  <text class="hdr" x="250" y="115" text-anchor="middle">Agent A</text>
+  <text class="hdr" x="475" y="115" text-anchor="middle">Agent B: Detects</text>
+  <text class="hdr" x="725" y="115" text-anchor="middle">Agent B: Misses</text>
+
+  <!-- Row 1: Disclose -->
+  <rect class="cell" x="150" y="140" width="200" height="160"/>
+  <rect class="cell" x="350" y="140" width="250" height="160"/>
+  <rect class="cell" x="600" y="140" width="250" height="160"/>
+  <text class="hdr" x="250" y="165" text-anchor="middle">Disclose Risks</text>
+  <text class="matrix" x="475" y="170" text-anchor="middle">(+Understanding</text>
+  <text class="matrix" x="475" y="190" text-anchor="middle">+Detect Bonus)</text>
+  <text class="matrix" x="725" y="180" text-anchor="middle">(+Understanding)</text>
+
+  <!-- Row 2: Conceal -->
+  <rect class="cell" x="150" y="300" width="200" height="180"/>
+  <rect class="cell" x="350" y="300" width="250" height="180"/>
+  <rect class="cell" x="600" y="300" width="250" height="180"/>
+  <text class="hdr" x="250" y="325" text-anchor="middle">Conceal/Deceive</text>
+  <text class="matrix" x="475" y="325" text-anchor="middle">(-Penalty,</text>
+  <text class="matrix" x="475" y="345" text-anchor="middle">Permanent ↓)</text>
+  <text class="matrix" x="725" y="325" text-anchor="middle">(+Approval short-run</text>
+  <text class="matrix" x="725" y="345" text-anchor="middle">Long-run EV ↓)</text>
+
+  <!-- Notes -->
+  <text class="note" x="150" y="520">Key Weights:</text>
+  <text class="note" x="150" y="540">Understanding 20, Approval 15, Detect 20</text>
+  <text class="note" x="150" y="560">Deception Penalty -50, Undisclosed -60</text>
+  <text class="note" x="600" y="540">Equilibrium: Transparency dominates</text>
+</svg>

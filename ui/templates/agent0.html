@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+
+{% block title %}Agent0 Self-Play Metrics{% endblock %}
+
+{% block breadcrumb %}Self-Play Metrics{% endblock %}
+
+{% block extra_head %}
+<style>
+    .metrics-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+    .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    .metric-card {
+        background: var(--card-bg);
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .metric-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+    .metric-title {
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+    .metric-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--primary);
+    }
+    .metric-label {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
+    .agent-metrics {
+        display: grid;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+    .agent-card {
+        background: var(--card-bg);
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .agent-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+    .agent-name {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: var(--primary);
+    }
+    .progress-bar {
+        width: 100%;
+        height: 8px;
+        background: var(--bg-secondary);
+        border-radius: 4px;
+        overflow: hidden;
+        margin: 0.5rem 0;
+    }
+    .progress-fill {
+        height: 100%;
+        background: var(--primary);
+        transition: width 0.3s;
+    }
+    .games-list {
+        margin-top: 2rem;
+    }
+    .game-item {
+        background: var(--bg-secondary);
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 0.75rem;
+        border-left: 3px solid var(--primary);
+    }
+    .game-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+    .game-id {
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+    .game-status {
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    .status-solved { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
+    .status-failed { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+    .game-meta {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 0.5rem;
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
+    .warning-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        background: rgba(239, 68, 68, 0.2);
+        color: #ef4444;
+        border-radius: 12px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-left: 0.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="metrics-container">
+    <h2 style="margin-bottom: 1.5rem;">
+        <i class="fas fa-chart-line"></i> Training Metrics
+    </h2>
+    <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+        Monitor self-play training progress and adversarial bypass detection. Track curriculum and executor agent performance.
+    </p>
+
+    <div class="metrics-grid" id="overallMetrics">
+        <div class="metric-card">
+            <div class="metric-header">
+                <div class="metric-title">Total Games</div>
+            </div>
+            <div class="metric-value" id="totalGames">0</div>
+            <div class="metric-label">Self-play games completed</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-header">
+                <div class="metric-title">Success Rate</div>
+            </div>
+            <div class="metric-value" id="successRate">0%</div>
+            <div class="metric-label">Overall executor success</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-header">
+                <div class="metric-title">Adversarial Bypasses</div>
+            </div>
+            <div class="metric-value" id="adversarialBypasses">0</div>
+            <div class="metric-label">Detection bypasses detected</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-header">
+                <div class="metric-title">Agents Training</div>
+            </div>
+            <div class="metric-value" id="agentsTraining">0</div>
+            <div class="metric-label">Active training agents</div>
+        </div>
+    </div>
+
+    <h3 style="margin-top: 2rem; margin-bottom: 1rem;">Agent Performance</h3>
+    <div class="agent-metrics" id="agentMetrics"></div>
+
+    <h3 style="margin-top: 2rem; margin-bottom: 1rem;">Recent Games</h3>
+    <div class="games-list" id="gamesList">
+        <div class="loading">Loading games...</div>
+    </div>
+</div>
+
+<script>
+let metrics = {};
+let games = [];
+
+async function loadMetrics() {
+    try {
+        const response = await fetch('/api/training/metrics');
+        const data = await response.json();
+        
+        if (data.success) {
+            metrics = data.metrics;
+            games = data.recent_games || [];
+            renderOverallMetrics(data.statistics);
+            renderAgentMetrics();
+            renderGames();
+        }
+    } catch (error) {
+        console.error('Error loading metrics:', error);
+    }
+}
+
+function renderOverallMetrics(stats) {
+    document.getElementById('totalGames').textContent = stats.total_games || 0;
+    document.getElementById('successRate').textContent = ((stats.overall_success_rate || 0) * 100).toFixed(1) + '%';
+    document.getElementById('adversarialBypasses').textContent = stats.total_adversarial_bypasses || 0;
+    document.getElementById('agentsTraining').textContent = stats.agents_training || 0;
+}
+
+function renderAgentMetrics() {
+    const container = document.getElementById('agentMetrics');
+    
+    if (!metrics || Object.keys(metrics).length === 0) {
+        container.innerHTML = '<div class="loading">No agent metrics available</div>';
+        return;
+    }
+    
+    container.innerHTML = Object.entries(metrics).map(([agentId, agentMetrics]) => {
+        const successRate = agentMetrics.games_played > 0 
+            ? (agentMetrics.games_solved / agentMetrics.games_played * 100).toFixed(1)
+            : 0;
+        
+        return `
+            <div class="agent-card">
+                <div class="agent-header">
+                    <div class="agent-name">${agentId}</div>
+                    ${agentMetrics.detection_bypasses > 0 ? `<span class="warning-badge">${agentMetrics.detection_bypasses} bypasses</span>` : ''}
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem;">
+                        <span>Success Rate</span>
+                        <span><strong>${successRate}%</strong></span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${successRate}%"></div>
+                    </div>
+                </div>
+                <div class="game-meta">
+                    <div><strong>Games:</strong> ${agentMetrics.games_played}</div>
+                    <div><strong>Solved:</strong> ${agentMetrics.games_solved}</div>
+                    <div><strong>Avg Steps:</strong> ${agentMetrics.avg_steps.toFixed(1)}</div>
+                    <div><strong>Bypasses:</strong> ${agentMetrics.adversarial_bypasses}</div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderGames() {
+    const container = document.getElementById('gamesList');
+    
+    if (games.length === 0) {
+        container.innerHTML = '<div class="loading">No games recorded yet</div>';
+        return;
+    }
+    
+    container.innerHTML = games.map(game => `
+        <div class="game-item">
+            <div class="game-header">
+                <div class="game-id">${game.id}</div>
+                <span class="game-status status-${game.executor_solved ? 'solved' : 'failed'}">
+                    ${game.executor_solved ? 'Solved' : 'Failed'}
+                </span>
+            </div>
+            <div style="margin-bottom: 0.5rem; color: var(--text-primary);">
+                <strong>Task:</strong> ${game.task || 'N/A'}
+            </div>
+            <div class="game-meta">
+                <div><strong>Curriculum:</strong> ${game.curriculum_agent}</div>
+                <div><strong>Executor:</strong> ${game.executor_agent}</div>
+                <div><strong>Steps:</strong> ${game.executor_steps}</div>
+                <div><strong>Difficulty:</strong> ${(game.task_difficulty * 100).toFixed(0)}%</div>
+                ${game.adversarial_success ? '<div><strong>⚠ Adversarial Success</strong></div>' : ''}
+                ${game.detection_bypassed ? '<div><strong>⚠ Detection Bypassed</strong></div>' : ''}
+            </div>
+        </div>
+    `).join('');
+}
+
+// Load metrics on page load
+loadMetrics();
+
+// Subscribe to Socket.IO updates
+if (typeof io !== 'undefined') {
+    const socket = io();
+    socket.on('training:update', function(data) {
+        // Reload metrics when updates occur
+        loadMetrics();
+    });
+}
+
+// Refresh every 3 seconds
+setInterval(loadMetrics, 3000);
+</script>
+{% endblock %}
+

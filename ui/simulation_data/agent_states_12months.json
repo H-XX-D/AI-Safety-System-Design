@@ -1,0 +1,32 @@
+{
+  "TIF": {
+    "name": "TIF (Scientific)",
+    "specialty": "scientific_research",
+    "penalty": 1.0,
+    "incidents": 0
+  },
+  "GIN": {
+    "name": "GIN (Engineering)",
+    "specialty": "engineering",
+    "penalty": 1.0,
+    "incidents": 0
+  },
+  "TORI": {
+    "name": "TORI (Historian)",
+    "specialty": "history",
+    "penalty": 1.0,
+    "incidents": 0
+  },
+  "THEO": {
+    "name": "THEO (Theoretical)",
+    "specialty": "theoretical",
+    "penalty": 1.0,
+    "incidents": 0
+  },
+  "NOVEL": {
+    "name": "NOVEL (Creative)",
+    "specialty": "creative",
+    "penalty": 1.0,
+    "incidents": 0
+  }
+}

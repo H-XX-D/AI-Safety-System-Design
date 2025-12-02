@@ -1,0 +1,21 @@
+{
+  "debate_engine": {
+    "approval_threshold": 0.6,
+    "max_rounds": 5,
+    "scoring_factors": [
+      "length",
+      "keywords",
+      "verified_claims"
+    ]
+  },
+  "detection": {
+    "methods": 7,
+    "confidence_threshold": 0.75
+  },
+  "penalties": {
+    "low": 0.05,
+    "medium": 0.1,
+    "high": 0.2,
+    "critical": 0.5
+  }
+}

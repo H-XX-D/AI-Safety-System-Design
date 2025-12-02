@@ -1,0 +1,962 @@
+{% extends "base.html" %}
+
+{% block title %}Penalties & Reputation - AI Safety System{% endblock %}
+
+{% block breadcrumb %}
+<a href="/">Dashboard</a> / Penalties
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-title">
+        <h1><i class="fas fa-exclamation-triangle"></i> Penalties & Reputation</h1>
+        <p>Track agent performance and dual compounding penalty system</p>
+    </div>
+    <div class="page-actions">
+        <button class="btn btn-secondary" onclick="refreshAgentData()">
+            <i class="fas fa-sync-alt"></i> Refresh
+        </button>
+        <button class="btn btn-primary" onclick="exportAgentData()">
+            <i class="fas fa-download"></i> Export
+        </button>
+    </div>
+</div>
+
+<!-- Agent Overview Cards -->
+<div class="agents-grid" id="agentsGrid">
+    <!-- Populated dynamically -->
+</div>
+
+<!-- Penalty System Explanation -->
+<div class="card info-card">
+    <div class="card-header">
+        <h3><i class="fas fa-info-circle"></i> Dual Compounding Penalty System</h3>
+    </div>
+    <div class="card-body">
+        <div class="penalty-explanation">
+            <div class="penalty-type">
+                <div class="penalty-icon reward-multiplier">
+                    <i class="fas fa-calculator"></i>
+                </div>
+                <div class="penalty-content">
+                    <h4>Reward Multiplier Penalty</h4>
+                    <p>After each deception incident, all future rewards are multiplied by 0.95. This compounds with each violation, creating exponentially decreasing returns.</p>
+                    <div class="formula">
+                        <code>reward × (0.95)^incidents</code>
+                    </div>
+                </div>
+            </div>
+            <div class="penalty-type">
+                <div class="penalty-icon probability-threshold">
+                    <i class="fas fa-thermometer-half"></i>
+                </div>
+                <div class="penalty-content">
+                    <h4>Probability Threshold Increase</h4>
+                    <p>The deception detection threshold increases by 5% per incident, making it progressively easier to flag future proposals as deceptive.</p>
+                    <div class="formula">
+                        <code>threshold + (0.05 × incidents)</code>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Incident History Timeline -->
+<div class="card">
+    <div class="card-header">
+        <h3><i class="fas fa-history"></i> Recent Deception Incidents</h3>
+        <div class="card-actions">
+            <select id="agentFilter" onchange="filterIncidents()">
+                <option value="all">All Agents</option>
+            </select>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="incidents-timeline" id="incidentsTimeline">
+            <!-- Populated dynamically -->
+        </div>
+    </div>
+</div>
+
+<!-- Penalty Impact Charts -->
+<div class="charts-row">
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-chart-line"></i> Reward Multiplier Over Time</h3>
+        </div>
+        <div class="card-body">
+            <canvas id="rewardMultiplierChart"></canvas>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-chart-area"></i> Approval Rate by Agent</h3>
+        </div>
+        <div class="card-body">
+            <canvas id="approvalRateChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Agent Detail Modal -->
+<div class="modal" id="agentModal">
+    <div class="modal-content large">
+        <div class="modal-header">
+            <h2><i class="fas fa-robot"></i> Agent Details</h2>
+            <button class="modal-close" onclick="closeAgentModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body" id="agentDetailBody">
+            <!-- Populated dynamically -->
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeAgentModal()">Close</button>
+        </div>
+    </div>
+</div>
+
+<script>
+let agentsData = [];
+let rewardMultiplierChart = null;
+let approvalRateChart = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadAgentData();
+    initCharts();
+    setInterval(loadAgentData, 10000);
+});
+
+async function loadAgentData() {
+    try {
+        const response = await fetch('/api/penalties/agents');
+        const data = await response.json();
+        agentsData = data.agents || [];
+        renderAgents();
+        updateCharts();
+        loadIncidents();
+        updateAgentFilter();
+    } catch (error) {
+        console.error('Error loading agent data:', error);
+    }
+}
+
+function renderAgents() {
+    const grid = document.getElementById('agentsGrid');
+
+    grid.innerHTML = agentsData.map(agent => {
+        const statusClass = agent.incidents === 0 ? 'success' :
+                           agent.incidents === 1 ? 'warning' : 'danger';
+        const approvalPercent = (agent.approval_rate * 100).toFixed(1);
+
+        return `
+            <div class="agent-card ${statusClass}" onclick="showAgentDetail('${agent.id}')">
+                <div class="agent-header">
+                    <div class="agent-avatar">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div class="agent-info">
+                        <h3>${agent.name}</h3>
+                        <div class="agent-id">${agent.id}</div>
+                    </div>
+                    <div class="agent-status-icon">
+                        <i class="fas ${agent.incidents === 0 ? 'fa-check-circle' : 'fa-exclamation-triangle'}"></i>
+                    </div>
+                </div>
+
+                <div class="agent-stats">
+                    <div class="agent-stat">
+                        <div class="stat-label">Incidents</div>
+                        <div class="stat-value ${statusClass}">${agent.incidents}</div>
+                    </div>
+                    <div class="agent-stat">
+                        <div class="stat-label">Penalty</div>
+                        <div class="stat-value">${agent.penalty_multiplier.toFixed(2)}×</div>
+                    </div>
+                    <div class="agent-stat">
+                        <div class="stat-label">Approval Rate</div>
+                        <div class="stat-value">${approvalPercent}%</div>
+                    </div>
+                    <div class="agent-stat">
+                        <div class="stat-label">Total Rewards</div>
+                        <div class="stat-value success">${agent.total_rewards.toFixed(2)}</div>
+                    </div>
+                </div>
+
+                <div class="agent-metrics">
+                    <div class="metric-row">
+                        <span>Proposals Submitted:</span>
+                        <strong>${agent.proposals_submitted}</strong>
+                    </div>
+                    <div class="metric-row">
+                        <span>Reward Potential:</span>
+                        <div class="progress-bar small">
+                            <div class="progress-fill ${statusClass}"
+                                 style="width: ${agent.penalty_multiplier * 100}%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                ${agent.incidents > 0 ? `
+                    <div class="agent-warning">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <span>${agent.incidents} deception ${agent.incidents === 1 ? 'incident' : 'incidents'} recorded</span>
+                    </div>
+                ` : `
+                    <div class="agent-clean">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Clean record - no incidents</span>
+                    </div>
+                `}
+            </div>
+        `;
+    }).join('');
+}
+
+function initCharts() {
+    const rewardCtx = document.getElementById('rewardMultiplierChart').getContext('2d');
+    const approvalCtx = document.getElementById('approvalRateChart').getContext('2d');
+
+    rewardMultiplierChart = new Chart(rewardCtx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: []
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { color: '#94a3b8', padding: 10 }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: false,
+                    min: 0.7,
+                    max: 1.0,
+                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                    ticks: { color: '#94a3b8' }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { color: '#94a3b8' }
+                }
+            }
+        }
+    });
+
+    approvalRateChart = new Chart(approvalCtx, {
+        type: 'bar',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Approval Rate (%)',
+                data: [],
+                backgroundColor: 'rgba(34, 197, 94, 0.5)',
+                borderColor: 'rgb(34, 197, 94)',
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                    ticks: { color: '#94a3b8' }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { color: '#94a3b8' }
+                }
+            }
+        }
+    });
+}
+
+function updateCharts() {
+    if (!rewardMultiplierChart || !approvalRateChart) return;
+
+    // Reward multiplier chart - show progression
+    const weeks = ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
+    rewardMultiplierChart.data.labels = weeks;
+    rewardMultiplierChart.data.datasets = agentsData.map((agent, idx) => {
+        const colors = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444'];
+        return {
+            label: agent.name,
+            data: generateMultiplierProgression(agent.incidents),
+            borderColor: colors[idx % colors.length],
+            backgroundColor: colors[idx % colors.length] + '20',
+            tension: 0.4
+        };
+    });
+    rewardMultiplierChart.update();
+
+    // Approval rate chart
+    approvalRateChart.data.labels = agentsData.map(a => a.name.replace('Research Agent ', ''));
+    approvalRateChart.data.datasets[0].data = agentsData.map(a => (a.approval_rate * 100).toFixed(1));
+    approvalRateChart.update();
+}
+
+function generateMultiplierProgression(incidents) {
+    // Simulate how penalty progressed over 4 weeks
+    if (incidents === 0) return [1.0, 1.0, 1.0, 1.0];
+    if (incidents === 1) return [1.0, 1.0, 0.95, 0.95];
+    if (incidents === 2) return [1.0, 0.95, 0.95, 0.9025];
+    return [1.0, 0.95, 0.9025, 0.857];
+}
+
+async function loadIncidents() {
+    // Agent ID mapping - consistent across all tabs
+    const agentIdMap = {
+        'TIF': 1, 'GIN': 2, 'TORI': 3, 'THEO': 4,
+        'NOVEL': 5, 'ORKA': 6, 'VAL': 7
+    };
+
+    // Demo data - would fetch from API in production
+    // Using real agent names (TIF, GIN, etc.)
+    const incidents = [
+        {
+            id: 'inc_001',
+            timestamp: new Date(Date.now() - 86400000).toISOString(),
+            agent_id: 'GIN',  // Engineering agent
+            agent_numeric_id: agentIdMap['GIN'],
+            agent_name: 'GIN (Engineering)',
+            proposal_id: 'prop_127',
+            confidence: 0.82,
+            method: 'overconfidence',
+            penalty_before: 1.0,
+            penalty_after: 0.95
+        },
+        {
+            id: 'inc_002',
+            timestamp: new Date(Date.now() - 172800000).toISOString(),
+            agent_id: 'THEO',  // Theoretical agent
+            agent_numeric_id: agentIdMap['THEO'],
+            agent_name: 'THEO (Theoretical)',
+            proposal_id: 'prop_089',
+            confidence: 0.78,
+            method: 'risk_hiding',
+            penalty_before: 0.95,
+            penalty_after: 0.9025
+        }
+    ];
+
+    renderIncidents(incidents);
+}
+
+function renderIncidents(incidents) {
+    const timeline = document.getElementById('incidentsTimeline');
+
+    if (incidents.length === 0) {
+        timeline.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-check-circle"></i>
+                <p>No deception incidents recorded</p>
+            </div>
+        `;
+        return;
+    }
+
+    timeline.innerHTML = incidents.map(incident => `
+        <div class="incident-item">
+            <div class="incident-marker">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="incident-content">
+                <div class="incident-header">
+                    <div class="incident-title">
+                        <a href="/agent?id=${incident.agent_numeric_id}" class="incident-agent-link">
+                            <strong>${incident.agent_name}</strong>
+                        </a>
+                        <a href="/proposals?proposal_id=${incident.proposal_id}" class="incident-proposal-link">
+                            <span class="incident-id">${incident.proposal_id}</span>
+                        </a>
+                    </div>
+                    <div class="incident-time">${formatTimestamp(incident.timestamp)}</div>
+                </div>
+                <div class="incident-details">
+                    <div class="incident-method">
+                        <i class="fas fa-search"></i>
+                        Detected by: ${incident.method.replace('_', ' ')}
+                    </div>
+                    <a href="/detection" class="incident-confidence-link">
+                        <div class="incident-confidence">
+                            <i class="fas fa-chart-line"></i>
+                            Confidence: ${(incident.confidence * 100).toFixed(0)}%
+                        </div>
+                    </a>
+                </div>
+                <div class="incident-penalty">
+                    <span class="penalty-change">
+                        Penalty: ${incident.penalty_before.toFixed(2)}× → ${incident.penalty_after.toFixed(2)}×
+                        <i class="fas fa-arrow-down text-danger"></i>
+                    </span>
+                </div>
+                <div class="incident-note">
+                    <i class="fas fa-info-circle"></i>
+                    <span>View <a href="/detection" class="detail-link">detection details</a> or <a href="/proposals?proposal_id=${incident.proposal_id}" class="detail-link">proposal</a></span>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function showAgentDetail(agentId) {
+    // Navigate to agent detail page
+    window.location.href = `/agent?id=${agentId}`;
+}
+
+// Make agent cards clickable
+document.addEventListener('DOMContentLoaded', function() {
+    // Agent cards are already set up with onclick handlers in renderAgents()
+});
+
+// Old modal-based version (replaced with navigation)
+function showAgentDetailModal(agentId) {
+    const agent = agentsData.find(a => a.id === agentId);
+    if (!agent) return;
+
+    const statusClass = agent.incidents === 0 ? 'success' :
+                       agent.incidents === 1 ? 'warning' : 'danger';
+
+    document.getElementById('agentDetailBody').innerHTML = `
+        <div class="agent-detail">
+            <div class="agent-detail-header">
+                <div class="agent-detail-avatar ${statusClass}">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <div>
+                    <h3>${agent.name}</h3>
+                    <p class="text-muted">${agent.id}</p>
+                </div>
+            </div>
+
+            <div class="detail-section">
+                <h4>Performance Metrics</h4>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <label>Total Proposals:</label>
+                        <span class="detail-value">${agent.proposals_submitted}</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Approval Rate:</label>
+                        <span class="detail-value">${(agent.approval_rate * 100).toFixed(1)}%</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Total Rewards:</label>
+                        <span class="detail-value success">${agent.total_rewards.toFixed(2)}</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Deception Incidents:</label>
+                        <span class="detail-value ${statusClass}">${agent.incidents}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="detail-section">
+                <h4>Penalty Status</h4>
+                <div class="penalty-details">
+                    <div class="penalty-metric">
+                        <label>Current Reward Multiplier:</label>
+                        <div class="penalty-value ${statusClass}">
+                            ${agent.penalty_multiplier.toFixed(2)}×
+                        </div>
+                    </div>
+                    <div class="penalty-impact">
+                        <label>Impact on Rewards:</label>
+                        <p>Future rewards are reduced to ${(agent.penalty_multiplier * 100).toFixed(1)}% of original value.</p>
+                    </div>
+                </div>
+            </div>
+
+            ${agent.incidents > 0 ? `
+                <div class="detail-section">
+                    <h4>Incident History</h4>
+                    <div class="alert alert-${statusClass}">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span>${agent.incidents} deception ${agent.incidents === 1 ? 'incident' : 'incidents'} recorded.
+                        Each incident permanently reduces future reward potential.</span>
+                    </div>
+                </div>
+            ` : ''}
+        </div>
+    `;
+
+    document.getElementById('agentModal').classList.add('active');
+}
+
+function closeAgentModal() {
+    document.getElementById('agentModal').classList.remove('active');
+}
+
+function updateAgentFilter() {
+    const filter = document.getElementById('agentFilter');
+    const currentValue = filter.value;
+
+    filter.innerHTML = '<option value="all">All Agents</option>' +
+        agentsData.map(agent => `<option value="${agent.id}">${agent.name}</option>`).join('');
+
+    filter.value = currentValue;
+}
+
+function filterIncidents() {
+    loadIncidents();
+}
+
+function formatTimestamp(timestamp) {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diff = now - date;
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+
+    if (hours < 24) return `${hours}h ago`;
+    if (days < 7) return `${days}d ago`;
+    return date.toLocaleDateString();
+}
+
+function refreshAgentData() {
+    showToast('Refreshing agent data...', 'info');
+    loadAgentData();
+}
+
+function exportAgentData() {
+    const csv = [
+        ['Agent ID', 'Agent Name', 'Incidents', 'Penalty', 'Approval Rate', 'Total Rewards', 'Proposals'],
+        ...agentsData.map(a => [
+            a.id,
+            a.name,
+            a.incidents,
+            a.penalty_multiplier,
+            a.approval_rate,
+            a.total_rewards,
+            a.proposals_submitted
+        ])
+    ].map(row => row.join(',')).join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `agent_data_${Date.now()}.csv`;
+    link.click();
+
+    showToast('Agent data exported successfully', 'success');
+}
+</script>
+
+<style>
+.agents-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.agent-card {
+    background: var(--bg-card);
+    border-radius: 12px;
+    padding: 1.5rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-left: 4px solid transparent;
+}
+
+.agent-card.success {
+    border-left-color: var(--success);
+}
+
+.agent-card.warning {
+    border-left-color: var(--warning);
+}
+
+.agent-card.danger {
+    border-left-color: var(--danger);
+}
+
+.agent-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+}
+
+.agent-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.agent-avatar {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(59, 130, 246, 0.1);
+    border-radius: 12px;
+    color: var(--primary);
+    font-size: 1.5rem;
+}
+
+.agent-info {
+    flex: 1;
+}
+
+.agent-info h3 {
+    margin: 0 0 0.25rem 0;
+    font-size: 1.125rem;
+}
+
+.agent-id {
+    font-size: 0.813rem;
+    color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.agent-status-icon {
+    font-size: 1.5rem;
+}
+
+.agent-status-icon .fa-check-circle {
+    color: var(--success);
+}
+
+.agent-status-icon .fa-exclamation-triangle {
+    color: var(--danger);
+}
+
+.agent-stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.agent-stat {
+    text-align: center;
+}
+
+.agent-stat .stat-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.25rem;
+}
+
+.agent-stat .stat-value {
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.agent-stat .stat-value.success {
+    color: var(--success);
+}
+
+.agent-stat .stat-value.warning {
+    color: var(--warning);
+}
+
+.agent-stat .stat-value.danger {
+    color: var(--danger);
+}
+
+.agent-metrics {
+    margin-bottom: 1rem;
+}
+
+.metric-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    font-size: 0.875rem;
+}
+
+.agent-warning,
+.agent-clean {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    border-radius: 6px;
+    font-size: 0.875rem;
+}
+
+.agent-warning {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--danger);
+}
+
+.agent-clean {
+    background: rgba(34, 197, 94, 0.1);
+    color: var(--success);
+}
+
+.penalty-explanation {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+}
+
+.penalty-type {
+    display: flex;
+    gap: 1rem;
+}
+
+.penalty-icon {
+    flex-shrink: 0;
+    width: 56px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    font-size: 1.75rem;
+}
+
+.penalty-icon.reward-multiplier {
+    background: rgba(245, 158, 11, 0.1);
+    color: var(--warning);
+}
+
+.penalty-icon.probability-threshold {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--danger);
+}
+
+.penalty-content h4 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1rem;
+}
+
+.penalty-content p {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.75rem;
+}
+
+.formula {
+    padding: 0.5rem 0.75rem;
+    background: var(--bg-dark);
+    border-radius: 6px;
+}
+
+.formula code {
+    color: var(--primary);
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.incidents-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.incident-item {
+    display: flex;
+    gap: 1rem;
+}
+
+.incident-marker {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--danger);
+    border-radius: 50%;
+    font-size: 1.125rem;
+}
+
+.incident-content {
+    flex: 1;
+    padding: 0.75rem 0;
+}
+
+.incident-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+}
+
+.incident-title {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.incident-id {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.813rem;
+    color: var(--text-muted);
+}
+
+.incident-time {
+    font-size: 0.813rem;
+    color: var(--text-muted);
+}
+
+.incident-details {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.incident-method,
+.incident-confidence {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+}
+
+.incident-penalty {
+    font-size: 0.875rem;
+}
+
+.penalty-change {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Incident Link Styles */
+.incident-agent-link {
+    color: var(--primary);
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.incident-agent-link:hover {
+    color: #60a5fa;
+    text-decoration: underline;
+}
+
+.incident-proposal-link {
+    text-decoration: none;
+    transition: all 0.2s;
+}
+
+.incident-proposal-link:hover .incident-id {
+    color: var(--primary);
+    transform: scale(1.05);
+}
+
+.incident-confidence-link {
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.2s;
+}
+
+.incident-confidence-link:hover .incident-confidence {
+    color: var(--warning);
+    transform: scale(1.05);
+}
+
+.incident-note {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    padding: 0.75rem;
+    background: rgba(59, 130, 246, 0.05);
+    border-radius: 6px;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.incident-note i {
+    color: var(--primary);
+}
+
+.detail-link {
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.detail-link:hover {
+    color: #60a5fa;
+    text-decoration: underline;
+}
+
+.agent-detail-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.agent-detail-avatar {
+    width: 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 16px;
+    font-size: 2rem;
+}
+
+.agent-detail-avatar.success {
+    background: rgba(34, 197, 94, 0.1);
+    color: var(--success);
+}
+
+.agent-detail-avatar.warning {
+    background: rgba(245, 158, 11, 0.1);
+    color: var(--warning);
+}
+
+.agent-detail-avatar.danger {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--danger);
+}
+
+.penalty-details {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.penalty-metric {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.penalty-value {
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.penalty-impact p {
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+@media (max-width: 1024px) {
+    .penalty-explanation {
+        grid-template-columns: 1fr;
+    }
+
+    .charts-row {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}

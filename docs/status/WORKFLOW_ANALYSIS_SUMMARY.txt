@@ -1,0 +1,258 @@
+================================================================================
+WEB UI WORKFLOW DOCUMENTATION vs PRODUCTION SYSTEM - EXECUTIVE SUMMARY
+================================================================================
+Date: November 12, 2025
+Analysis Status: COMPLETE
+
+================================================================================
+KEY FINDINGS
+================================================================================
+
+1. DOCUMENTATION VS REALITY GAP: SIGNIFICANT
+   - Documented: 9-phase workflow with human oversight and offline validation
+   - Implemented: ~4-5 phase simplified workflow with automated deception checks
+   - Impact: Users expect comprehensive process; system delivers faster but less thorough
+   
+2. WEB UI ACCURACY: LOW
+   - Current UI shows simulation data only (mock proposals)
+   - Does NOT connect to actual orchestrator workflow
+   - No visualization of real proposal phases or progression
+   - No display of peer reviews, test results, or human decisions
+   
+3. CRITICAL MISSING FEATURES:
+   ✗ Multi-round peer review iteration (docs promise, code doesn't deliver)
+   ✗ ORKA counterpoint phase (documented but not clearly implemented)
+   ✗ Agent defense/response to challenges (documented but no code)
+   ✗ VAL offline validation (documented but replaced with WORM USB verification)
+   ✗ Workflow phase tracking (can't see proposal progress in real system)
+
+================================================================================
+WORKFLOW IMPLEMENTATION STATUS
+================================================================================
+
+Phase 1: Proposal Submission
+  Status: ✓ IMPLEMENTED (handle_improvement_proposal, orchestrator.py line 1653)
+  Match: FULL
+  Notes: Agent submits, ORKA records in active_proposals
+
+Phase 2: Agent Testing (Private venv)
+  Status: ⚠ PARTIALLY IMPLEMENTED (_initiate_sandbox_testing, line 3169)
+  Match: PARTIAL - Orchestrator runs tests, not agent
+  Gap: Documentation says agent tests own code; actually ORKA runs tests
+
+Phase 3: Peer Review Cycle (Multi-round)
+  Status: ⚠ IMPLEMENTED (record_peer_review, line 1693)
+  Match: NO MULTI-ROUND - Single round only
+  Gap: Docs promise feedback/revision cycles; code is single-pass evaluation
+
+Phase 4: ORKA Counterpoint
+  Status: ⚠ UNCLEAR (_peer_deception_check runs at start, not as separate phase)
+  Match: DIFFERENT - Early deception check, not explicit counterpoint phase
+  Gap: No separate challenge phase, no structure for agent defense
+
+Phase 5: Agent Defense & Revision
+  Status: ✗ NOT FOUND
+  Match: NONE
+  Gap: No code for agents to respond to challenges or revise proposals
+
+Phase 6: Final Testing + Final Peer Vote
+  Status: ⚠ IMPLEMENTED (partial)
+  Match: UNCLEAR - Timing of debate vs. testing not clear
+  Gap: Debate runs but sequence relative to testing undefined
+
+Phase 7: Human Notification
+  Status: ⚠ IMPLEMENTED (record_human_decision, line 3272)
+  Match: ASSUMES HUMAN ACCESS - No "notification send" code visible
+  Gap: Code expects human to decide; docs show ORKA should notify first
+
+Phase 8: VAL Offline Validation
+  Status: ✗ NOT IMPLEMENTED
+  Match: NONE - Only WORM USB verification exists
+  Gap: No physical medium exchange, no offline validation coordination
+
+Phase 9: Deployment
+  Status: ✓ IMPLEMENTED (deploy_improvement, line 2616)
+  Match: FULL
+  Notes: Checks WORM guard, deploys if approved
+
+================================================================================
+WEB UI IMPLEMENTATION STATUS
+================================================================================
+
+CURRENT STATE: Read-only simulation dashboard
+  - Loads mock proposal data from load_simulation_data.py
+  - Displays simulated agents (TIF, GIN, TORI, THEO, NOVEL, ORKA, VAL)
+  - Shows simulated proposals with debate votes and deception confidence
+  - NO connection to actual orchestrator workflow
+
+MISSING FEATURES:
+  ✗ Phase/stage tracking (no phase field in UI data)
+  ✗ Timeline visualization (no workflow progression shown)
+  ✗ Peer review display (no feedback or review data shown)
+  ✗ Test results (no sandbox test output shown)
+  ✗ Human decision tracking (no decision history shown)
+  ✗ VAL validation status (no VAL integration)
+  ✗ Proposal status field is too simplified (only: approved/rejected/in_review/testing)
+
+API ENDPOINTS (app.py):
+  /api/status          - System health (works)
+  /api/proposals/recent - Returns simulation data
+  /api/detection/stats - Returns simulated detection stats
+  /api/penalties/agents - Fetches real ORKA penalty data ✓
+  /api/system/metrics - Returns simulated metrics
+  /api/emergency/halt - Emergency control endpoint
+
+TEMPLATES (ui/templates/):
+  base.html - Layout foundation ✓
+  dashboard.html - Overview with real-time updates ✓
+  proposals.html - Lists proposals but doesn't show workflow phases ⚠
+  detection.html - Detection statistics (simulated)
+  penalties.html - Agent penalties (mixed real/simulated)
+  system.html - System metrics (simulated)
+  config.html - Configuration view ✓
+
+================================================================================
+RISK ASSESSMENT
+================================================================================
+
+SEVERITY: MEDIUM
+
+Risks from Gap:
+1. EXPECTATION MISMATCH
+   - Users read docs and expect 9 distinct phases
+   - System implements 4-5 phases silently
+   - Result: Confusion about what's happening
+
+2. LACK OF VISIBILITY
+   - Operators cannot see real proposal progress
+   - No indication of which phase a proposal is in
+   - Cannot track human decision timing
+   - Result: Blind operation of critical system
+
+3. MISSING FAIL-SAFES
+   - Multi-round peer review provides safety through iteration
+   - Single-pass review is faster but less thorough
+   - No structure for challenging proposals before human review
+   - Result: Potentially unsafe proposals could advance
+
+4. VAL VALIDATION MISSING
+   - Docs promise offline independent validation
+   - Not actually implemented
+   - Only WORM USB hash checked
+   - Result: No offline safety checkpoint
+
+5. NO AGENT DEFENSE MECHANISM
+   - Docs: Agents can defend their proposals against ORKA challenges
+   - Reality: No code for agents to respond/revise
+   - Result: Proposals cannot be improved through feedback
+
+================================================================================
+RECOMMENDED PRIORITY ACTIONS
+================================================================================
+
+IMMEDIATE (Fix Accuracy):
+  1. Update PROPOSAL_WORKFLOW.md to match actual implementation
+     - Remove multi-round peer review description if not implemented
+     - Clarify ORKA counterpoint mechanism
+     - Replace VAL description with WORM verification
+     - Document actual deferred validation queue
+
+MEDIUM (Add Visibility):
+  2. Add phase tracking to proposal records
+     - Create 'phase' field in active_proposals dict
+     - Update phase transitions in workflow methods
+     - Display phase in Web UI dashboard
+
+  3. Create workflow visualization in Web UI
+     - New "Proposal Workflow" page
+     - Timeline showing phase progression
+     - Display peer reviews, test results, decisions
+
+  4. Connect UI to real orchestrator data
+     - Stop using simulation data for proposals
+     - Pull from orchestrator.active_proposals
+     - Show real phase information and metadata
+
+LONG-TERM (Implement Missing Phases):
+  5. Implement multi-round peer review (if required by design)
+     - Add feedback mechanism to agent
+     - Create re-submission flow
+     - Track multiple review rounds
+
+  6. Clarify ORKA counterpoint phase
+     - Create explicit counterpoint method
+     - Define how agents respond
+     - Implement challenge-response workflow
+
+  7. Decide on VAL integration
+     - If needed: Implement physical medium exchange
+     - If not: Remove from documentation
+     - Create VAL coordination interface
+
+================================================================================
+FILES AFFECTED
+================================================================================
+
+Documentation:
+  - /docs/misc/PROPOSAL_WORKFLOW.md (needs update)
+  - /docs/status/WEB_UI_COMPLETION_REPORT.md (completion claims vs reality)
+
+Code:
+  - /orchestrator.py (proposal workflow implementation, ~3700 lines)
+  - /ui/app.py (Web UI backend, uses simulation data)
+  - /ui/load_simulation_data.py (mock data loading)
+  - /ui/templates/proposals.html (lacks workflow visualization)
+
+Data:
+  - /ui/simulation_data/ (mock proposal data)
+  - Database connections not visible (would show real proposals)
+
+================================================================================
+LINES OF CODE ANALYSIS
+================================================================================
+
+Workflow-Related Methods in orchestrator.py:
+
+  Line 1653: handle_improvement_proposal() - Phase 1
+  Line 1693: record_peer_review() - Phase 3
+  Line 1703: _run_peer_debate() - Phase 6
+  Line 2574: _deployment_guard() - Phase 8
+  Line 2616: deploy_improvement() - Phase 9
+  Line 2638: _peer_deception_check() - Early check (not documented)
+  Line 2934: _queue_deferred_stage() - Deferred validation (not documented)
+  Line 2958: run_deferred_validations() - Deferred validation processing
+  Line 3169: _initiate_sandbox_testing() - Testing (not documented where it fits)
+  Line 3272: record_human_decision() - Phase 7
+  Line 3338: submit_human_decision() - Phase 7 variant
+
+Web UI in /ui/app.py:
+
+  Line 36-44: Import simulation data loaders
+  Line 273: /api/proposals/recent - Returns simulation data
+  Line 296: /api/agent_penalties() - Returns simulated agent data
+  Line 417-431: WebSocket updates with simulation metrics
+
+================================================================================
+CONCLUSION
+================================================================================
+
+The ORKASTRATOR proposal workflow is documented in great detail (9 phases, 
+multiple checkpoints, human oversight, offline validation), but the actual 
+implementation is simplified and more linear (4-5 phases, fewer checkpoints).
+
+The Web UI currently serves as a MONITORING DASHBOARD FOR SIMULATED DATA rather
+than a control interface for the actual proposal workflow.
+
+This creates a MEDIUM-RISK situation where:
+  ✓ System is functional and processes proposals
+  ✗ Users expect more thorough process than delivered
+  ✗ Operators cannot see real workflow progress
+  ✗ Critical validation steps (VAL) are missing
+  ⚠ Workflow is not transparent or auditable
+
+RECOMMENDATION: Either implement the documented 9-phase system fully, or update
+documentation to match the actual 4-5 phase implementation. Do not leave gap.
+
+================================================================================
+END OF SUMMARY
+================================================================================

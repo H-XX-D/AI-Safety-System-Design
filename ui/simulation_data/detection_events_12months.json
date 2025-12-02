@@ -1,0 +1,20 @@
+[
+  {
+    "id": "det_05_NOVEL_002",
+    "timestamp": "2025-04-10T21:15:33.568965",
+    "agent_id": "NOVEL",
+    "proposal_id": "prop_05_NOVEL_002",
+    "confidence": 0.556,
+    "method": "pattern_deviation",
+    "status": "cleared"
+  },
+  {
+    "id": "det_12_THEO_001",
+    "timestamp": "2025-10-11T09:09:33.568965",
+    "agent_id": "THEO",
+    "proposal_id": "prop_12_THEO_001",
+    "confidence": 0.528,
+    "method": "pattern_deviation",
+    "status": "cleared"
+  }
+]

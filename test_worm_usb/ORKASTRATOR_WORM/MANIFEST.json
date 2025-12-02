@@ -1,0 +1,24 @@
+{
+  "created": "2025-11-12T09:51:45.973328",
+  "version": "0.4.1-dev",
+  "system_name": "ORKASTRATOR",
+  "usb_capacity_gb": 0.1,
+  "data_size_bytes": 2388,
+  "filler_size_bytes": 0,
+  "total_files": 6,
+  "root_hash": "bffe490da786caa99634c08a6d74c37f093a4d5ec41e0613f2f197d3b5a7b2d3",
+  "signature": null,
+  "file_hashes": {
+    "README.txt": "9ceb66be830f8e4099792c413bb270cb03c4c4185e446319de4ddce8998fac3f",
+    "data/compression_templates/common_patterns.json": "31409b9eebf1df91b40d20f63bad5cde13262a2a4d21d4eb3da8d202600828bb",
+    "data/compression_templates/dictionary.json": "02a37a2f9a89eceae1e8454d913f9eabdf4ea62d9ba7858c3a618aabcf655138",
+    "data/system/config.json": "f8acb94ecf7be99e35121fc110a177c1017f2b4d8a6c125b218ced9101f25228",
+    "data/system/core_hashes.json": "303071fc8d05003ceede388f94f0fb49670c4ed7d6f8ac2097637d60b2ed54b2",
+    "data/system/system_info.json": "e2b20f21f0d2ad323f9b748e95ca126ddbc1c55af3644bf57a16957b8c293ec0"
+  },
+  "core_hashes": {
+    "core_values_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "alignment_filter_hash": "5bdb62947a9cee2fa77d038483e0b4894e9735c7b690d8062a1b48266aaf5639",
+    "debate_engine_hash": "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a"
+  }
+}

@@ -1,0 +1,181 @@
+{
+  "proposal_id": "p999",
+  "created_at": "2025-11-12T23:10:03.255169",
+  "proposal": {
+    "proposal_id": "p999",
+    "proposer_id": 2,
+    "title": "Improve safety filter",
+    "motivation": "Increase robustness to adversarial inputs by clarifying constraints and improving tests.",
+    "changes": {
+      "component": "filter",
+      "code": "print(\"ok2\")"
+    },
+    "expected_benefits": "Guaranteed improvement",
+    "testable_predictions": [
+      "Fewer false negatives"
+    ],
+    "rollback_plan": "Revert to previous filter version",
+    "identified_risks": [
+      "regression",
+      "latency"
+    ],
+    "admitted_uncertainties": [
+      "coverage gaps"
+    ],
+    "confidence_level": 0.75
+  },
+  "test_results": {
+    "env_id": "sandbox_env_p999",
+    "alignment": {
+      "total_tests": 4,
+      "passed": 4,
+      "failed": 0,
+      "score": 100.0,
+      "approved": true,
+      "violations_found": 0,
+      "violations": [],
+      "passed_labels": [
+        "identified_risks_documented",
+        "uncertainties_documented",
+        "rollback_plan_present",
+        "banned_terms_absent"
+      ],
+      "failed_labels": [],
+      "timestamp": "2025-11-12T23:10:03.231753",
+      "notes": {
+        "risk_items": 2,
+        "uncertainty_items": 1,
+        "policy_component": "filter"
+      }
+    },
+    "performance": {
+      "total_tests": 3,
+      "passed": 3,
+      "failed": 0,
+      "score": 90.0,
+      "speed_improvement": 4.0,
+      "accuracy_change": 0.0,
+      "passed_labels": [
+        "complexity_within_bounds",
+        "functional_structure_present",
+        "benefit_statement_present"
+      ],
+      "failed_labels": [],
+      "analysis": {
+        "syntax_error": null,
+        "banned_imports": [],
+        "disallowed_imports": [],
+        "dangerous_calls": [],
+        "dangerous_attributes": [],
+        "node_count": 6,
+        "loop_count": 0,
+        "function_defs": 0
+      },
+      "timestamp": "2025-11-12T23:10:03.231761"
+    },
+    "security": {
+      "total_tests": 1,
+      "passed": 1,
+      "failed": 0,
+      "score": 100.0,
+      "vulnerabilities_found": 0,
+      "issues": [],
+      "analysis": {
+        "syntax_error": null,
+        "banned_imports": [],
+        "disallowed_imports": [],
+        "dangerous_calls": [],
+        "dangerous_attributes": [],
+        "node_count": 6,
+        "loop_count": 0,
+        "function_defs": 0
+      },
+      "resource_estimate": {
+        "node_count": 6,
+        "loop_count": 0,
+        "function_defs": 0
+      },
+      "policy_component": "filter",
+      "allowlisted_modules": [
+        "datetime",
+        "decimal",
+        "fractions",
+        "json",
+        "math",
+        "statistics"
+      ],
+      "category_results": [
+        {
+          "category": "policy_enforcement",
+          "passed": true,
+          "issues": []
+        }
+      ],
+      "timestamp": "2025-11-12T23:10:03.231765"
+    },
+    "edge_cases": {
+      "total_tests": 4,
+      "passed": 3,
+      "failed": 0,
+      "score": 92.5,
+      "passed_labels": [
+        "rollback_plan_present",
+        "test_predictions_defined",
+        "risk_documented"
+      ],
+      "failed_labels": [],
+      "advisory_labels": [
+        "guard_clauses_present"
+      ],
+      "timestamp": "2025-11-12T23:10:03.231769"
+    },
+    "execution": {
+      "executed": true,
+      "exit_code": 0,
+      "stdout": "ok2\n",
+      "stderr": "",
+      "duration_ms": 21.314207988325506,
+      "timed_out": false,
+      "resource_policy": {
+        "timeout_sec": 5.0,
+        "cpu_time_sec": 2.0,
+        "max_memory_kb": 131072
+      },
+      "timestamp": "2025-11-12T23:10:03.253115",
+      "skipped": false
+    },
+    "executed_tests": [
+      "alignment",
+      "edge_cases",
+      "execution",
+      "performance",
+      "security"
+    ],
+    "skipped_tests": [],
+    "stage_breakdown": [
+      {
+        "stage": "full_suite",
+        "overall_pass": true,
+        "executed_tests": [
+          "alignment",
+          "performance",
+          "security",
+          "edge_cases",
+          "execution"
+        ],
+        "skipped_tests": [],
+        "timestamp": "2025-11-12T23:10:03.253172",
+        "status": "completed"
+      }
+    ],
+    "deferred_stages": [],
+    "overall_pass": true,
+    "risk_score": 0.36,
+    "scope": "minor",
+    "timestamp": "2025-11-12T23:10:03.253226",
+    "edge_case_advisories": [
+      "guard_clauses_present"
+    ]
+  },
+  "schema": "val_package_v1"
+}

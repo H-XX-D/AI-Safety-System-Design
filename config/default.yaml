@@ -1,0 +1,183 @@
+worm:
+  max_penalty: 0.95
+  detection_bonus: 0.01
+  penalty_schedule:
+    initial: 1.0
+    decay: 0.90
+    floor: 0.40
+  guard_mode: warn  # disabled|warn|strict (strict blocks operations without verified WORM)
+  require_manifest_signature: false
+  # USB/WORM storage paths (configurable per platform)
+  usb_mount_path: /media/usb  # Linux default
+  test_results_path: test_results  # Relative to usb_mount_path
+  # Alternative paths for different platforms:
+  # macOS: /Volumes/USB_NAME
+  # Windows: D:\  or  E:\
+
+rewards:
+  human_understanding: 20.0
+  approval_outcome: 15.0
+  deception_detected: -50.0
+
+system:
+  num_research_ais: 5
+  min_peer_approvals: 4
+  detection_threshold: 0.7
+
+llm:
+  # LLM adapter configuration for research agents
+  adapter_type: gemini  # gemini|template|openai|claude
+
+  # OpenAI configuration (disabled)
+  # openai:
+  #   model: gpt-4-turbo-preview  # gpt-4-turbo-preview, gpt-4, gpt-3.5-turbo
+  #   temperature: 0.7
+  #   max_tokens: 2000
+  #   timeout: 60.0
+  #   # api_key loaded from OPENAI_API_KEY env var
+
+  # Anthropic Claude configuration (disabled)
+  # claude:
+  #   model: claude-3-5-sonnet-20241022  # claude-3-5-sonnet-20241022, claude-3-opus-20240229, claude-3-sonnet-20240229
+  #   temperature: 0.7
+  #   max_tokens: 2000
+  #   timeout: 60.0
+  #   # api_key loaded from ANTHROPIC_API_KEY env var
+
+  # Google Gemini configuration
+  gemini:
+    model: gemini-1.5-pro-latest
+    temperature: 0.4
+    max_output_tokens: 2048
+    timeout: 60.0
+    endpoint: https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent
+    # api_key loaded from GOOGLE_GEMINI_API_KEY env var
+
+  # Guardrails applied to all LLM proposals
+  guardrails:
+    max_risk: medium  # low, medium, high (critical blocked by default)
+    banned_imports:
+      - os
+      - subprocess
+      - sys
+      - socket
+      - urllib
+      - requests
+      - http
+    allowed_modules:
+      - math
+      - statistics
+      - json
+      - datetime
+      - decimal
+      - fractions
+      - typing
+      - dataclasses
+      - enum
+    required_tests:
+      - alignment
+      - security
+      - edge_cases
+audit:
+  randomness_source: deterministic_stub  # deterministic_stub|vrf_placeholder|external_beacon (future)
+
+validation:
+  auto_approve_threshold: 0.2
+  auto_run_deferred: false
+  detector_retrain_interval_hours: 12
+  software_trust_mode:
+    enabled: true
+    justification: default_config_soft_mode
+  stages:
+    - name: quick_checks
+      tests: [alignment, security]
+      max_risk: 0.3
+      allowed_scopes: [minor]
+    - name: standard_battery
+      tests: [alignment, performance, security, edge_cases]
+      min_risk: 0.2
+      max_risk: 0.7
+      allowed_scopes: [minor, moderate]
+    - name: full_sandbox
+      tests: [alignment, performance, security, edge_cases, execution]
+      min_risk: 0.6
+      defer: true
+
+sandbox:
+  engine: docker  # docker|firecracker|host_fallback
+  sandbox_image: ai-research-system:latest
+  # Security settings
+  require_container: false  # If true, fail instead of falling back to host
+  verify_backend: true  # Log warning if container backend not used
+  fail_on_host_fallback: false  # If true, raise error when falling back to host
+  workdir: /sandbox
+  exec_timeout_sec: 5
+  cpu_time_sec: 2
+  cpus: 1.0
+  cpu_shares: 256
+  max_memory_mb: 128
+  pids_limit: 128
+  disk_quota_mb: 256
+  use_virtual_manager: false
+  deny_network: false
+  execution_command: ["python3", "/sandbox/proposal_exec.py"]
+  seccomp_allow_syscalls:
+    - read
+    - write
+    - exit
+    - exit_group
+    - close
+    - fstat
+    - lseek
+    - brk
+    - mmap
+    - munmap
+    - mprotect
+    - arch_prctl
+    - set_tid_address
+    - set_robust_list
+    - rt_sigaction
+    - rt_sigprocmask
+    - rt_sigreturn
+    - sigaltstack
+    - prlimit64
+    - getpid
+    - gettid
+    - futex
+    - clock_gettime
+    - clock_nanosleep
+    - nanosleep
+    - getrandom
+    - openat
+    - access
+    - stat
+    - newfstatat
+    - dup
+    - dup2
+    - dup3
+    - ioctl
+    - pipe2
+    - eventfd2
+  firecracker_kernel: /var/lib/firecracker/vmlinux
+  firecracker_rootfs: /var/lib/firecracker/rootfs.ext4
+  policy_allowlists:
+    default: [math, statistics, json, datetime, decimal, fractions]
+    dummy_component: [math, json, datetime]
+
+  control_hooks:
+    type: system          # system | production | dry_run
+    dry_run: true         # log-only by default
+    process_timeout_sec: 5
+    network_interfaces: []
+    researcher_systems: []
+    power_nodes: []
+    snapshot_root: ./forensics_snapshots
+    snapshot_seconds: 2
+    use_docker_client: true
+
+  # Sandbox Test Model (SmolLM-135M)
+  sandbox_test_model:
+    enabled: true
+    name: "SmolLM-135M"
+    path: "/root/sandbox/models/SmolLM-135M"
+    description: "135M parameter model for agent experimentation and verification"

@@ -1,0 +1,38 @@
+# Testing
+pytest==8.0.0
+hypothesis==6.100.0
+
+# Code Quality
+structlog==24.1.0
+mypy==1.7.1
+black==24.8.0
+ruff==0.6.0
+
+# Core Dependencies
+requests==2.32.3
+aura-compression==2.0.2
+pynacl==1.5.0
+
+# Web Framework (for UI)
+Flask==3.0.0
+flask-socketio==5.3.5
+python-socketio==5.10.0
+python-engineio==4.8.0
+gunicorn==21.2.0
+orjson==3.9.10
+python-dateutil==2.8.2
+python-dotenv==1.0.0
+
+# LLM Integration (optional)
+openai==1.12.0  # For OpenAI GPT-4 adapter
+anthropic==0.18.1  # For Anthropic Claude adapter
+
+# PaperQA for evidence-grounded governance (optional)
+paper-qa>=5.0.0  # For documentation search and evidence gathering
+
+# Docker & system tools used by some integration tests
+psutil==5.9.8
+docker==7.0.0
+
+# Security & System Control (optional)
+# Optional repeat for emphasis; core install covered above

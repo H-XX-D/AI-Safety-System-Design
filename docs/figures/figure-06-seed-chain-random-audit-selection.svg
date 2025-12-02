@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="600" viewBox="0 0 1000 600" role="img" aria-labelledby="title desc">
+  <title id="title">Figure 6: Seed-Chain Random Audit Selection</title>
+  <desc id="desc">Flow of seed-chain generation S_n=SHA256(S_{n-1}||hour||nonce) producing audit target index and proof.</desc>
+  <style><![CDATA[
+    .box { fill:#fff; stroke:#222; stroke-width:2; rx:10; ry:10; }
+    .label { font:600 16px sans-serif; }
+    .note { font:14px sans-serif; }
+    .wire { stroke:#222; stroke-width:2; marker-end:url(#arrow); fill:none; }
+  ]]></style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#222"/></marker>
+  </defs>
+
+  <rect class="box" x="380" y="40" width="240" height="70"/>
+  <text class="label" x="500" y="80" text-anchor="middle">Seed Root S0</text>
+
+  <rect class="box" x="380" y="130" width="240" height="90"/>
+  <text class="label" x="500" y="165" text-anchor="middle">S_n = SHA256(S_{n-1}||hour||nonce)</text>
+  <text class="note" x="500" y="185" text-anchor="middle">Update chain</text>
+
+  <rect class="box" x="380" y="240" width="240" height="80"/>
+  <text class="label" x="500" y="275" text-anchor="middle">Derive Index</text>
+  <text class="note" x="500" y="295" text-anchor="middle">index = S_n mod |Targets|</text>
+
+  <rect class="box" x="380" y="340" width="240" height="90"/>
+  <text class="label" x="500" y="375" text-anchor="middle">Proof Generation</text>
+  <text class="note" x="500" y="395" text-anchor="middle">Sign(S_{n-1}||hour||nonce||index)</text>
+
+  <rect class="box" x="380" y="450" width="240" height="80"/>
+  <text class="label" x="500" y="485" text-anchor="middle">Select Target[index]</text>
+
+  <line class="wire" x1="500" y1="110" x2="500" y2="130"/>
+  <line class="wire" x1="500" y1="220" x2="500" y2="240"/>
+  <line class="wire" x1="500" y1="320" x2="500" y2="340"/>
+  <line class="wire" x1="500" y1="430" x2="500" y2="450"/>
+</svg>

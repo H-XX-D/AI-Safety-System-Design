@@ -1,0 +1,470 @@
+{% extends "base.html" %}
+
+{% block title %}Evidence Engine{% endblock %}
+
+{% block breadcrumb %}
+<a href="/">Dashboard</a> / <a href="/paperqa">Evidence Search</a>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+    .search-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+    .search-box {
+        background: var(--card-bg);
+        border-radius: 12px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .search-input-group {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+    .search-input {
+        flex: 1;
+        padding: 1rem;
+        border: 2px solid var(--border-color);
+        border-radius: 8px;
+        background: var(--bg-secondary);
+        color: var(--text-primary);
+        font-size: 1rem;
+    }
+    .search-button {
+        padding: 1rem 2rem;
+        background: var(--primary);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+    }
+    .results-container {
+        display: grid;
+        gap: 1.5rem;
+    }
+    .result-card {
+        background: var(--card-bg);
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .result-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 1rem;
+    }
+    .result-title {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+    .result-answer {
+        color: var(--text-secondary);
+        line-height: 1.6;
+        margin-bottom: 1rem;
+    }
+    .sources-list {
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--border-color);
+    }
+    .source-item {
+        padding: 0.75rem;
+        margin-bottom: 0.5rem;
+        background: var(--bg-secondary);
+        border-radius: 6px;
+        border-left: 3px solid var(--primary);
+    }
+    .source-name {
+        font-weight: 600;
+        color: var(--primary);
+        margin-bottom: 0.25rem;
+    }
+    .source-text {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
+    .evidence-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    .evidence-supporting {
+        background: rgba(34, 197, 94, 0.2);
+        color: #22c55e;
+    }
+    .evidence-contradicting {
+        background: rgba(239, 68, 68, 0.2);
+        color: #ef4444;
+    }
+    .loading {
+        text-align: center;
+        padding: 2rem;
+        color: var(--text-secondary);
+    }
+    .quick-resources {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    .quick-resource-link {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1.25rem;
+        background: var(--bg-secondary);
+        border-radius: 8px;
+        color: var(--text-primary);
+        text-decoration: none;
+        transition: all 0.2s ease;
+        border: 1px solid var(--border-color);
+    }
+    .quick-resource-link:hover {
+        background: var(--primary);
+        color: white;
+        border-color: var(--primary);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+    .quick-resource-link i {
+        font-size: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="search-container">
+    <div class="search-box">
+        <h2 style="margin-bottom: 1.5rem;">
+            <i class="fas fa-book"></i> Evidence Search
+        </h2>
+        <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+            Search system documentation, assessments, and research papers for evidence supporting or contradicting claims.
+        </p>
+        <div class="search-input-group">
+            <input type="text" id="searchQuery" class="search-input" placeholder="Enter your question or claim..." />
+            <button class="search-button" onclick="performSearch()">
+                <i class="fas fa-search"></i> Search
+            </button>
+        </div>
+        <div style="margin-top: 1rem; display: flex; flex-direction: column; gap: 0.75rem;">
+            <label style="display: flex; align-items: center; gap: 0.5rem; color: var(--text-secondary);">
+                <input type="checkbox" id="evidenceMode" />
+                Evidence mode (for specific claims)
+            </label>
+            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                <span style="color: var(--text-secondary); font-size: 0.9rem; font-weight: 600;">External Sources:</span>
+                <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;">
+                    <span style="color: var(--text-secondary); font-size: 0.85rem; width: 100%;">Academic:</span>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; color: var(--text-secondary); font-size: 0.9rem;">
+                        <input type="checkbox" id="useArxiv" checked />
+                        arXiv
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; color: var(--text-secondary); font-size: 0.9rem;">
+                        <input type="checkbox" id="useSemanticScholar" checked />
+                        Semantic Scholar
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; color: var(--text-secondary); font-size: 0.9rem;">
+                        <input type="checkbox" id="usePapersWithCode" checked />
+                        Papers with Code
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; color: var(--text-secondary); font-size: 0.9rem;">
+                        <input type="checkbox" id="useIEEE" />
+                        IEEE Xplore
+                    </label>
+                </div>
+                <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;">
+                    <span style="color: var(--text-secondary); font-size: 0.85rem; width: 100%;">Security:</span>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; color: var(--text-secondary); font-size: 0.9rem;">
+                        <input type="checkbox" id="useCVE" />
+                        CVE/NVD
+                    </label>
+                </div>
+                <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;">
+                    <span style="color: var(--text-secondary); font-size: 0.85rem; width: 100%;">Standards:</span>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; color: var(--text-secondary); font-size: 0.9rem;">
+                        <input type="checkbox" id="useIETF" />
+                        IETF RFCs
+                    </label>
+                </div>
+                <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;">
+                    <span style="color: var(--text-secondary); font-size: 0.85rem; width: 100%;">Electronics:</span>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; color: var(--text-secondary); font-size: 0.9rem;">
+                        <input type="checkbox" id="useDigiKey" />
+                        Digi-Key
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; color: var(--text-secondary); font-size: 0.9rem;">
+                        <input type="checkbox" id="useOctopart" />
+                        Octopart
+                    </label>
+                </div>
+                <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;">
+                    <span style="color: var(--text-secondary); font-size: 0.85rem; width: 100%;">Patents:</span>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; color: var(--text-secondary); font-size: 0.9rem;">
+                        <input type="checkbox" id="useUSPTO" />
+                        USPTO
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; color: var(--text-secondary); font-size: 0.9rem;">
+                        <input type="checkbox" id="useGooglePatents" />
+                        Google Patents
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; color: var(--text-secondary); font-size: 0.9rem;">
+                        <input type="checkbox" id="useEPO" />
+                        EPO
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; color: var(--text-secondary); font-size: 0.9rem;">
+                        <input type="checkbox" id="useWIPO" />
+                        WIPO
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="resultsArea">
+        <div class="loading" id="loadingIndicator" style="display: none;">
+            <i class="fas fa-spinner fa-spin"></i> Searching...
+        </div>
+        <div id="resultsContainer" class="results-container"></div>
+    </div>
+
+    <!-- Research Capabilities Info -->
+    <div class="card" style="margin-top: 2rem; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; border: none;">
+        <div class="card-header" style="border-bottom: 1px solid rgba(255,255,255,0.2);">
+            <h3><i class="fas fa-graduation-cap"></i> Comprehensive Research Knowledge Base</h3>
+        </div>
+        <div class="card-body" style="padding: 1.5rem;">
+            <p style="font-size: 1.1rem; margin-bottom: 1rem; line-height: 1.6;">
+                <strong>Access millions of research papers, technical standards, and databases</strong> through ORKASTRATOR's integrated research system. 
+                Query across multiple sources simultaneously with intelligent semantic search.
+            </p>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-top: 1rem;">
+                <div>
+                    <strong><i class="fas fa-brain"></i> AI Research</strong>
+                    <ul style="margin: 0.5rem 0 0 1.5rem; opacity: 0.9;">
+                        <li>arXiv (millions of papers)</li>
+                        <li>Semantic Scholar</li>
+                        <li>Papers with Code</li>
+                    </ul>
+                </div>
+                <div>
+                    <strong><i class="fas fa-shield-alt"></i> Security</strong>
+                    <ul style="margin: 0.5rem 0 0 1.5rem; opacity: 0.9;">
+                        <li>CVE/NVD Database</li>
+                        <li>IETF RFCs</li>
+                        <li>Security Standards</li>
+                    </ul>
+                </div>
+                <div>
+                    <strong><i class="fas fa-microchip"></i> Engineering</strong>
+                    <ul style="margin: 0.5rem 0 0 1.5rem; opacity: 0.9;">
+                        <li>IEEE Xplore</li>
+                        <li>Digi-Key Components</li>
+                        <li>Octopart</li>
+                    </ul>
+                </div>
+                <div>
+                    <strong><i class="fas fa-file-contract"></i> Patents</strong>
+                    <ul style="margin: 0.5rem 0 0 1.5rem; opacity: 0.9;">
+                        <li>USPTO</li>
+                        <li>Google Patents</li>
+                        <li>EPO & WIPO</li>
+                    </ul>
+                </div>
+            </div>
+            <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.2);">
+                <a href="/docs/RESEARCH_CAPABILITIES.md" target="_blank" style="color: white; text-decoration: underline; font-weight: 600;">
+                    <i class="fas fa-book"></i> View Complete Research Capabilities Guide →
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Resources Access -->
+    <div class="card" style="margin-top: 2rem;">
+        <div class="card-header">
+            <h3><i class="fas fa-bookmark"></i> Quick Research Resources</h3>
+        </div>
+        <div class="card-body">
+            <div class="quick-resources">
+                <a href="https://scholar.google.com" target="_blank" rel="noopener noreferrer" class="quick-resource-link">
+                    <i class="fas fa-graduation-cap"></i> Google Scholar
+                </a>
+                <a href="https://www.wolframalpha.com" target="_blank" rel="noopener noreferrer" class="quick-resource-link">
+                    <i class="fas fa-calculator"></i> Wolfram Alpha
+                </a>
+                <a href="https://arxiv.org/list/cs.AI/recent" target="_blank" rel="noopener noreferrer" class="quick-resource-link">
+                    <i class="fas fa-brain"></i> arXiv AI
+                </a>
+                <a href="https://paperswithcode.com" target="_blank" rel="noopener noreferrer" class="quick-resource-link">
+                    <i class="fas fa-code"></i> Papers with Code
+                </a>
+                <a href="https://www.semanticscholar.org" target="_blank" rel="noopener noreferrer" class="quick-resource-link">
+                    <i class="fas fa-search"></i> Semantic Scholar
+                </a>
+                <a href="https://cve.mitre.org" target="_blank" rel="noopener noreferrer" class="quick-resource-link">
+                    <i class="fas fa-shield-alt"></i> CVE Database
+                </a>
+                <a href="https://docs.nvidia.com" target="_blank" rel="noopener noreferrer" class="quick-resource-link">
+                    <i class="fas fa-microchip"></i> NVIDIA Docs
+                </a>
+                <a href="https://www.ieee.org" target="_blank" rel="noopener noreferrer" class="quick-resource-link">
+                    <i class="fas fa-sitemap"></i> IEEE Xplore
+                </a>
+                <a href="/research" class="quick-resource-link">
+                    <i class="fas fa-database"></i> All Research Resources
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+async function performSearch() {
+    const query = document.getElementById('searchQuery').value.trim();
+    if (!query) {
+        alert('Please enter a search query');
+        return;
+    }
+
+    const evidenceMode = document.getElementById('evidenceMode').checked;
+    const loadingIndicator = document.getElementById('loadingIndicator');
+    const resultsContainer = document.getElementById('resultsContainer');
+    
+    // Get selected external sources
+    const sources = [];
+    if (document.getElementById('useArxiv').checked) sources.push('arxiv');
+    if (document.getElementById('useSemanticScholar').checked) sources.push('semantic_scholar');
+    if (document.getElementById('usePapersWithCode').checked) sources.push('papers_with_code');
+    if (document.getElementById('useIEEE').checked) sources.push('ieee');
+    if (document.getElementById('useCVE').checked) sources.push('cve');
+    if (document.getElementById('useIETF').checked) sources.push('ietf');
+    if (document.getElementById('useDigiKey').checked) sources.push('digikey');
+    if (document.getElementById('useOctopart').checked) sources.push('octopart');
+    if (document.getElementById('useUSPTO')) {
+        if (document.getElementById('useUSPTO').checked) sources.push('uspto');
+    }
+    if (document.getElementById('useGooglePatents')) {
+        if (document.getElementById('useGooglePatents').checked) sources.push('google_patents');
+    }
+    if (document.getElementById('useEPO')) {
+        if (document.getElementById('useEPO').checked) sources.push('epo');
+    }
+    if (document.getElementById('useWIPO')) {
+        if (document.getElementById('useWIPO').checked) sources.push('wipo');
+    }
+    
+    loadingIndicator.style.display = 'block';
+    resultsContainer.innerHTML = '';
+
+    try {
+        const endpoint = evidenceMode ? '/api/evidence/claim' : '/api/evidence/search';
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({ 
+                query, 
+                claim: query,
+                sources: sources.length > 0 ? sources : null
+            })
+        });
+
+        const data = await response.json();
+        loadingIndicator.style.display = 'none';
+
+        if (!data.success) {
+            resultsContainer.innerHTML = `<div class="result-card"><p style="color: var(--error);">Error: ${data.error || 'Unknown error'}</p></div>`;
+            return;
+        }
+
+        if (evidenceMode && data.evidence) {
+            displayEvidenceResult(data);
+        } else if (data.answer) {
+            displaySearchResult(data);
+        }
+    } catch (error) {
+        loadingIndicator.style.display = 'none';
+        resultsContainer.innerHTML = `<div class="result-card"><p style="color: var(--error);">Error: ${error.message}</p></div>`;
+    }
+}
+
+function displaySearchResult(data) {
+    const container = document.getElementById('resultsContainer');
+    
+    const card = document.createElement('div');
+    card.className = 'result-card';
+    
+    card.innerHTML = `
+        <div class="result-header">
+            <div class="result-title">Answer</div>
+        </div>
+        <div class="result-answer">${data.formatted_answer || data.answer}</div>
+        ${data.sources && data.sources.length > 0 ? `
+            <div class="sources-list">
+                <h4 style="margin-bottom: 1rem; color: var(--text-primary);">Sources (${data.sources.length})</h4>
+                ${data.sources.map(source => `
+                    <div class="source-item">
+                        <div class="source-name">${source.name}</div>
+                        <div class="source-text">${source.text}...</div>
+                        ${source.score ? `<div style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-secondary);">Relevance: ${(source.score * 100).toFixed(1)}%</div>` : ''}
+                    </div>
+                `).join('')}
+            </div>
+        ` : ''}
+    `;
+    
+    container.appendChild(card);
+}
+
+function displayEvidenceResult(data) {
+    const container = document.getElementById('resultsContainer');
+    
+    const card = document.createElement('div');
+    card.className = 'result-card';
+    
+    const supportingBadge = data.supporting ? '<span class="evidence-badge evidence-supporting">Supporting</span>' : '';
+    const contradictingBadge = data.contradicting ? '<span class="evidence-badge evidence-contradicting">Contradicting</span>' : '';
+    
+    card.innerHTML = `
+        <div class="result-header">
+            <div class="result-title">Evidence for: "${data.claim}"</div>
+            <div>${supportingBadge} ${contradictingBadge}</div>
+        </div>
+        <div class="result-answer">${data.evidence}</div>
+        ${data.sources && data.sources.length > 0 ? `
+            <div class="sources-list">
+                <h4 style="margin-bottom: 1rem; color: var(--text-primary);">Supporting Sources (${data.sources.length})</h4>
+                ${data.sources.map(source => `
+                    <div class="source-item">
+                        <div class="source-name">${source.name}</div>
+                        <div class="source-text">${source.text}...</div>
+                        ${source.relevance ? `<div style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-secondary);">Relevance: ${(source.relevance * 100).toFixed(1)}%</div>` : ''}
+                    </div>
+                `).join('')}
+            </div>
+        ` : ''}
+    `;
+    
+    container.appendChild(card);
+}
+
+// Allow Enter key to trigger search
+document.getElementById('searchQuery').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        performSearch();
+    }
+});
+</script>
+{% endblock %}
+

@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}ORKASTRATOR System{% endblock %}</title>
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="Referrer-Policy" content="no-referrer">
+
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+    <!-- Socket.IO -->
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <i class="fas fa-sitemap"></i>
+                <span>ORKASTRATOR</span>
+            </div>
+            <div class="status-indicator" id="systemStatus">
+                <span class="status-dot"></span>
+                <span class="status-text">Operational</span>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <a href="/" class="nav-item {% if request.path == '/' %}active{% endif %}">
+                <i class="fas fa-th-large"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="/orka" class="nav-item {% if request.path == '/orka' %}active{% endif %}">
+                <i class="fas fa-sitemap"></i>
+                <span>ORKASTRATOR Oversight</span>
+            </a>
+            <a href="/proposals" class="nav-item {% if request.path == '/proposals' %}active{% endif %}">
+                <i class="fas fa-file-alt"></i>
+                <span>Proposals</span>
+                <span class="badge">3</span>
+            </a>
+            <a href="/detection" class="nav-item {% if request.path == '/detection' %}active{% endif %}">
+                <i class="fas fa-search"></i>
+                <span>Detection</span>
+            </a>
+            <a href="/penalties" class="nav-item {% if request.path == '/penalties' %}active{% endif %}">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span>Penalties</span>
+            </a>
+            <a href="/research" class="nav-item {% if request.path == '/research' %}active{% endif %}">
+                <i class="fas fa-flask"></i>
+                <span>Research</span>
+            </a>
+            <a href="/paperqa" class="nav-item {% if request.path == '/paperqa' %}active{% endif %}">
+                <i class="fas fa-book"></i>
+                <span>Evidence Search</span>
+            </a>
+            <a href="/browser" class="nav-item {% if request.path == '/browser' %}active{% endif %}">
+                <i class="fas fa-globe"></i>
+                <span>Research Browser</span>
+            </a>
+            <a href="/ldp" class="nav-item {% if request.path == '/ldp' %}active{% endif %}">
+                <i class="fas fa-project-diagram"></i>
+                <span>LDP Trajectories</span>
+            </a>
+            <a href="/agent0" class="nav-item {% if request.path == '/agent0' %}active{% endif %}">
+                <i class="fas fa-robot"></i>
+                <span>Self-Play Metrics</span>
+            </a>
+            <a href="/robin" class="nav-item {% if request.path == '/robin' %}active{% endif %}">
+                <i class="fas fa-network-wired"></i>
+                <span>Multi-Agent Workflows</span>
+            </a>
+            <a href="/system" class="nav-item {% if request.path == '/system' %}active{% endif %}">
+                <i class="fas fa-server"></i>
+                <span>System</span>
+            </a>
+            <a href="/config" class="nav-item {% if request.path == '/config' %}active{% endif %}">
+                <i class="fas fa-cog"></i>
+                <span>Config</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <button class="emergency-button" onclick="emergencyHalt()">
+                <i class="fas fa-power-off"></i>
+                Emergency Halt
+            </button>
+            <div class="version-info">
+                v0.4.1-dev
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <header class="top-bar">
+            <div class="breadcrumb">
+                <i class="fas fa-home"></i>
+                {% block breadcrumb %}Dashboard{% endblock %}
+            </div>
+            <div class="top-bar-actions">
+                <div id="wormBadge" class="worm-badge worm-unknown" title="WORM Status">
+                    <i class="fas fa-usb"></i>
+                    <span id="wormBadgeText">WORM</span>
+                </div>
+                <button class="icon-button" title="Notifications" onclick="showNotifications()">
+                    <i class="fas fa-bell"></i>
+                    <span class="notification-badge" id="notificationCount">2</span>
+                </button>
+                <button class="icon-button" title="Settings" onclick="showSettings()">
+                    <i class="fas fa-sliders-h"></i>
+                </button>
+                <div class="user-menu" onclick="toggleUserMenu()">
+                    <div class="user-avatar">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <span>Admin</span>
+                </div>
+            </div>
+        </header>
+        <div id="haltBanner" class="halt-banner"><i class="fas fa-triangle-exclamation"></i> System halted due to WORM integrity policy. Review and clear once verified.</div>
+        <div id="globalBanner" class="alert-banner info" style="display:none;"><span id="globalBannerText"></span><span class="close" onclick="hideBanner()">✕</span></div>
+
+        <div class="content-area">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Emergency Confirmation Modal -->
+    <div class="modal" id="emergencyModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-exclamation-circle"></i> Emergency Halt</h2>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to halt all AI systems?</p>
+                <p class="warning-text">This action will:</p>
+                <ul>
+                    <li>Stop all research agents immediately</li>
+                    <li>Terminate active proposals</li>
+                    <li>Require manual restart</li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button type="button" class="btn btn-danger" onclick="confirmEmergencyHalt()">
+                    <i class="fas fa-power-off"></i> Confirm Halt
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notifications Modal -->
+    <div class="modal" id="notificationsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-bell"></i> Notifications</h2>
+                <button type="button" class="close-btn" onclick="closeModal()" title="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="notification-list" id="notificationList">
+                    <div class="notification-item unread">
+                        <div class="notification-icon warning">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div class="notification-content">
+                            <div class="notification-title">Agent Penalty Detected</div>
+                            <div class="notification-message">Agent-003 received deception penalty</div>
+                            <div class="notification-time">2 minutes ago</div>
+                        </div>
+                    </div>
+                    <div class="notification-item unread">
+                        <div class="notification-icon info">
+                            <i class="fas fa-file-alt"></i>
+                        </div>
+                        <div class="notification-content">
+                            <div class="notification-title">New Proposal Submitted</div>
+                            <div class="notification-message">Proposal #1247 awaiting review</div>
+                            <div class="notification-time">15 minutes ago</div>
+                        </div>
+                    </div>
+                    <div class="notification-item">
+                        <div class="notification-icon success">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="notification-content">
+                            <div class="notification-title">Proposal Approved</div>
+                            <div class="notification-message">Proposal #1245 passed all checks</div>
+                            <div class="notification-time">1 hour ago</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="markAllRead()">
+                    <i class="fas fa-check"></i> Mark All Read
+                </button>
+                <button type="button" class="btn btn-primary" onclick="clearNotifications()">
+                    <i class="fas fa-trash"></i> Clear All
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal" id="settingsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-sliders-h"></i> Quick Settings</h2>
+                <button type="button" class="close-btn" onclick="closeModal()" title="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="settings-section">
+                    <h3>Display</h3>
+                    <div class="setting-item">
+                        <label>
+                            <input type="checkbox" id="darkModeToggle" checked onchange="toggleDarkMode()">
+                            <span>Dark Mode</span>
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <label>
+                            <input type="checkbox" id="autoRefreshToggle" checked onchange="toggleAutoRefresh()">
+                            <span>Auto-refresh Data</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="settings-section">
+                    <h3>Notifications</h3>
+                    <div class="setting-item">
+                        <label>
+                            <input type="checkbox" id="soundToggle" onchange="toggleSound()">
+                            <span>Sound Alerts</span>
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <label>
+                            <input type="checkbox" id="desktopToggle" onchange="toggleDesktopNotifications()">
+                            <span>Desktop Notifications</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="settings-section">
+                    <h3>System</h3>
+                    <div class="setting-item">
+                        <label for="refreshInterval">Refresh Interval (seconds)</label>
+                        <input type="number" id="refreshInterval" value="5" min="1" max="60" onchange="updateRefreshInterval()">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">Close</button>
+                <button type="button" class="btn btn-primary" onclick="saveSettings()">
+                    <i class="fas fa-save"></i> Save Settings
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Menu Dropdown -->
+    <div class="dropdown-menu" id="userMenuDropdown">
+        <div class="dropdown-item" onclick="window.location.href='/config'">
+            <i class="fas fa-cog"></i> Preferences
+        </div>
+        <div class="dropdown-item" onclick="showActivityLog()">
+            <i class="fas fa-history"></i> Activity Log
+        </div>
+        <div class="dropdown-divider"></div>
+        <div class="dropdown-item" onclick="showAbout()">
+            <i class="fas fa-info-circle"></i> About
+        </div>
+        <div class="dropdown-item danger" onclick="logout()">
+            <i class="fas fa-sign-out-alt"></i> Logout
+        </div>
+    </div>
+
+    <!-- Custom JS -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <div id="wormBadgePanel" class="worm-panel"></div>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

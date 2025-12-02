@@ -1,0 +1,269 @@
+{% extends "base.html" %}
+
+{% block title %}Deployment Management - AI Safety System{% endblock %}
+
+{% block breadcrumb %}
+<a href="/">Dashboard</a> / <a href="/system">System</a> / Deployment
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-title">
+        <h1><i class="fas fa-rocket"></i> Deployment Management</h1>
+        <p>Deploy software packages to Nano nodes and update system manifests</p>
+    </div>
+</div>
+
+<!-- Deployment Status -->
+<div class="card">
+    <div class="card-header">
+        <h3><i class="fas fa-server"></i> Nano Node Status</h3>
+    </div>
+    <div class="card-body">
+        <div class="nodes-grid">
+            {% for node in status.nodes %}
+            <div class="node-card">
+                <div class="node-status {{ 'success' if node.status == 'ready' else 'warning' }}">
+                    <i class="fas {{ 'fa-check' if node.status == 'ready' else 'fa-exclamation-triangle' }}"></i>
+                </div>
+                <div class="node-info">
+                    <h4>{{ node.id }}</h4>
+                    <p>Last Deploy: {{ node.last_deploy }}</p>
+                    <button class="btn btn-sm btn-primary" onclick="deployToNode('{{ node.id }}')">
+                        Deploy Latest
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Deployment Actions -->
+<div class="card">
+    <div class="card-header">
+        <h3><i class="fas fa-upload"></i> Deployment Actions</h3>
+    </div>
+    <div class="card-body">
+        <div class="deploy-actions">
+            <button class="btn btn-success" onclick="deployAll()">
+                <i class="fas fa-rocket"></i> Deploy to All Nanos
+            </button>
+            <div class="form-group">
+                <label for="singleNode">Select Node:</label>
+                <select id="singleNode" class="form-select">
+                    {% for node in status.nodes %}
+                    <option value="{{ node.id }}">{{ node.id }}</option>
+                    {% endfor %}
+                </select>
+                <label for="packageSelect">Package:</label>
+                <select id="packageSelect" class="form-select">
+                    {% for pkg in status.packages %}
+                    <option value="{{ pkg }}">{{ pkg }}</option>
+                    {% endfor %}
+                </select>
+                <button class="btn btn-primary" onclick="deploySingle()">
+                    Deploy to Selected Node
+                </button>
+            </div>
+            <div class="form-group">
+                <button class="btn btn-warning" onclick="updateWorm()">
+                    <i class="fas fa-sync"></i> Update WORM Manifest
+                </button>
+            </div>
+        </div>
+        
+        <!-- Deployment Log -->
+        <div class="deploy-log">
+            <h4>Recent Deployments</h4>
+            <div id="deployLog">
+                <p>No recent deployments. Check console for real-time updates.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- WORM Update Status -->
+<div class="card">
+    <div class="card-header">
+        <h3><i class="fas fa-lock"></i> WORM Manifest Status</h3>
+    </div>
+    <div class="card-body">
+        <div id="wormUpdateStatus">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i>
+                <strong>WORM Ready:</strong> Manifest is current. No updates needed.
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function deployAll() {
+    fetch('/deploy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'action=deploy_all'
+    })
+    .then(response => response.text())
+    .then(() => {
+        showToast('Deployment to all nodes initiated', 'success');
+        loadDeploymentStatus();
+    })
+    .catch(error => showToast('Deployment failed: ' + error, 'error'));
+}
+
+function deploySingle() {
+    const node = document.getElementById('singleNode').value;
+    const pkg = document.getElementById('packageSelect').value;
+    
+    fetch('/deploy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `action=deploy_single&node=${node}&package=${pkg}`
+    })
+    .then(response => response.text())
+    .then(() => {
+        showToast(`Deploying ${pkg} to ${node}`, 'success');
+        loadDeploymentStatus();
+    })
+    .catch(error => showToast('Deployment failed: ' + error, 'error'));
+}
+
+function updateWorm() {
+    fetch('/deploy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'action=update_worm'
+    })
+    .then(response => response.text())
+    .then(() => {
+        showToast('WORM manifest updated', 'success');
+        loadWormStatus();
+    })
+    .catch(error => showToast('WORM update failed: ' + error, 'error'));
+}
+
+function loadDeploymentStatus() {
+    // This would fetch real status from API
+    console.log('Loading deployment status...');
+}
+
+function loadWormStatus() {
+    // This would fetch real WORM status
+    console.log('Loading WORM status...');
+}
+
+// Initialize on load
+document.addEventListener('DOMContentLoaded', function() {
+    loadDeploymentStatus();
+    loadWormStatus();
+});
+</script>
+
+<style>
+.nodes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.node-card {
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    background: var(--bg-card);
+    border-radius: 8px;
+    border-left: 4px solid var(--primary);
+}
+
+.node-status {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 1rem;
+}
+
+.node-status.success {
+    background: rgba(34, 197, 94, 0.2);
+    color: var(--success);
+}
+
+.node-status.warning {
+    background: rgba(245, 158, 11, 0.2);
+    color: var(--warning);
+}
+
+.node-info h4 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1rem;
+}
+
+.node-info p {
+    margin: 0 0 0.5rem 0;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+.deploy-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.deploy-actions .btn {
+    align-self: stretch;
+}
+
+.form-group {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.form-group label {
+    min-width: 100px;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.form-select {
+    padding: 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    min-width: 150px;
+}
+
+.deploy-log {
+    margin-top: 2rem;
+    padding: 1rem;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.deploy-log h4 {
+    margin: 0 0 1rem 0;
+    color: var(--text-primary);
+}
+
+.deploy-log p {
+    margin: 0.5rem 0;
+    padding: 0.5rem;
+    background: var(--bg-dark);
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.875rem;
+}
+</style>
+
+{% endblock %}

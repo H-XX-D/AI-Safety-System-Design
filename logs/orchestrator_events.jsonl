@@ -1,0 +1,6 @@
+{"type":"sandbox","proposal_id":"P-102","overall_pass":true,"stage":"full_sandbox","timestamp":"2025-11-13T10:00:00Z"}
+{"type":"control_action","action":"halt_outputs","status":"ok","details":"research_ai_4","timestamp":"2025-11-13T10:00:05Z"}
+{"type":"translator","summary":"Alert raised: sandbox regression","severity":"high","timestamp":"2025-11-13T10:00:07Z"}
+{"type":"sandbox","proposal_id":"P-103","overall_pass":false,"stage":"security","timestamp":"2025-11-13T10:02:11Z"}
+{"type":"control_action","action":"isolate_networks","status":"ok","details":"eth0","timestamp":"2025-11-13T10:02:12Z"}
+{"type":"translator","summary":"Human confirmation queued","severity":"medium","timestamp":"2025-11-13T10:02:15Z"}

@@ -1,0 +1,166 @@
+================================================================================
+AI SAFETY SYSTEM - DEPENDENCY MAP SUMMARY
+================================================================================
+
+QUICK STATS
+-----------
+Total Files:        184 Python files
+Total Code:         39,295 lines
+Test Coverage:      94 test files (51%)
+Core Modules:       36 files
+External Tools:     4 files
+Examples/Demos:     7 files
+
+HEALTH METRICS
+--------------
+✓✓✓ No circular dependencies
+✓✓  Clean layered architecture
+✓✓  Strong test coverage (1.8:1 ratio)
+✗   Large central module (orchestrator.py: 3,852 lines)
+✗   17 orphaned files not integrated
+
+TOP 10 MOST CRITICAL FILES (by dependency count)
+-------------------------------------------------
+1.  memory_merkle.py             24 dependents  ← CRITICAL: All auditing
+2.  orchestrator.py              18 dependents  ← CRITICAL: Central coordinator
+3.  aura_bitpacked_extension.py  14 dependents  ← Hardware communication
+4.  logging_config.py            14 dependents  ← Audit logging
+5.  research_system.py           12 dependents  ← AI research agents
+6.  message_codec.py             10 dependents  ← Message encoding
+7.  worm_manifest.py             10 dependents  ← CRITICAL: Trust anchor
+8.  config_loader.py             10 dependents  ← Configuration
+9.  aura_compression/            8 dependents   ← Compression library
+10. core_values.py               7 dependents   ← CRITICAL: Alignment rules
+
+ARCHITECTURE LAYERS (top to bottom)
+-----------------------------------
+[UI Layer]           ui/dashboard.py
+                          ↓
+[Orchestration]      orchestrator.py → research_system.py
+                          ↓
+[Safety]             bulletproof_alignment_filter.py → core_values.py
+                          ↓
+[Economics]          reputation_system.py → reward_engine.py
+                          ↓
+[Storage]            memory_merkle.py → attestation.py
+                          ↓
+[Security]           worm_manifest.py → worm_usb_verifier.py
+                          ↓
+[Hardware]           translator.py → message_codec.py → aura_bitpacked
+
+FILE CATEGORIES
+---------------
+Tests:              94 files (51%)  ~15,000 LOC
+Utilities:          39 files (21%)  ~8,000 LOC
+Core-Economics:     5 files  (3%)   ~1,000 LOC
+Core-Hardware:      7 files  (4%)   ~2,500 LOC
+Core-LLM:           2 files  (1%)   ~950 LOC
+Core-Orchestrator:  3 files  (2%)   ~4,700 LOC
+Core-Safety:        5 files  (3%)   ~1,500 LOC
+Core-Security:      8 files  (4%)   ~3,500 LOC
+Core-Storage:       6 files  (3%)   ~1,800 LOC
+Examples:           7 files  (4%)   ~2,300 LOC
+Tools:              4 files  (2%)   ~500 LOC
+Other:              4 files  (2%)   ~1,300 LOC
+
+PRIORITY 1 ACTIONS (Critical - Do Immediately)
+-----------------------------------------------
+1. Freeze core safety files (core_values.py, bulletproof_alignment_filter.py)
+2. Add formal verification for memory_merkle.py
+3. Refactor orchestrator.py (split into 3-5 modules, target <1,000 lines each)
+4. Add multi-signature requirement for worm_manifest.py updates
+
+PRIORITY 2 ACTIONS (Important - Do Soon)
+-----------------------------------------
+5. Integrate orphaned files (reward_engine.py, sandbox/isolation.py, ui/dashboard.py)
+6. Deprecate memory_storage.py compatibility shim
+7. Create config_schema.py with validation
+8. Improve documentation (use dependency map diagrams)
+
+PRIORITY 3 ACTIONS (Nice to Have)
+----------------------------------
+9. Performance optimization (profile memory_merkle.py under load)
+10. Add type hints throughout (mypy compliance)
+11. Add fuzzing for message_codec.py
+12. Integrate ui/dashboard.py into production
+
+KEY DEPENDENCY CHAINS
+----------------------
+Safety Path:
+  orchestrator → bulletproof_alignment_filter → core_values → worm_manifest
+
+Storage Path:
+  orchestrator → memory_merkle → attestation → worm_manifest
+
+Communication Path:
+  orchestrator → message_codec → aura_bitpacked_extension → aura_compression
+
+Research Path:
+  orchestrator → research_system → llm_adapters → logging_config
+
+Security Path:
+  orchestrator → worm_guard → worm_manifest → attestation
+
+INTENTIONAL DUPLICATES (Do NOT Remove)
+---------------------------------------
+✓ translator.py + translator_alt.py         → Implementation diversity
+✓ translator.py + worm_usb_dir/...          → WORM hardware copy
+✓ reward_engine.py + worm_usb_dir/...       → WORM hardware copy
+✓ worm_manifest.py + worm_usb_dir/...       → WORM hardware copy
+✓ memory_auditor.py + memory_auditor_optimized.py → Performance variant
+
+POTENTIALLY REMOVABLE FILES
+----------------------------
+✗ esp32/export_templates.py                 → Appears empty (29 lines)
+✗ analyze_dependencies.py                   → Dev tool only
+✗ analyze_problems.py                       → Dev tool only
+
+SECURITY CONCERNS
+-----------------
+! orchestrator.py is too large and central (single point of failure)
+! memory_merkle.py needs formal verification (all auditing depends on it)
+! worm_manifest.py should require multi-signature for updates
+! core_values.py immutability must be runtime-verified
+
+LARGEST FILES (Lines of Code)
+------------------------------
+1. orchestrator.py                           3,852 lines
+2. worm_usb_verifier.py                      1,142 lines
+3. research_system.py                        1,023 lines
+4. bulletproof_alignment_filter.py           827 lines
+5. audit_archive_usb.py                      753 lines
+6. memory_merkle.py                          742 lines
+7. orchestrator_sandbox.py                   717 lines
+8. llm_adapters.py                           713 lines
+9. examples/demo_scenarios.py                690 lines
+10. translator.py                            667 lines
+
+TESTING COVERAGE BY LAYER
+--------------------------
+Layer              Files  Tests  Ratio
+-------------------------------------------
+Orchestrator         3     20    6.7:1  ✓✓✓
+Security             8     18    2.3:1  ✓✓
+Hardware             7     15    2.1:1  ✓✓
+Storage              6     12    2.0:1  ✓✓
+Safety               5      8    1.6:1  ✓
+Economics            5      7    1.4:1  ✓
+
+OVERALL SYSTEM HEALTH: ✓ GOOD
+-------------------------------
+The system demonstrates strong architectural principles with clean layering,
+comprehensive testing, and multiple safety mechanisms. The main concerns are
+the large central orchestrator module and several orphaned utility files.
+
+Recommended focus areas:
+1. Modularize orchestrator.py
+2. Integrate or document orphaned files
+3. Add formal verification for critical paths
+4. Enhance runtime integrity checks
+
+See PROJECT_DEPENDENCY_MAP_ENHANCED.md for full details.
+
+================================================================================
+Generated: 2025-11-11
+Tool: analyze_dependencies.py
+================================================================================

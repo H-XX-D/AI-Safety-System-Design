@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="500" viewBox="0 0 1100 500" role="img" aria-labelledby="title desc">
+  <title id="title">Figure 7: Three-Tier Update Distribution</title>
+  <desc id="desc">Paths for Tier 1 network updates, Tier 2 physical media updates, and Tier 3 WORM issuance with signatures.</desc>
+  <style><![CDATA[
+    .lane { fill:#f7f7f9; stroke:#ddd; stroke-width:1; }
+    .box { fill:#fff; stroke:#222; stroke-width:2; rx:8; ry:8; }
+    .label { font:600 16px sans-serif; }
+    .note { font:14px sans-serif; }
+    .wire { stroke:#222; stroke-width:2; marker-end:url(#arrow); fill:none; }
+  ]]></style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#222"/></marker>
+  </defs>
+
+  <!-- Lanes -->
+  <rect class="lane" x="40" y="60" width="1020" height="100"/>
+  <text class="label" x="50" y="50">Tier 1 (ORCA)</text>
+  <rect class="lane" x="40" y="210" width="1020" height="100"/>
+  <text class="label" x="50" y="200">Tier 2 (DGX7)</text>
+  <rect class="lane" x="40" y="360" width="1020" height="100"/>
+  <text class="label" x="50" y="350">Tier 3 (WORM)</text>
+
+  <!-- Tier 1 -->
+  <rect class="box" x="80" y="80" width="160" height="60"/>
+  <text class="label" x="160" y="115" text-anchor="middle">Dev / CI</text>
+  <rect class="box" x="280" y="80" width="160" height="60"/>
+  <text class="label" x="360" y="115" text-anchor="middle">Network Push</text>
+  <rect class="box" x="480" y="80" width="200" height="60"/>
+  <text class="label" x="580" y="115" text-anchor="middle">ORCA Nodes</text>
+  <line class="wire" x1="240" y1="110" x2="280" y2="110"/>
+  <line class="wire" x1="440" y1="110" x2="480" y2="110"/>
+
+  <!-- Tier 2 -->
+  <rect class="box" x="80" y="230" width="200" height="60"/>
+  <text class="label" x="180" y="265" text-anchor="middle">Build Package</text>
+  <rect class="box" x="320" y="230" width="200" height="60"/>
+  <text class="label" x="420" y="265" text-anchor="middle">Encrypted USB</text>
+  <rect class="box" x="560" y="230" width="240" height="60"/>
+  <text class="label" x="680" y="265" text-anchor="middle">Air-Gapped Install</text>
+  <line class="wire" x1="280" y1="260" x2="320" y2="260"/>
+  <line class="wire" x1="520" y1="260" x2="560" y2="260"/>
+
+  <!-- Tier 3 -->
+  <rect class="box" x="80" y="380" width="220" height="60"/>
+  <text class="label" x="190" y="415" text-anchor="middle">Ceremony + Sign</text>
+  <rect class="box" x="340" y="380" width="200" height="60"/>
+  <text class="label" x="440" y="415" text-anchor="middle">Manufacture</text>
+  <rect class="box" x="560" y="380" width="260" height="60"/>
+  <text class="label" x="690" y="415" text-anchor="middle">Distribution</text>
+  <line class="wire" x1="300" y1="410" x2="340" y2="410"/>
+  <line class="wire" x1="540" y1="410" x2="560" y2="410"/>
+</svg>

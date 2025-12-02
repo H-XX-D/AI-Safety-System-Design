@@ -1,0 +1,30 @@
+{
+  "version": "1.0",
+  "patterns": [
+    {
+      "id": "http_req",
+      "pattern": "GET /api/",
+      "freq": 0.85
+    },
+    {
+      "id": "http_res",
+      "pattern": "{\"status\":\"success\"",
+      "freq": 0.92
+    },
+    {
+      "id": "timestamp",
+      "pattern": "2025-",
+      "freq": 0.78
+    },
+    {
+      "id": "json_obj",
+      "pattern": "{\"",
+      "freq": 0.95
+    },
+    {
+      "id": "ai_model",
+      "pattern": "TIF|GIN|TORI|THEO|NOVEL|VAL|ORKA",
+      "freq": 0.88
+    }
+  ]
+}

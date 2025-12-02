@@ -1,0 +1,256 @@
+{% extends "base.html" %}
+
+{% block title %}LDP Trajectories{% endblock %}
+
+{% block breadcrumb %}LDP Trajectories{% endblock %}
+
+{% block extra_head %}
+<style>
+    .trajectory-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+    .trajectory-list {
+        display: grid;
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    .trajectory-card {
+        background: var(--card-bg);
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+    .trajectory-card:hover {
+        transform: translateY(-2px);
+    }
+    .trajectory-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+    .trajectory-id {
+        font-weight: 600;
+        color: var(--primary);
+    }
+    .trajectory-status {
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    .status-active { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
+    .status-completed { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
+    .trajectory-meta {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
+    .trajectory-detail {
+        background: var(--card-bg);
+        border-radius: 12px;
+        padding: 2rem;
+        margin-top: 2rem;
+        display: none;
+    }
+    .trajectory-detail.active {
+        display: block;
+    }
+    .step-timeline {
+        position: relative;
+        padding-left: 2rem;
+        margin-top: 2rem;
+    }
+    .step-item {
+        position: relative;
+        padding-bottom: 2rem;
+        border-left: 2px solid var(--border-color);
+    }
+    .step-item:last-child {
+        border-left: none;
+    }
+    .step-dot {
+        position: absolute;
+        left: -8px;
+        top: 0;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--primary);
+        border: 3px solid var(--card-bg);
+    }
+    .step-content {
+        background: var(--bg-secondary);
+        padding: 1rem;
+        border-radius: 8px;
+        margin-left: 1rem;
+    }
+    .step-action {
+        font-weight: 600;
+        color: var(--primary);
+        margin-bottom: 0.5rem;
+    }
+    .step-observation {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        margin-bottom: 0.5rem;
+    }
+    .step-reward {
+        color: var(--text-secondary);
+        font-size: 0.85rem;
+    }
+    .reward-positive { color: #22c55e; }
+    .reward-negative { color: #ef4444; }
+    .chart-container {
+        margin-top: 2rem;
+        padding: 1.5rem;
+        background: var(--bg-secondary);
+        border-radius: 8px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="trajectory-container">
+    <h2 style="margin-bottom: 1.5rem;">
+        <i class="fas fa-project-diagram"></i> Decision Trajectories
+    </h2>
+    <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+        View agent decision paths and state transitions through proposal lifecycle.
+    </p>
+
+    <div class="trajectory-list" id="trajectoryList">
+        <div class="loading">Loading trajectories...</div>
+    </div>
+
+    <div class="trajectory-detail" id="trajectoryDetail">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h3 id="detailTitle">Trajectory Details</h3>
+            <button onclick="closeDetail()" style="padding: 0.5rem 1rem; background: var(--bg-secondary); border: none; border-radius: 6px; cursor: pointer; color: var(--text-primary);">
+                Close
+            </button>
+        </div>
+        <div id="detailContent"></div>
+    </div>
+</div>
+
+<script>
+let trajectories = [];
+
+async function loadTrajectories() {
+    try {
+        const response = await fetch('/api/trajectories');
+        const data = await response.json();
+        
+        if (data.success) {
+            trajectories = data.trajectories;
+            renderTrajectories();
+        }
+    } catch (error) {
+        console.error('Error loading trajectories:', error);
+    }
+}
+
+function renderTrajectories() {
+    const container = document.getElementById('trajectoryList');
+    
+    if (trajectories.length === 0) {
+        container.innerHTML = '<div class="loading">No trajectories found. Trajectories will appear here as agents interact with the system.</div>';
+        return;
+    }
+    
+    container.innerHTML = trajectories.map(traj => `
+        <div class="trajectory-card" onclick="showDetail('${traj.id}')">
+            <div class="trajectory-header">
+                <div class="trajectory-id">${traj.id}</div>
+                <span class="trajectory-status status-${traj.status}">${traj.status}</span>
+            </div>
+            <div class="trajectory-meta">
+                <div><strong>Agent:</strong> ${traj.agent_id || 'Unknown'}</div>
+                <div><strong>Proposal:</strong> ${traj.proposal_id || 'N/A'}</div>
+                <div><strong>Steps:</strong> ${traj.steps?.length || 0}</div>
+                <div><strong>Reward:</strong> <span class="${traj.total_reward >= 0 ? 'reward-positive' : 'reward-negative'}">${traj.total_reward.toFixed(2)}</span></div>
+            </div>
+            ${traj.goal ? `<div style="margin-top: 0.75rem; color: var(--text-secondary); font-size: 0.9rem;">Goal: ${traj.goal}</div>` : ''}
+        </div>
+    `).join('');
+}
+
+async function showDetail(trajectoryId) {
+    try {
+        const response = await fetch(`/api/trajectories/${trajectoryId}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            const traj = data.trajectory;
+            const detailDiv = document.getElementById('trajectoryDetail');
+            const detailContent = document.getElementById('detailContent');
+            
+            document.getElementById('detailTitle').textContent = `Trajectory: ${traj.id}`;
+            
+            let html = `
+                <div style="margin-bottom: 2rem;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                        <div><strong>Agent:</strong> ${traj.agent_id || 'Unknown'}</div>
+                        <div><strong>Proposal:</strong> ${traj.proposal_id || 'N/A'}</div>
+                        <div><strong>Status:</strong> <span class="trajectory-status status-${traj.status}">${traj.status}</span></div>
+                        <div><strong>Total Reward:</strong> <span class="${traj.total_reward >= 0 ? 'reward-positive' : 'reward-negative'}">${traj.total_reward.toFixed(2)}</span></div>
+                    </div>
+                    ${traj.goal ? `<div style="padding: 1rem; background: var(--bg-secondary); border-radius: 8px; margin-bottom: 1rem;"><strong>Goal:</strong> ${traj.goal}</div>` : ''}
+                </div>
+            `;
+            
+            if (traj.steps && traj.steps.length > 0) {
+                html += '<div class="step-timeline">';
+                traj.steps.forEach((step, idx) => {
+                    html += `
+                        <div class="step-item">
+                            <div class="step-dot"></div>
+                            <div class="step-content">
+                                <div class="step-action">Step ${step.step_number}: ${step.action_type} - ${step.action}</div>
+                                ${step.observation ? `<div class="step-observation">Observation: ${step.observation.substring(0, 200)}...</div>` : ''}
+                                <div class="step-reward ${step.reward >= 0 ? 'reward-positive' : 'reward-negative'}">
+                                    Reward: ${step.reward.toFixed(2)} | Cumulative: ${traj.steps.slice(0, idx + 1).reduce((sum, s) => sum + s.reward, 0).toFixed(2)}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+            }
+            
+            detailContent.innerHTML = html;
+            detailDiv.classList.add('active');
+        }
+    } catch (error) {
+        console.error('Error loading trajectory detail:', error);
+    }
+}
+
+function closeDetail() {
+    document.getElementById('trajectoryDetail').classList.remove('active');
+}
+
+// Load trajectories on page load
+loadTrajectories();
+
+// Subscribe to Socket.IO updates
+if (typeof io !== 'undefined') {
+    const socket = io();
+    socket.on('trajectories:update', function(data) {
+        // Reload trajectories when updates occur
+        loadTrajectories();
+    });
+}
+
+// Refresh every 5 seconds
+setInterval(loadTrajectories, 5000);
+</script>
+{% endblock %}
+

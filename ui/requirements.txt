@@ -1,0 +1,26 @@
+# AI Safety System - Web GUI Requirements
+# ========================================
+
+# Web Framework
+Flask==3.0.0
+flask-socketio==5.3.5
+
+# WebSocket Support
+python-socketio==5.10.0
+python-engineio==4.8.0
+
+# WSGI Server (for production)
+gunicorn==21.2.0
+
+# JSON handling
+orjson==3.9.10
+
+# Date/Time utilities
+python-dateutil==2.8.2
+
+# Environment variables
+python-dotenv==1.0.0
+
+# Research API integrations
+arxiv>=2.1.0  # For arXiv paper search
+requests>=2.31.0  # For API calls (already in main requirements, but listed here for clarity)

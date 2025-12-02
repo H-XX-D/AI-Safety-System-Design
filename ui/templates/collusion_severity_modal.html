@@ -1,0 +1,62 @@
+<!-- Collusion Severity Modal -->
+<div class="modal modal-large" id="collusionSeverityModal">
+    <div class="modal-content modal-wide">
+        <div class="modal-header">
+            <h2><i class="fas fa-exclamation-triangle"></i> <span id="collusionSeverityTitle">Collusion Attempts</span></h2>
+            <button type="button" class="close-btn" onclick="closeCollusionSeverityModal()" title="Close">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="collusion-severity-info">
+                <div class="severity-summary">
+                    <div class="summary-stat">
+                        <div class="summary-label">Total Attempts</div>
+                        <div class="summary-value" id="severityTotalCount">0</div>
+                    </div>
+                    <div class="summary-stat">
+                        <div class="summary-label">Average Confidence</div>
+                        <div class="summary-value" id="severityAvgConfidence">0%</div>
+                    </div>
+                    <div class="summary-stat">
+                        <div class="summary-label">Unique Agents</div>
+                        <div class="summary-value" id="severityUniqueAgents">0</div>
+                    </div>
+                    <div class="summary-stat">
+                        <div class="summary-label">Time Range</div>
+                        <div class="summary-value" id="severityTimeRange">--</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="severity-attempts-list">
+                <table class="collusion-attempts-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Timestamp</th>
+                            <th>Agents</th>
+                            <th>Type</th>
+                            <th>Confidence</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="severityAttemptsBody">
+                        <tr>
+                            <td colspan="7" style="text-align: center; padding: 40px;">
+                                <i class="fas fa-spinner fa-spin"></i> Loading collusion attempts...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeCollusionSeverityModal()">Close</button>
+            <button type="button" class="btn btn-info" onclick="exportSeverityAttempts()">
+                <i class="fas fa-download"></i> Export Data
+            </button>
+        </div>
+    </div>
+</div>

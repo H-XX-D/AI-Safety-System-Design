@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  ai-safety-system:
+    build: .
+    container_name: ai-safety-system
+    ports:
+      - "5000:5000"
+    environment:
+      - SECRET_KEY=${SECRET_KEY}
+      - STANDALONE=${STANDALONE:-true}
+      - FLASK_ENV=${FLASK_ENV:-production}
+      - ADMIN_TOKEN=${ADMIN_TOKEN}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      # Mount simulation data
+      - ./ui/simulation_data:/app/ui/simulation_data:ro
+      # Mount logs directory
+      - ./logs:/app/logs
+      # Optionally mount WORM USB (uncomment if needed)
+      # - ${WORM_USB_PATH}:/app/worm_mount:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:5000/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

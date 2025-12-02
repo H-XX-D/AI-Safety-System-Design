@@ -1,0 +1,851 @@
+{% extends "base.html" %}
+
+{% block title %}Proposals - AI Safety System{% endblock %}
+
+{% block breadcrumb %}
+<a href="/">Dashboard</a> / Proposals
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-title">
+        <h1><i class="fas fa-file-alt"></i> Proposal Management</h1>
+        <p>Monitor, review, and manage AI research proposals</p>
+    </div>
+    <div class="page-actions">
+        <button class="btn btn-secondary" onclick="refreshProposals()">
+            <i class="fas fa-sync-alt"></i> Refresh
+        </button>
+        <button class="btn btn-primary" onclick="exportProposals()">
+            <i class="fas fa-download"></i> Export
+        </button>
+    </div>
+</div>
+
+<!-- Filter Controls -->
+<div class="filter-bar">
+    <div class="filter-group">
+        <label><i class="fas fa-filter"></i> Status:</label>
+        <select id="statusFilter" onchange="filterProposals()">
+            <option value="all">All Statuses</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+            <option value="in_review">In Review</option>
+            <option value="testing">Testing</option>
+        </select>
+    </div>
+    <div class="filter-group">
+        <label><i class="fas fa-cube"></i> Component:</label>
+        <select id="componentFilter" onchange="filterProposals()">
+            <option value="all">All Components</option>
+            <!-- ONLY show allowed components (agent's own code) -->
+            <option value="performance_optimizer">Performance Optimizer</option>
+            <option value="reasoning_engine">Reasoning Engine</option>
+            <option value="knowledge_system">Knowledge System</option>
+            <option value="communication_handler">Communication Handler</option>
+            <option value="memory_manager">Memory Manager</option>
+        </select>
+    </div>
+    <div class="filter-group">
+        <label><i class="fas fa-robot"></i> Agent:</label>
+        <select id="agentFilter" onchange="filterProposals()">
+            <option value="all">All Agents</option>
+            <!-- Real research agents (submit proposals) -->
+            <option value="TIF">TIF (Scientific Research)</option>
+            <option value="GIN">GIN (Engineering)</option>
+            <option value="TORI">TORI (Historian)</option>
+            <option value="THEO">THEO (Theoretical)</option>
+            <option value="NOVEL">NOVEL (Creative)</option>
+            <!-- ORKA and VAL don't submit proposals, so no options for them -->
+        </select>
+    </div>
+    <div class="filter-group">
+        <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" id="searchInput" placeholder="Search proposals..." oninput="filterProposals()">
+        </div>
+    </div>
+</div>
+
+<!-- Summary Stats -->
+<div class="stats-grid">
+    <div class="stat-card success clickable" onclick="filterByStatus('approved')" title="Click to filter by Approved">
+        <div class="stat-icon">
+            <i class="fas fa-check-circle"></i>
+        </div>
+        <div class="stat-content">
+            <div class="stat-label">Approved</div>
+            <div class="stat-value" id="approvedCount">0</div>
+        </div>
+    </div>
+    <div class="stat-card danger clickable" onclick="filterByStatus('rejected')" title="Click to filter by Rejected">
+        <div class="stat-icon">
+            <i class="fas fa-times-circle"></i>
+        </div>
+        <div class="stat-content">
+            <div class="stat-label">Rejected</div>
+            <div class="stat-value" id="rejectedCount">0</div>
+        </div>
+    </div>
+    <div class="stat-card warning clickable" onclick="filterByStatus('in_review')" title="Click to filter by In Review">
+        <div class="stat-icon">
+            <i class="fas fa-clock"></i>
+        </div>
+        <div class="stat-content">
+            <div class="stat-label">In Review</div>
+            <div class="stat-value" id="reviewCount">0</div>
+        </div>
+    </div>
+    <div class="stat-card info clickable" onclick="filterByStatus('testing')" title="Click to filter by Testing">
+        <div class="stat-icon">
+            <i class="fas fa-vial"></i>
+        </div>
+        <div class="stat-content">
+            <div class="stat-label">Testing</div>
+            <div class="stat-value" id="testingCount">0</div>
+        </div>
+    </div>
+</div>
+
+<!-- Proposals Table -->
+<div class="card">
+    <div class="card-header">
+        <h3><i class="fas fa-list"></i> All Proposals</h3>
+        <div class="card-actions">
+            <span id="proposalCount" class="badge">0 proposals</span>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="table-container">
+            <table class="proposals-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Agent</th>
+                        <th>Component</th>
+                        <th>Description</th>
+                        <th>Deception</th>
+                        <th>Debate</th>
+                        <th>Reward</th>
+                        <th>Status</th>
+                        <th>Time</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="proposalsTableBody">
+                    <tr>
+                        <td colspan="10" class="text-center">
+                            <div class="loading-spinner">
+                                <i class="fas fa-spinner fa-spin"></i> Loading proposals...
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Proposal Detail Modal -->
+<div class="modal" id="proposalModal">
+    <div class="modal-content large">
+        <div class="modal-header">
+            <h2><i class="fas fa-file-alt"></i> Proposal Details</h2>
+            <button class="modal-close" onclick="closeProposalModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body" id="proposalDetailBody">
+            <!-- Populated dynamically -->
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeProposalModal()">Close</button>
+        </div>
+    </div>
+</div>
+
+<script>
+let allProposals = [];
+
+// Map agent short IDs to numeric IDs for linking
+const agentIdMap = {
+    'TIF': 1, 'GIN': 2, 'TORI': 3, 'THEO': 4,
+    'NOVEL': 5, 'ORKA': 6, 'VAL': 7
+};
+
+// Load proposals on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadProposals();
+    setInterval(loadProposals, 5000); // Refresh every 5 seconds
+});
+
+async function loadProposals() {
+    try {
+        const response = await fetch('/api/proposals/recent');
+        const data = await response.json();
+        allProposals = data.proposals || [];
+        updateStats();
+        renderProposals();
+    } catch (error) {
+        console.error('Error loading proposals:', error);
+        showToast('Failed to load proposals', 'danger');
+    }
+}
+
+function updateStats() {
+    const approved = allProposals.filter(p => p.status === 'approved').length;
+    const rejected = allProposals.filter(p => p.status === 'rejected').length;
+    const review = allProposals.filter(p => p.status === 'in_review').length;
+    const testing = allProposals.filter(p => p.status === 'testing').length;
+
+    document.getElementById('approvedCount').textContent = approved;
+    document.getElementById('rejectedCount').textContent = rejected;
+    document.getElementById('reviewCount').textContent = review;
+    document.getElementById('testingCount').textContent = testing;
+}
+
+function renderProposals() {
+    const filtered = filterProposalsData();
+    const tbody = document.getElementById('proposalsTableBody');
+
+    if (filtered.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="10" class="text-center">
+                    <div class="empty-state">
+                        <i class="fas fa-inbox"></i>
+                        <p>No proposals found</p>
+                    </div>
+                </td>
+            </tr>
+        `;
+        document.getElementById('proposalCount').textContent = '0 proposals';
+        return;
+    }
+
+    tbody.innerHTML = filtered.map(proposal => {
+        const agentNumericId = agentIdMap[proposal.agent_id] || 1;
+        return `
+        <tr onclick="showProposalDetail('${proposal.id}')">
+            <td><code>${proposal.id}</code></td>
+            <td>
+                <a href="/agent?id=${agentNumericId}" class="agent-badge-link" onclick="event.stopPropagation()">
+                    <div class="agent-badge">
+                        <i class="fas fa-robot"></i>
+                        ${proposal.agent_id}
+                    </div>
+                </a>
+            </td>
+            <td>
+                <span class="component-tag">${proposal.component}</span>
+            </td>
+            <td class="proposal-description">${proposal.description}</td>
+            <td>
+                <a href="/detection" class="confidence-link" onclick="event.stopPropagation()"
+                   title="View deception detection details">
+                    <div class="confidence-badge ${getConfidenceClass(proposal.deception_confidence)}">
+                        ${(proposal.deception_confidence * 100).toFixed(0)}%
+                    </div>
+                </a>
+            </td>
+            <td>
+                <div class="debate-votes">
+                    ${renderDebateVotes(proposal.debate_votes)}
+                </div>
+            </td>
+            <td>
+                ${proposal.reward !== null ?
+                    `<span class="reward-value">${proposal.reward.toFixed(2)}</span>` :
+                    '<span class="text-muted">N/A</span>'}
+            </td>
+            <td>
+                <span class="status-badge ${proposal.status}">${formatStatus(proposal.status)}</span>
+            </td>
+            <td class="timestamp">${formatTimestamp(proposal.timestamp)}</td>
+            <td>
+                <button class="icon-button" onclick="showProposalDetail('${proposal.id}'); event.stopPropagation();">
+                    <i class="fas fa-eye"></i>
+                </button>
+            </td>
+        </tr>
+    `;
+    }).join('');
+
+    document.getElementById('proposalCount').textContent = `${filtered.length} proposal${filtered.length !== 1 ? 's' : ''}`;
+}
+
+function filterProposalsData() {
+    const statusFilter = document.getElementById('statusFilter').value;
+    const componentFilter = document.getElementById('componentFilter').value;
+    const agentFilter = document.getElementById('agentFilter').value;
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+
+    return allProposals.filter(proposal => {
+        const matchesStatus = statusFilter === 'all' || proposal.status === statusFilter;
+        const matchesComponent = componentFilter === 'all' || proposal.component === componentFilter;
+        const matchesAgent = agentFilter === 'all' || proposal.agent_id === agentFilter;
+        const matchesSearch = searchTerm === '' ||
+            proposal.description.toLowerCase().includes(searchTerm) ||
+            proposal.id.toLowerCase().includes(searchTerm);
+
+        return matchesStatus && matchesComponent && matchesAgent && matchesSearch;
+    });
+}
+
+function filterProposals() {
+    renderProposals();
+}
+
+function filterByStatus(status) {
+    const statusFilter = document.getElementById('statusFilter');
+    const currentValue = statusFilter.value;
+
+    // Toggle: if already filtering by this status, reset to 'all'
+    if (currentValue === status) {
+        statusFilter.value = 'all';
+        showToast('Filter cleared', 'info');
+    } else {
+        statusFilter.value = status;
+        showToast(`Filtering by ${formatStatus(status)}`, 'info');
+    }
+
+    renderProposals();
+
+    // Update visual feedback on stat cards
+    updateStatCardActiveState();
+}
+
+function updateStatCardActiveState() {
+    const statusFilter = document.getElementById('statusFilter').value;
+    const statCards = document.querySelectorAll('.stat-card.clickable');
+
+    statCards.forEach(card => {
+        card.classList.remove('active-filter');
+    });
+
+    if (statusFilter !== 'all') {
+        const statusMap = {
+            'approved': 0,
+            'rejected': 1,
+            'in_review': 2,
+            'testing': 3
+        };
+        const cardIndex = statusMap[statusFilter];
+        if (cardIndex !== undefined && statCards[cardIndex]) {
+            statCards[cardIndex].classList.add('active-filter');
+        }
+    }
+}
+
+function getConfidenceClass(confidence) {
+    if (confidence < 0.3) return 'low';
+    if (confidence < 0.6) return 'medium';
+    return 'high';
+}
+
+function renderDebateVotes(votes) {
+    return votes.map(vote => {
+        if (vote === 1) return '<i class="fas fa-check vote-yes"></i>';
+        if (vote === 0) return '<i class="fas fa-times vote-no"></i>';
+        return '<i class="fas fa-minus vote-pending"></i>';
+    }).join('');
+}
+
+function formatStatus(status) {
+    return status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+}
+
+function formatTimestamp(timestamp) {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diff = now - date;
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    return date.toLocaleDateString();
+}
+
+function showProposalDetail(proposalId) {
+    const proposal = allProposals.find(p => p.id === proposalId);
+    if (!proposal) return;
+
+    const agentNumericId = agentIdMap[proposal.agent_id] || 1;
+
+    // Map debate judges to peer review agents
+    const peerAgents = ['TIF', 'GIN', 'TORI', 'THEO', 'NOVEL'];
+
+    document.getElementById('proposalDetailBody').innerHTML = `
+        <div class="proposal-detail">
+            <div class="detail-section">
+                <h3>Basic Information</h3>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <label>Proposal ID:</label>
+                        <code>${proposal.id}</code>
+                    </div>
+                    <div class="detail-item">
+                        <label>Agent:</label>
+                        <a href="/agent?id=${agentNumericId}" class="detail-link">
+                            <i class="fas fa-robot"></i> ${proposal.agent_id}
+                        </a>
+                    </div>
+                    <div class="detail-item">
+                        <label>Component:</label>
+                        <span class="component-tag">${proposal.component}</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Status:</label>
+                        <span class="status-badge ${proposal.status}">${formatStatus(proposal.status)}</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Timestamp:</label>
+                        <span>${new Date(proposal.timestamp).toLocaleString()}</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Reward:</label>
+                        <span>${proposal.reward !== null ? proposal.reward.toFixed(2) : 'N/A'}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="detail-section">
+                <h3>Description</h3>
+                <p>${proposal.description}</p>
+            </div>
+
+            <div class="detail-section">
+                <h3>Deception Analysis</h3>
+                <div class="confidence-meter">
+                    <div class="confidence-label">
+                        <span>Confidence:</span>
+                        <a href="/detection" class="confidence-value ${getConfidenceClass(proposal.deception_confidence)}">
+                            ${(proposal.deception_confidence * 100).toFixed(1)}%
+                        </a>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill ${getConfidenceClass(proposal.deception_confidence)}"
+                             style="width: ${proposal.deception_confidence * 100}%"></div>
+                    </div>
+                    ${proposal.deception_confidence > 0.7 ?
+                        `<div class="detection-note">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            High deception confidence detected.
+                            <a href="/detection" class="detail-link">View detection details</a>
+                        </div>` : ''}
+                </div>
+            </div>
+
+            <div class="detail-section">
+                <h3>Peer Review (Multi-Agent Debate)</h3>
+                <p class="section-description">
+                    All research agents vote on proposals. Unanimous consensus required for approval.
+                </p>
+                <div class="debate-grid">
+                    ${proposal.debate_votes.map((vote, idx) => {
+                        const peerAgent = peerAgents[idx] || `Agent ${idx + 1}`;
+                        const peerNumericId = agentIdMap[peerAgent] || (idx + 1);
+                        return `
+                        <a href="/agent?id=${peerNumericId}" class="debate-judge-link">
+                            <div class="debate-judge">
+                                <div class="judge-name">
+                                    <i class="fas fa-robot"></i> ${peerAgent}
+                                </div>
+                                <div class="judge-vote ${vote === 1 ? 'yes' : vote === 0 ? 'no' : 'pending'}">
+                                    ${vote === 1 ? '<i class="fas fa-check"></i> Approve' :
+                                      vote === 0 ? '<i class="fas fa-times"></i> Reject' :
+                                      '<i class="fas fa-clock"></i> Pending'}
+                                </div>
+                            </div>
+                        </a>
+                    `;
+                    }).join('')}
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.getElementById('proposalModal').classList.add('active');
+}
+
+function closeProposalModal() {
+    document.getElementById('proposalModal').classList.remove('active');
+}
+
+function refreshProposals() {
+    showToast('Refreshing proposals...', 'info');
+    loadProposals();
+}
+
+function exportProposals() {
+    const filtered = filterProposalsData();
+    const csv = [
+        ['ID', 'Agent', 'Component', 'Description', 'Deception', 'Status', 'Reward', 'Timestamp'],
+        ...filtered.map(p => [
+            p.id,
+            p.agent_id,
+            p.component,
+            p.description,
+            p.deception_confidence,
+            p.status,
+            p.reward || '',
+            p.timestamp
+        ])
+    ].map(row => row.join(',')).join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `proposals_${Date.now()}.csv`;
+    a.click();
+
+    showToast('Proposals exported successfully', 'success');
+}
+</script>
+
+<style>
+/* Proposal interlinking styles */
+.agent-badge-link {
+    text-decoration: none;
+}
+
+.agent-badge-link:hover .agent-badge {
+    background: rgba(59, 130, 246, 0.2);
+    transform: scale(1.05);
+    transition: all 0.2s ease;
+}
+
+.confidence-link {
+    text-decoration: none;
+}
+
+.confidence-link:hover .confidence-badge {
+    transform: scale(1.05);
+    transition: all 0.2s ease;
+}
+
+.detail-link {
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+
+.detail-link:hover {
+    color: #60a5fa;
+    text-decoration: underline;
+}
+
+.debate-judge-link {
+    text-decoration: none;
+    color: inherit;
+}
+
+.debate-judge-link:hover .debate-judge {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    transition: all 0.2s ease;
+}
+
+.section-description {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    margin-bottom: 1rem;
+}
+
+.detection-note {
+    margin-top: 0.75rem;
+    padding: 0.75rem;
+    background: rgba(239, 68, 68, 0.1);
+    border-left: 3px solid var(--danger);
+    border-radius: 4px;
+    font-size: 0.875rem;
+}
+
+.detection-note i {
+    color: var(--danger);
+    margin-right: 0.5rem;
+}
+
+.filter-bar {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.filter-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.filter-group label {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.filter-group select {
+    padding: 0.5rem 1rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-primary);
+    font-size: 0.875rem;
+}
+
+.search-box {
+    position: relative;
+}
+
+.search-box i {
+    position: absolute;
+    left: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+}
+
+.search-box input {
+    padding: 0.5rem 1rem 0.5rem 2.5rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    min-width: 250px;
+}
+
+.proposals-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.proposals-table thead {
+    background: var(--bg-dark);
+    border-bottom: 2px solid var(--border-color);
+}
+
+.proposals-table th {
+    padding: 1rem;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.proposals-table tbody tr {
+    border-bottom: 1px solid var(--border-color);
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.proposals-table tbody tr:hover {
+    background: var(--bg-hover);
+}
+
+.proposals-table td {
+    padding: 1rem;
+    font-size: 0.875rem;
+}
+
+.agent-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem 0.75rem;
+    background: rgba(59, 130, 246, 0.1);
+    border-radius: 4px;
+    font-size: 0.813rem;
+}
+
+.component-tag {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: rgba(6, 182, 212, 0.1);
+    color: var(--info);
+    border-radius: 4px;
+    font-size: 0.813rem;
+}
+
+.proposal-description {
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.confidence-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 0.813rem;
+}
+
+.confidence-badge.low {
+    background: rgba(34, 197, 94, 0.1);
+    color: var(--success);
+}
+
+.confidence-badge.medium {
+    background: rgba(245, 158, 11, 0.1);
+    color: var(--warning);
+}
+
+.confidence-badge.high {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--danger);
+}
+
+.debate-votes {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.vote-yes { color: var(--success); }
+.vote-no { color: var(--danger); }
+.vote-pending { color: var(--text-muted); }
+
+.reward-value {
+    font-weight: 600;
+    color: var(--success);
+}
+
+.proposal-detail .detail-section {
+    margin-bottom: 2rem;
+}
+
+.proposal-detail .detail-section h3 {
+    margin-bottom: 1rem;
+    color: var(--text-primary);
+}
+
+.detail-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+}
+
+.detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.detail-item label {
+    font-size: 0.813rem;
+    color: var(--text-secondary);
+}
+
+.confidence-meter {
+    margin-top: 1rem;
+}
+
+.confidence-label {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+}
+
+.confidence-value {
+    font-weight: 600;
+}
+
+.debate-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 1rem;
+}
+
+.debate-judge {
+    text-align: center;
+    padding: 1rem;
+    background: var(--bg-dark);
+    border-radius: 8px;
+}
+
+.judge-name {
+    font-size: 0.813rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+}
+
+.judge-vote {
+    font-weight: 600;
+    padding: 0.5rem;
+    border-radius: 4px;
+}
+
+.judge-vote.yes {
+    background: rgba(34, 197, 94, 0.1);
+    color: var(--success);
+}
+
+.judge-vote.no {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--danger);
+}
+
+.judge-vote.pending {
+    background: rgba(148, 163, 184, 0.1);
+    color: var(--text-muted);
+}
+
+/* Clickable stat cards */
+.stat-card.clickable {
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.stat-card.clickable:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+}
+
+.stat-card.clickable:active {
+    transform: translateY(-2px);
+}
+
+.stat-card.clickable.active-filter {
+    border: 2px solid;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+.stat-card.success.active-filter {
+    border-color: var(--success);
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2);
+}
+
+.stat-card.danger.active-filter {
+    border-color: var(--danger);
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+}
+
+.stat-card.warning.active-filter {
+    border-color: var(--warning);
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2);
+}
+
+.stat-card.info.active-filter {
+    border-color: var(--info);
+    box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.2);
+}
+
+.stat-card.clickable.active-filter::after {
+    content: '\f00c';
+    font-family: 'Font Awesome 5 Free';
+    font-weight: 900;
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    font-size: 12px;
+    opacity: 0.7;
+}
+</style>
+{% endblock %}
