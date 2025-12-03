@@ -16,6 +16,7 @@ class AdapterConfig:
     target_cube_size: Optional[int] = None
     extra: Dict[str, str] = field(default_factory=dict)
     activation: Optional[str] = None
+    store_as_cube: bool = True
 
 
 def _match(name: str, needle: str) -> bool:
@@ -26,7 +27,12 @@ def get_adapter_config(layer_name: str) -> AdapterConfig:
     name = layer_name.lower()
 
     if "embeddings" in name:
-        return AdapterConfig(role="embedding", quantized=False, extra={"precision": "dense"})
+        return AdapterConfig(
+            role="embedding",
+            quantized=False,
+            extra={"precision": "dense"},
+            store_as_cube=False,
+        )
 
     if ".attention" in name:
         if ".q_lin" in name:
@@ -45,10 +51,25 @@ def get_adapter_config(layer_name: str) -> AdapterConfig:
         return AdapterConfig(role="ffn_out")
 
     if "pre_classifier" in name:
-        return AdapterConfig(role="pre_classifier", quantized=False, extra={"precision": "dense"})
+        return AdapterConfig(
+            role="pre_classifier", quantized=False, extra={"precision": "dense"}
+        )
 
     if "classifier" in name:
-        return AdapterConfig(role="classifier", quantized=False, extra={"precision": "dense"})
+        return AdapterConfig(
+            role="classifier",
+            quantized=False,
+            extra={"precision": "dense"},
+            store_as_cube=False,
+        )
+
+    if "layernorm" in name or "layer_norm" in name:
+        return AdapterConfig(
+            role="layer_norm",
+            quantized=False,
+            extra={"precision": "dense"},
+            store_as_cube=False,
+        )
 
     return AdapterConfig()
 

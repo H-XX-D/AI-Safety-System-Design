@@ -89,6 +89,37 @@ llm:
       - alignment
       - security
       - edge_cases
+# Global systems configuration (shared infrastructure across all specialists)
+# Specialists can propose improvements to these policies via algorithmic improvements
+# Promoted only if neutral benchmarks (no domain data) show improvement
+cache:
+  policy: LRU  # LRU, LFU, ARC, tinyLFU
+  ttl_seconds: 900
+  soft_ttl_seconds: 300
+  max_size_mb: 512
+  prefetch_k: 0  # Number of items to prefetch (0 = disabled)
+  admission_policy: always  # always, tinyLFU, W-TinyLFU
+  eviction_batch_size: 16
+  enable_compression: false
+  compression_threshold_kb: 64
+
+routing:
+  strategy: epsilon_greedy  # epsilon_greedy, UCB1, Thompson
+  epsilon: 0.1
+  ucb_c: 1.414
+  thompson_alpha: 1.0
+  thompson_beta: 1.0
+
+retriever:
+  retrieval_k: 10
+  rerank_top_n: 5
+  enable_hybrid: true
+  sparse_weight: 0.3
+  dense_weight: 0.7
+  enable_mmap: true
+  chunk_size: 512
+  chunk_overlap: 64
+
 audit:
   randomness_source: deterministic_stub  # deterministic_stub|vrf_placeholder|external_beacon (future)
 

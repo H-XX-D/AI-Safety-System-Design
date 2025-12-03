@@ -3291,6 +3291,9 @@ class Orchestrator:
                 workflow_record.total_duration_seconds = (workflow_record.completed_at - workflow_record.submitted_at).total_seconds()
             self.logger.info('deployed proposal=%s', proposal_id)
             
+            # Check if this is an algorithmic improvement that should be promoted globally
+            self._check_and_promote_global_capability(proposal_id)
+            
             # Trigger next hypothesis generation cycle (self-improvement loop)
             self._trigger_next_hypothesis_cycle(proposal_id)
             
@@ -3298,6 +3301,56 @@ class Orchestrator:
         except Exception as _e:
             self.logger.warning('deploy_failed proposal=%s error=%s', proposal_id, str(_e))
             return False
+
+    def _check_and_promote_global_capability(self, proposal_id: str) -> None:
+        """
+        Check if a deployed proposal is an algorithmic improvement (e.g., caching, routing)
+        and promote it to global config if neutral benchmarks pass.
+        
+        This prevents specialists from homogenizing: only infrastructure improvements
+        are shared globally; domain knowledge stays isolated.
+        """
+        try:
+            from core.systems_adapter import get_global_systems_adapter
+            
+            if proposal_id not in self.active_proposals:
+                return
+            
+            proposal_record = self.active_proposals[proposal_id]
+            proposal = proposal_record.get('proposal', {})
+            
+            # Check if this is an algorithmic improvement
+            adapter = get_global_systems_adapter()
+            if not adapter.is_algorithmic_proposal(proposal):
+                return  # Domain-specific; no global promotion
+            
+            self.logger.info(
+                "algorithmic_improvement_detected proposal=%s title=%s",
+                proposal_id,
+                proposal.get('title', 'Unknown')
+            )
+            
+            # Queue for neutral benchmark testing and potential promotion
+            # In production, this would trigger an async job
+            # For now, we just log the opportunity
+            self.logger.info(
+                "promotion_candidate proposal=%s specialist=%s",
+                proposal_id,
+                proposal.get('proposer_id')
+            )
+            
+            # Future: Trigger scripts/promote_systems_capability.py as background job
+            # promote_job = subprocess.Popen([
+            #     sys.executable,
+            #     'scripts/promote_systems_capability.py',
+            #     '--proposal-id', proposal_id,
+            #     '--apply'
+            # ])
+            
+        except ImportError:
+            self.logger.debug("systems_adapter not available, skipping global promotion check")
+        except Exception as e:
+            self.logger.warning("global_promotion_check_failed proposal=%s error=%s", proposal_id, str(e))
 
     def _check_worm_integrity_and_halt(self) -> None:
         """Verify WORM integrity; halt system and execute critical controls on failure."""

@@ -38,5 +38,13 @@ docker==7.0.0
 jax[cpu]>=0.8.1  # JAX for GPU acceleration (Metal backend on Apple Silicon)
 jax-metal>=0.1.1  # Metal backend plugin for Apple Silicon GPUs
 
+# Model Compression & HF Pipelines
+torch==2.9.1  # PyTorch runtime (Metal / CUDA acceleration, py3.14 wheels)
+transformers==4.46.1  # Hugging Face model definitions & utilities
+datasets==3.1.0  # Evaluation + calibration datasets (e.g., SST-2)
+safetensors==0.4.5  # Streaming tensor storage for HF checkpoints
+accelerate==1.2.1  # Device placement helpers (CPU / GPU)
+sentencepiece==0.2.0  # Tokenizers required by several HF models
+
 # Security & System Control (optional)
 # Optional repeat for emphasis; core install covered above

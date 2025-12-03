@@ -1,0 +1,32 @@
+{
+  "phi_server": {
+    "url": "http://localhost:8080",
+    "model": "phi-3.5-mini",
+    "max_tokens": 1500,
+    "temperature": 0.7
+  },
+  "paperqa_server": {
+    "url": "http://localhost:5000",
+    "timeout": 60
+  },
+  "research": {
+    "output_dir": "./data/research_projects",
+    "max_papers_broad": 50,
+    "max_standouts": 15,
+    "auto_triage_threshold": 0.7
+  },
+  "prompts": {
+    "system": "You are a research scientist conducting rigorous academic research. Follow the scientific method, cite sources, and be honest about limitations.",
+    "triage_threshold": 0.7,
+    "deep_dive_min_findings": 3
+  },
+  "example_topics": [
+    "emotion detection for AI safety",
+    "deception detection in language models",
+    "multi-agent coordination safety",
+    "adversarial robustness in edge AI",
+    "interpretability methods for small models",
+    "self-improvement safety constraints"
+  ]
+}
+
