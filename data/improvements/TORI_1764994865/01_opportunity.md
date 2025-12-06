@@ -1,3 +1,0 @@
-CATEGORY: inference_params
-PROBLEM: Currently, the ORKASTRATOR cluster utilizes a fixed, relatively high batch size for inference, leading to significant latency spikes during peak usage periods. This is exacerbated by the complex orchestration required to manage the distributed model execution.
-SOLUTION: Implement dynamic batch sizing based on real-time queue length and resource availability. The system should automatically adjust the batch size, scaling up during periods of low demand and scaling down during peak periods. This would dramatically improve throughput and reduce latency, particularly during periods of high user activity.

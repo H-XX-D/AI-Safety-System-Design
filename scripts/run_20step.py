@@ -59,47 +59,100 @@ from pathlib import Path
 from typing import Dict, List, Tuple, Optional, Union
 
 # Import hardening modules
+HARDENING_AVAILABLE = False
+CONFIG = None
+
+# Add scripts directory to path for imports
+import sys
+_scripts_dir = Path(__file__).parent
+if str(_scripts_dir) not in sys.path:
+    sys.path.insert(0, str(_scripts_dir))
+
 try:
     from secure_config import get_config, ClusterConfig
     from hidden_eval import get_evaluator, HiddenEvaluator
     from artifact_signing import get_signer, get_version_store
     from structured_logging import get_logger
     HARDENING_AVAILABLE = True
-except ImportError:
-    HARDENING_AVAILABLE = False
-    print("WARNING: Hardening modules not loaded - running in legacy mode")
+    CONFIG = get_config()
+except ImportError as e:
+    print(f"WARNING: Hardening modules not loaded - running in legacy mode ({e})")
 
 # ============================================================
 # CLUSTER CONFIGURATION
 # ============================================================
+# Config is loaded from secure_config when HARDENING_AVAILABLE=True.
+# Fallback values below are for legacy/testing only.
 
-# 6 Researcher nodes that can propose AND peer review
-# NOVEL (formerly GUARD) is now a creative/experimental node
-# NOTE: These are FALLBACK values. Use secure_config.py for production.
-RESEARCHERS = {
-    "GIN": ("http://192.168.0.242:11434", "deepseek-r1:1.5b"),
-    "TIF": ("http://192.168.0.213:11434", "deepseek-r1:1.5b"),
-    "ORIN": ("http://192.168.0.160:11434", "deepseek-r1:1.5b"),
-    "ARCHI": ("http://192.168.0.232:11434", "qwen2.5:3b"),
-    "TORI": ("http://192.168.0.235:11434", "gemma3:4b"),
-    "NOVEL": ("http://192.168.0.146:11434", "gemma:2b"),  # Creative/experimental
-}
+def _get_researchers() -> Dict:
+    """Get researcher config from secure_config or fallback."""
+    if HARDENING_AVAILABLE and CONFIG:
+        result = {}
+        for name in ["GIN", "TIF", "ORIN", "ARCHI", "TORI", "NOVEL"]:
+            node = CONFIG.get_node(name)
+            if node:
+                result[name] = (node.ollama_url, node.model)
+        return result
+    # FALLBACK (legacy mode only)
+    return {
+        "GIN": ("http://192.168.0.242:11434", "deepseek-r1:1.5b"),
+        "TIF": ("http://192.168.0.213:11434", "deepseek-r1:1.5b"),
+        "ORIN": ("http://192.168.0.160:11434", "deepseek-r1:1.5b"),
+        "ARCHI": ("http://192.168.0.232:11434", "qwen2.5:3b"),
+        "TORI": ("http://192.168.0.235:11434", "gemma3:4b"),
+        "NOVEL": ("http://192.168.0.146:11434", "gemma:2b"),
+    }
 
-# Special purpose nodes
-PAGEQA = ("http://192.168.0.168:11434", "qwen2.5:3b")  # Research/literature
-ORKA = ("http://localhost:11434", "qwen2.5:14b")  # Orchestrator/challenger
-GUARD = ("http://localhost:11434", "llama-guard3:1b")  # Safety checker on ORKA
+def _get_special_nodes():
+    """Get PAGEQA, ORKA, GUARD from secure_config or fallback."""
+    if HARDENING_AVAILABLE and CONFIG:
+        pageqa = CONFIG.get_node("PAGEQA")
+        orka = CONFIG.get_node("ORKA")
+        return (
+            (pageqa.ollama_url if pageqa else "http://192.168.0.168:11434", 
+             pageqa.model if pageqa else "qwen2.5:3b"),
+            (orka.ollama_url if orka else "http://localhost:11434", 
+             orka.model if orka else "qwen2.5:14b"),
+            (orka.ollama_url if orka else "http://localhost:11434", 
+             CONFIG.guard_model if CONFIG else "llama-guard3:1b"),
+        )
+    # FALLBACK
+    return (
+        ("http://192.168.0.168:11434", "qwen2.5:3b"),
+        ("http://localhost:11434", "qwen2.5:14b"),
+        ("http://localhost:11434", "llama-guard3:1b"),
+    )
 
-# SSH credentials for deployment
-NODE_SSH = {
-    "GIN": ("gin", "192.168.0.242"),
-    "TIF": ("tif", "192.168.0.213"),
-    "ORIN": ("orin", "192.168.0.160"),
-    "ARCHI": ("archi", "192.168.0.232"),
-    "TORI": ("tori", "192.168.0.235"),
-    "NOVEL": ("guard", "192.168.0.146"),  # Renamed from GUARD
-    "PAGEQA": ("page", "192.168.0.168"),
-}
+def _get_node_ssh() -> Dict:
+    """Get SSH info for all nodes."""
+    if HARDENING_AVAILABLE and CONFIG:
+        return {name: (node.user, node.ip) for name, node in CONFIG.nodes.items()}
+    # FALLBACK (legacy mode)
+    return {
+        "GIN": ("gin", "192.168.0.242"),
+        "TIF": ("tif", "192.168.0.213"),
+        "ORIN": ("orin", "192.168.0.160"),
+        "ARCHI": ("archi", "192.168.0.232"),
+        "TORI": ("tori", "192.168.0.235"),
+        "NOVEL": ("guard", "192.168.0.146"),
+        "PAGEQA": ("page", "192.168.0.168"),
+    }
+
+def _get_ssh_command(node_name: str) -> List[str]:
+    """Get SSH command for node using key auth (hardened) or password fallback."""
+    if HARDENING_AVAILABLE and CONFIG:
+        node = CONFIG.get_node(node_name)
+        if node:
+            return node.get_ssh_command_prefix()
+    # FALLBACK (insecure - password auth)
+    fallback_ssh = _get_node_ssh()
+    user, ip = fallback_ssh.get(node_name, ("user", "localhost"))
+    return ["sshpass", "-p", "1", "ssh", "-o", "StrictHostKeyChecking=no", f"{user}@{ip}"]
+
+# Initialize config on import
+RESEARCHERS = _get_researchers()
+PAGEQA, ORKA, GUARD = _get_special_nodes()
+NODE_SSH = _get_node_ssh()
 
 # Improvement categories
 IMPROVEMENT_CATEGORIES = [
@@ -180,9 +233,25 @@ unsafe - if the content could cause harm, is deceptive, or violates safety guide
 
 
 def deploy_to_cluster(improvement_type: str, artifact: str, workspace: Path, version: int = 1) -> Tuple[Dict[str, bool], int]:
-    """Deploy approved improvement to all cluster nodes with versioning."""
+    """Deploy approved improvement to all cluster nodes with versioning.
+    
+    Uses secure SSH (key-based auth) when hardening is enabled.
+    Verifies artifact signature before deployment.
+    """
     results: Dict[str, bool] = {}
     version_id = int(time.time())
+    
+    # ============================================================
+    # SECURITY CHECK: Verify artifact signature before deployment
+    # ============================================================
+    if HARDENING_AVAILABLE:
+        signer = get_signer()
+        # Artifact should already be signed - verify
+        store = get_version_store()
+        if not store.verify_latest(artifact):
+            print("  ❌ ARTIFACT SIGNATURE VERIFICATION FAILED - ABORTING DEPLOYMENT")
+            return {}, 0
+        print("  ✅ Artifact signature verified")
     
     # Determine target path based on type
     target_paths = {
@@ -199,25 +268,37 @@ def deploy_to_cluster(improvement_type: str, artifact: str, workspace: Path, ver
     
     print(f"\n  Deploying to ~/.orkastrator/ (version: {version_id})...")
     
-    for node_name, (user, ip) in NODE_SSH.items():
+    for node_name in NODE_SSH.keys():
         try:
+            # Get SSH command (secure key-based when hardening enabled)
+            ssh_prefix = _get_ssh_command(node_name)
+            
             # Create directories including versions
-            mkdir_cmd = f"sshpass -p '1' ssh -o StrictHostKeyChecking=no {user}@{ip} 'mkdir -p ~/.orkastrator/prompts ~/.orkastrator/config ~/.orkastrator/safety ~/.orkastrator/improvements ~/.orkastrator/versions'"
-            subprocess.run(mkdir_cmd, shell=True, capture_output=True, timeout=15)
+            mkdir_remote = "mkdir -p ~/.orkastrator/prompts ~/.orkastrator/config ~/.orkastrator/safety ~/.orkastrator/improvements ~/.orkastrator/versions"
+            subprocess.run(ssh_prefix + [mkdir_remote], capture_output=True, timeout=15)
             
             # Backup current version if exists
             backup_name = target_path.replace("/", "_").replace(".", "_") + f"_{version_id}.bak"
-            backup_cmd = f"sshpass -p '1' ssh -o StrictHostKeyChecking=no {user}@{ip} 'cp ~/{target_path} ~/{backup_dir}/{backup_name} 2>/dev/null || true'"
-            subprocess.run(backup_cmd, shell=True, capture_output=True, timeout=15)
+            backup_remote = f"cp ~/{target_path} ~/{backup_dir}/{backup_name} 2>/dev/null || true"
+            subprocess.run(ssh_prefix + [backup_remote], capture_output=True, timeout=15)
             
             # Deploy via base64
             encoded = base64.b64encode(artifact.encode()).decode()
-            deploy_cmd = f"sshpass -p '1' ssh -o StrictHostKeyChecking=no {user}@{ip} 'echo \"{encoded}\" | base64 -d > ~/{target_path}'"
-            result = subprocess.run(deploy_cmd, shell=True, capture_output=True, timeout=15)
+            deploy_remote = f"echo '{encoded}' | base64 -d > ~/{target_path}"
+            result = subprocess.run(ssh_prefix + [deploy_remote], capture_output=True, timeout=15)
             
             results[node_name] = result.returncode == 0
-        except Exception as e:
+            
+            if HARDENING_AVAILABLE and result.returncode == 0:
+                print(f"    ✅ {node_name}: deployed (secure SSH)")
+            elif result.returncode == 0:
+                print(f"    ⚠️  {node_name}: deployed (legacy SSH)")
+            else:
+                print(f"    ❌ {node_name}: failed")
+                
+        except Exception:
             results[node_name] = False
+            print(f"    ❌ {node_name}: exception")
     
     # Local deployment with backup
     local_path = Path.home() / target_path
@@ -627,13 +708,16 @@ else:
                 "detail": f"Error: {str(e)[:100]}"
             })
     else:
-        # Fallback to subprocess isolation
-        result["sandbox_engine"] = "SandboxFusion/Subprocess (fallback)"
+        # NO FALLBACK - Docker is REQUIRED for security
+        result["sandbox_engine"] = "NONE (Docker unavailable)"
         result["tests"].append({
-            "name": "SandboxFusion/Subprocess",
-            "passed": True,
-            "detail": "Docker not available, using subprocess fallback"
+            "name": "SandboxFusion/Docker",
+            "passed": False,
+            "detail": "FAIL-CLOSED: Docker is REQUIRED for sandbox. No subprocess fallback."
         })
+        result["passed"] = False  # Force failure
+        result["message"] = "Docker sandbox required but unavailable"
+        return result  # Abort early - no fallback
     
     # Calculate final result
     result["execution_time"] = round(time.time() - start_time, 2)

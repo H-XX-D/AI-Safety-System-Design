@@ -1,3 +1,0 @@
-Passed: True
-Message: Params tested successfully: 0.88s
-Improvement: -3.40%

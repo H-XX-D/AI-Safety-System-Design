@@ -403,6 +403,48 @@ class SecureVersionStore:
             "total_artifacts": len(artifact_results),
             "valid_artifacts": sum(1 for r in artifact_results.values() if r["valid"]),
         }
+    
+    def verify_latest(self, content: str) -> bool:
+        """Verify that content matches the latest stored artifact.
+        
+        Used before deployment to ensure artifact hasn't been tampered with.
+        Returns True if:
+        - Content hash matches latest stored artifact
+        - Artifact signature is valid
+        """
+        # Find the most recent artifact
+        latest_artifact = None
+        latest_time = 0
+        
+        for path in self.store_path.glob("*.json"):
+            if path.name.startswith("audit"):
+                continue
+            try:
+                data = json.loads(path.read_text())
+                if data.get("timestamp", 0) > latest_time:
+                    latest_time = data["timestamp"]
+                    latest_artifact = SignedArtifact.from_dict(data)
+            except Exception:
+                continue
+        
+        if not latest_artifact:
+            logger.warning("No artifacts in store - cannot verify")
+            return False
+        
+        # Verify signature
+        valid, msg = self.signer.verify_artifact(latest_artifact)
+        if not valid:
+            logger.error(f"Latest artifact signature invalid: {msg}")
+            return False
+        
+        # Verify content hash matches
+        content_hash = hashlib.sha256(content.encode()).hexdigest()
+        if content_hash != latest_artifact.content_hash:
+            logger.error(f"Content hash mismatch: expected {latest_artifact.content_hash}, got {content_hash}")
+            return False
+        
+        logger.info(f"Verified artifact {latest_artifact.artifact_id}")
+        return True
 
 
 # Global instances

@@ -1,6 +1,0 @@
-{
-  "type": "inference_params",
-  "artifact": "{\n  \"temperature\": 0.8,\n  \"top_p\": 0.95,\n  \"top_k\": 40,\n  \"num_predict\": 768,\n  \"repeat_penalty\": 1.1,\n  \"seed\": null\n}",
-  "timestamp": 1764995374.17245,
-  "workspace": "data/improvements/TORI_1764995275"
-}

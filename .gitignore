@@ -116,3 +116,8 @@ threedlm/
 # Archive large files
 Archive Files/Research Artifacts/worm_usb_dir/
 
+
+# Generated data (not version controlled)
+data/improvements/
+data/agents/
+.worm/
