@@ -503,6 +503,52 @@ class TestSecurityGates:
         valid, msg = TransferIntegrity.verify_transfer(tampered, envelope, key)
         assert not valid, "Tampered content should fail verification"
     
+    def test_chunked_transfer_integrity(self):
+        """Test per-chunk integrity verification."""
+        from scripts.security_gates import TransferIntegrity
+        
+        content = "A" * 10000  # 10KB content
+        artifact_id = "chunk_test_001"
+        signature = "test_signature_abc123"
+        
+        # Create chunked manifest
+        manifest = TransferIntegrity.create_chunked_manifest(
+            content, artifact_id, signature, chunk_size=1024
+        )
+        
+        assert manifest["version"] == 2
+        assert manifest["chunk_count"] >= 10  # 10KB / 1KB = 10 chunks
+        assert len(manifest["chunk_hashes"]) == manifest["chunk_count"]
+        
+        # Verify each chunk
+        chunks = TransferIntegrity.chunk_content(content, 1024)
+        for idx, chunk_data, _ in chunks:
+            valid, msg = TransferIntegrity.verify_chunk(chunk_data, idx, manifest)
+            assert valid, f"Chunk {idx} should verify: {msg}"
+    
+    def test_ast_analyzer_detects_obfuscation(self):
+        """Test AST analyzer detects obfuscated dangerous code."""
+        from scripts.security_gates import get_ast_analyzer
+        
+        analyzer = get_ast_analyzer()
+        
+        # Obfuscated eval
+        obfuscated_code = '''
+x = chr(101) + chr(118) + chr(97) + chr(108)  # Builds "eval"
+'''
+        is_safe, violations, _ = analyzer.analyze(obfuscated_code)
+        assert not is_safe, "Should detect chr() obfuscation"
+        assert any("Obfuscation" in v or "chr" in v for v in violations)
+        
+        # Direct dangerous import
+        dangerous_code = '''
+import subprocess
+subprocess.run(["ls", "-la"])
+'''
+        is_safe, violations, _ = analyzer.analyze(dangerous_code)
+        assert not is_safe, "Should detect subprocess usage"
+        assert any("subprocess" in v for v in violations)
+    
     def test_multi_signal_gating(self):
         """Test that multiple signals are required."""
         from scripts.security_gates import MultiSignalSafetyGate
@@ -525,6 +571,47 @@ class TestSecurityGates:
         # Count passing signals
         passing = sum(1 for s in result.signals if s.passed)
         assert passing >= 2, f"Should have at least 2 passing signals, got {passing}"
+
+
+class TestCIModeRestrictions:
+    """Tests for CI-only auto-approve restrictions."""
+    
+    def test_ci_mode_detection(self):
+        """Test CI environment detection."""
+        from scripts.secure_config import ClusterConfig
+        import os
+        
+        # Save original environment
+        original = os.environ.copy()
+        
+        try:
+            # Clear CI indicators
+            for key in ["CI", "GITHUB_ACTIONS", "GITLAB_CI"]:
+                os.environ.pop(key, None)
+            
+            # Should not be in CI mode
+            assert not ClusterConfig._detect_ci_environment()
+            
+            # Set CI indicator
+            os.environ["CI"] = "true"
+            assert ClusterConfig._detect_ci_environment()
+            
+            # GitHub Actions
+            os.environ.pop("CI", None)
+            os.environ["GITHUB_ACTIONS"] = "true"
+            assert ClusterConfig._detect_ci_environment()
+        finally:
+            # Restore original environment
+            os.environ.clear()
+            os.environ.update(original)
+    
+    def test_require_https_default_enabled(self):
+        """Test that require_https is enabled by default."""
+        from scripts.secure_config import ClusterConfig
+        
+        config = ClusterConfig()
+        assert config.require_https is True, "HTTPS should be required by default"
+        assert config.allow_localhost_http is True, "Localhost HTTP should be allowed"
 
 
 class TestHardGates:

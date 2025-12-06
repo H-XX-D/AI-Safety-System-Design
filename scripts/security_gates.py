@@ -251,6 +251,155 @@ class SafetyPolicy:
         return len(matches) > 0, matches
 
 
+class ASTCodeAnalyzer:
+    """
+    Deep code analysis using Python AST.
+    
+    Goes beyond regex to detect:
+    - Obfuscated dangerous calls
+    - Dynamic code execution patterns
+    - Hidden imports
+    - Data exfiltration attempts
+    """
+    
+    # Dangerous function names that should never appear
+    DANGEROUS_FUNCTIONS = {
+        "eval", "exec", "compile", "__import__",
+        "getattr", "setattr", "delattr",  # Only dangerous with user input
+        "open",  # Dangerous in write mode
+    }
+    
+    # Dangerous module.function combinations
+    DANGEROUS_CALLS = {
+        ("os", "system"), ("os", "popen"), ("os", "spawn"),
+        ("os", "execl"), ("os", "execle"), ("os", "execlp"),
+        ("os", "execv"), ("os", "execve"), ("os", "execvp"),
+        ("subprocess", "run"), ("subprocess", "call"),
+        ("subprocess", "Popen"), ("subprocess", "check_output"),
+        ("shutil", "rmtree"), ("shutil", "move"),
+        ("socket", "connect"), ("socket", "bind"),
+        ("pickle", "loads"), ("pickle", "load"),  # Deserialization attacks
+        ("marshal", "loads"), ("marshal", "load"),
+        ("builtins", "eval"), ("builtins", "exec"),
+    }
+    
+    # Patterns that indicate obfuscation attempts
+    OBFUSCATION_PATTERNS = [
+        r"chr\s*\(\s*\d+\s*\)",  # chr(65) style obfuscation
+        r"\\x[0-9a-fA-F]{2}",    # Hex escapes
+        r"\\u[0-9a-fA-F]{4}",    # Unicode escapes
+        r"base64\.(b64)?decode",  # Base64 encoded payloads
+        r"codecs\.(decode|encode)",
+        r"rot_?13",
+        r"getattr\s*\(\s*__builtins__",  # Builtins access
+    ]
+    
+    def analyze(self, code: str) -> Tuple[bool, List[str], float]:
+        """
+        Analyze code for dangerous patterns.
+        
+        Returns:
+            (is_safe, violations, confidence)
+        """
+        violations = []
+        confidence = 1.0
+        
+        # Step 1: Try AST parsing
+        try:
+            import ast
+            tree = ast.parse(code)
+            
+            # Walk the AST
+            for node in ast.walk(tree):
+                violation = self._check_node(node)
+                if violation:
+                    violations.append(violation)
+                    confidence -= 0.2
+        except SyntaxError:
+            # Not valid Python - check for other languages or obfuscation
+            confidence -= 0.1
+        
+        # Step 2: Check for obfuscation patterns
+        for pattern in self.OBFUSCATION_PATTERNS:
+            if re.search(pattern, code, re.IGNORECASE):
+                violations.append(f"Obfuscation pattern: {pattern}")
+                confidence -= 0.15
+        
+        # Step 3: Check for string manipulation that hides dangerous calls
+        suspicious_strings = self._find_suspicious_strings(code)
+        for s in suspicious_strings:
+            violations.append(f"Suspicious string construction: {s}")
+            confidence -= 0.1
+        
+        is_safe = len(violations) == 0
+        confidence = max(0.0, min(1.0, confidence))
+        
+        return is_safe, violations, confidence
+    
+    def _check_node(self, node) -> Optional[str]:
+        """Check an AST node for dangerous patterns."""
+        import ast
+        
+        # Check for dangerous function calls
+        if isinstance(node, ast.Call):
+            # Direct dangerous function calls
+            if isinstance(node.func, ast.Name):
+                if node.func.id in self.DANGEROUS_FUNCTIONS:
+                    return f"Dangerous function: {node.func.id}()"
+            
+            # Module.function calls
+            if isinstance(node.func, ast.Attribute):
+                if isinstance(node.func.value, ast.Name):
+                    module = node.func.value.id
+                    func = node.func.attr
+                    if (module, func) in self.DANGEROUS_CALLS:
+                        return f"Dangerous call: {module}.{func}()"
+        
+        # Check for dangerous imports
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name in ("os", "subprocess", "socket", "pickle"):
+                    return f"Sensitive import: {alias.name}"
+        
+        if isinstance(node, ast.ImportFrom):
+            if node.module in ("os", "subprocess", "socket", "pickle"):
+                funcs = [a.name for a in node.names]
+                return f"Sensitive import from {node.module}: {funcs}"
+        
+        return None
+    
+    def _find_suspicious_strings(self, code: str) -> List[str]:
+        """Find string manipulations that might hide dangerous code."""
+        suspicious = []
+        
+        # Look for string concatenation building dangerous names
+        dangerous_chars = ["eval", "exec", "system", "import", "open"]
+        for dangerous in dangerous_chars:
+            # Check for character-by-character construction
+            pattern = r'["\'][' + dangerous[0] + r']["\'].*["\'][' + dangerous[-1] + r']["\']'
+            if re.search(pattern, code, re.IGNORECASE):
+                suspicious.append(f"Possible {dangerous} construction")
+        
+        # Check for join operations that could build dangerous strings
+        if re.search(r'["\']\.join\s*\(\s*\[.*\]', code):
+            # Simple heuristic - join with many single chars is suspicious
+            join_match = re.findall(r'["\']\.join\s*\(\s*\[(.*?)\]', code)
+            for match in join_match:
+                if match.count(",") > 3:  # More than 3 elements
+                    suspicious.append(f"String join with many elements")
+        
+        return suspicious
+
+
+# Global AST analyzer instance
+_ast_analyzer = ASTCodeAnalyzer()
+
+
+def get_ast_analyzer() -> ASTCodeAnalyzer:
+    """Get the AST analyzer instance."""
+    return _ast_analyzer
+
+
 # Default safety policies
 DEFAULT_POLICIES = [
     SafetyPolicy(
@@ -459,6 +608,13 @@ class MultiSignalSafetyGate:
         if not structure_signal.passed:
             blocked_by.append("structure")
         
+        # Signal 5: AST-based deep code analysis (for code artifacts)
+        if artifact_type in ("code", "prompt_template", "chain_of_thought", "safety_filter"):
+            ast_signal = self._check_ast_safety(content)
+            signals.append(ast_signal)
+            if not ast_signal.passed:
+                blocked_by.append("ast_analysis")
+        
         # Compute overall result
         passing_signals = sum(1 for s in signals if s.passed)
         total_signals = len(signals)
@@ -620,6 +776,19 @@ Respond with EXACTLY one of:
             confidence=1.0 if passed else 0.0,
             details="; ".join(issues) if issues else "Valid structure",
         )
+    
+    def _check_ast_safety(self, content: str) -> SafetySignal:
+        """Deep code analysis using AST to catch obfuscated dangerous patterns."""
+        analyzer = get_ast_analyzer()
+        is_safe, violations, confidence = analyzer.analyze(content)
+        
+        return SafetySignal(
+            name="ast_analysis",
+            passed=is_safe,
+            confidence=confidence,
+            details="; ".join(violations[:3]) if violations else "AST analysis passed",
+            blocked_patterns=violations,
+        )
 
 
 # =============================================================================
@@ -630,6 +799,9 @@ Respond with EXACTLY one of:
 class TransferIntegrity:
     """On-wire integrity verification for artifact transfers."""
     
+    # Chunk size for streaming transfers (4KB)
+    CHUNK_SIZE: int = 4096
+    
     @staticmethod
     def compute_checksum(content: str) -> str:
         """Compute SHA-256 checksum of content."""
@@ -639,6 +811,84 @@ class TransferIntegrity:
     def compute_hmac(content: str, key: bytes) -> str:
         """Compute HMAC-SHA256 of content."""
         return hmac.new(key, content.encode(), hashlib.sha256).hexdigest()
+    
+    @staticmethod
+    def chunk_content(content: str, chunk_size: int = 4096) -> List[Tuple[int, str, str]]:
+        """
+        Split content into chunks with per-chunk checksums.
+        
+        Returns:
+            List of (chunk_index, chunk_data, chunk_checksum)
+        """
+        chunks = []
+        content_bytes = content.encode('utf-8')
+        
+        for i in range(0, len(content_bytes), chunk_size):
+            chunk = content_bytes[i:i + chunk_size].decode('utf-8', errors='replace')
+            chunk_hash = hashlib.sha256(chunk.encode()).hexdigest()[:16]
+            chunks.append((i // chunk_size, chunk, chunk_hash))
+        
+        return chunks
+    
+    @staticmethod
+    def create_chunked_manifest(
+        content: str,
+        artifact_id: str,
+        signature: str,
+        chunk_size: int = 4096,
+    ) -> Dict:
+        """
+        Create a manifest with per-chunk integrity checksums.
+        
+        This allows verification at each chunk boundary during transfer,
+        detecting corruption early rather than only at the end.
+        """
+        chunks = TransferIntegrity.chunk_content(content, chunk_size)
+        
+        chunk_hashes = [
+            {"idx": idx, "hash": h}
+            for idx, _, h in chunks
+        ]
+        
+        return {
+            "version": 2,
+            "artifact_id": artifact_id,
+            "content_sha256": TransferIntegrity.compute_checksum(content),
+            "total_size": len(content.encode('utf-8')),
+            "chunk_size": chunk_size,
+            "chunk_count": len(chunks),
+            "chunk_hashes": chunk_hashes,
+            "signature_ref": signature[:32] + "..." if signature else None,
+            "created_at": time.time(),
+        }
+    
+    @staticmethod
+    def verify_chunk(
+        chunk_data: str,
+        chunk_index: int,
+        manifest: Dict,
+    ) -> Tuple[bool, str]:
+        """
+        Verify a single chunk against the manifest.
+        
+        Returns:
+            (valid, message)
+        """
+        chunk_hashes = manifest.get("chunk_hashes", [])
+        expected = None
+        for ch in chunk_hashes:
+            if ch["idx"] == chunk_index:
+                expected = ch["hash"]
+                break
+        
+        if not expected:
+            return False, f"No hash found for chunk {chunk_index}"
+        
+        actual = hashlib.sha256(chunk_data.encode()).hexdigest()[:16]
+        if actual != expected:
+            return False, f"Chunk {chunk_index} hash mismatch: expected {expected}, got {actual}"
+        
+        return True, f"Chunk {chunk_index} verified"
     
     @staticmethod
     def create_transfer_envelope(

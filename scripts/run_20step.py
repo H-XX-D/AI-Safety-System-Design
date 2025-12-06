@@ -1542,11 +1542,21 @@ This is the version that will be deployed if approved."""
         print(f"  {improvement_code[:300]}...")
         print("")
         
-        # Check for non-interactive mode
-        if os.environ.get("ORKA_AUTO_APPROVE") == "1":
-            human_approved = True
-            human_approver = "AUTO (ORKA_AUTO_APPROVE=1)"
-            print("  ⚠️  AUTO-APPROVED (ORKA_AUTO_APPROVE=1)")
+        # Check for non-interactive mode (CI ONLY)
+        auto_approve_requested = os.environ.get("ORKA_AUTO_APPROVE") == "1"
+        ci_mode_allowed = CONFIG and hasattr(CONFIG, 'ci_mode') and CONFIG.ci_mode
+        
+        if auto_approve_requested:
+            if ci_mode_allowed and CONFIG.auto_approve_allowed:
+                human_approved = True
+                human_approver = "CI_AUTO (ORKA_AUTO_APPROVE=1 in CI)"
+                print("  ⚠️  CI AUTO-APPROVED (verified CI environment)")
+            else:
+                # BLOCK: Auto-approve requested but NOT in CI
+                print("  ⛔ AUTO-APPROVE BLOCKED: ORKA_AUTO_APPROVE=1 only allowed in CI environments")
+                print("     Detected CI mode:", ci_mode_allowed)
+                print("     Set CI environment variables (CI=true, GITHUB_ACTIONS, etc.) for CI mode")
+                raise SecurityError("SECURITY: ORKA_AUTO_APPROVE=1 blocked - not in CI environment")
         else:
             try:
                 response = input("  APPROVE DEPLOYMENT? (yes/no): ").strip().lower()

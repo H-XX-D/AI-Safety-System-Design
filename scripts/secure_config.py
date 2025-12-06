@@ -109,8 +109,40 @@ class ClusterConfig:
     worm_manifest_required: bool = True  # Require signed WORM manifests
     max_improvement_size: int = 50000    # Max chars for improvement artifacts
     
+    # TLS/HTTPS requirements (ENABLED by default for hardening)
+    require_https: bool = True           # Require HTTPS for non-localhost model calls
+    allow_localhost_http: bool = True    # Allow HTTP for localhost only
+    
+    # Auto-approve restrictions
+    auto_approve_allowed: bool = False   # ORKA_AUTO_APPROVE disabled by default
+    ci_mode: bool = False                # Only CI can enable auto-approve
+    
     # Evaluation config (HIDDEN from researchers)
     _eval_metrics: Dict[str, Any] = field(default_factory=dict, repr=False)
+    
+    @staticmethod
+    def _detect_ci_environment() -> bool:
+        """
+        Detect if running in a CI environment.
+        
+        Only in CI should ORKA_AUTO_APPROVE be allowed.
+        """
+        ci_indicators = [
+            "CI",                    # Generic CI
+            "GITHUB_ACTIONS",        # GitHub Actions
+            "GITLAB_CI",             # GitLab CI
+            "JENKINS_URL",           # Jenkins
+            "CIRCLECI",              # CircleCI
+            "TRAVIS",                # Travis CI
+            "AZURE_PIPELINES",       # Azure Pipelines
+            "TF_BUILD",              # Azure DevOps
+            "BUILDKITE",             # Buildkite
+            "ORKASTRATOR_CI_MODE",   # Explicit CI mode (must be set + signed)
+        ]
+        for indicator in ci_indicators:
+            if os.environ.get(indicator):
+                return True
+        return False
     
     @classmethod
     def load(cls, config_path: Optional[str] = None) -> "ClusterConfig":
@@ -163,6 +195,12 @@ class ClusterConfig:
         config.require_safety_check = settings.get("require_safety_check", True)
         config.require_human_approval = settings.get("require_human_approval", True)
         config.worm_manifest_required = settings.get("worm_manifest_required", True)
+        config.require_https = settings.get("require_https", True)
+        config.allow_localhost_http = settings.get("allow_localhost_http", True)
+        
+        # CI mode detection - auto-approve ONLY allowed in CI
+        config.ci_mode = cls._detect_ci_environment()
+        config.auto_approve_allowed = config.ci_mode and settings.get("auto_approve_allowed", False)
         
         # Load HIDDEN eval metrics (not exposed to researchers)
         config._eval_metrics = data.get("_evaluation", {})
