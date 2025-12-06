@@ -605,13 +605,30 @@ class TestCIModeRestrictions:
             os.environ.clear()
             os.environ.update(original)
     
-    def test_require_https_default_enabled(self):
-        """Test that require_https is enabled by default."""
+    def test_https_config_reflects_ollama_reality(self):
+        """Test that HTTPS config reflects Ollama's lack of native TLS."""
         from scripts.secure_config import ClusterConfig
         
         config = ClusterConfig()
-        assert config.require_https is True, "HTTPS should be required by default"
+        # Ollama doesn't support TLS natively, so require_https should be False
+        assert config.require_https is False, "require_https should be False (Ollama lacks TLS)"
         assert config.allow_localhost_http is True, "Localhost HTTP should be allowed"
+        assert config.allow_private_network_http is True, "Private network HTTP should be allowed"
+    
+    def test_private_network_detection(self):
+        """Test private network IP detection."""
+        from scripts.run_20step import _is_private_network
+        
+        # Private networks should be detected
+        assert _is_private_network("http://192.168.0.146:11434")
+        assert _is_private_network("http://10.0.0.5:11434")
+        assert _is_private_network("http://172.16.0.1:11434")
+        assert _is_private_network("http://localhost:11434")
+        assert _is_private_network("http://127.0.0.1:11434")
+        
+        # Public IPs should not match
+        assert not _is_private_network("http://8.8.8.8:11434")
+        assert not _is_private_network("http://example.com:11434")
 
 
 class TestHardGates:

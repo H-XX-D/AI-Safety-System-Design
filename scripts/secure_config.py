@@ -109,9 +109,16 @@ class ClusterConfig:
     worm_manifest_required: bool = True  # Require signed WORM manifests
     max_improvement_size: int = 50000    # Max chars for improvement artifacts
     
-    # TLS/HTTPS requirements (ENABLED by default for hardening)
-    require_https: bool = True           # Require HTTPS for non-localhost model calls
-    allow_localhost_http: bool = True    # Allow HTTP for localhost only
+    # TLS/HTTPS requirements
+    # NOTE: Ollama does NOT natively support TLS. For production:
+    # 1. Use a reverse proxy (nginx/caddy) with TLS termination, OR
+    # 2. Deploy Ollama in a private network with SSH tunneling, OR  
+    # 3. Accept HTTP on trusted LAN (current cluster setup)
+    # 
+    # Set require_https=True only if you have a TLS-terminating proxy.
+    require_https: bool = False          # Disabled - Ollama doesn't support TLS natively
+    allow_localhost_http: bool = True    # Allow HTTP for localhost
+    allow_private_network_http: bool = True  # Allow HTTP on 192.168.x.x/10.x.x.x
     
     # Auto-approve restrictions
     auto_approve_allowed: bool = False   # ORKA_AUTO_APPROVE disabled by default

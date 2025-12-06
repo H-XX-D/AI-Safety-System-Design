@@ -173,6 +173,40 @@ class SafetyCheckFailed(Exception):
     pass
 
 
+def _is_private_network(url: str) -> bool:
+    """Check if URL is on a private network (192.168.x.x, 10.x.x.x, 172.16-31.x.x)."""
+    import re
+    # Extract host from URL
+    match = re.search(r'https?://([^:/]+)', url)
+    if not match:
+        return False
+    host = match.group(1)
+    
+    # Check private network ranges
+    if host in ('localhost', '127.0.0.1'):
+        return True
+    
+    parts = host.split('.')
+    if len(parts) != 4:
+        return False
+    
+    try:
+        octets = [int(p) for p in parts]
+        # 10.0.0.0/8
+        if octets[0] == 10:
+            return True
+        # 172.16.0.0/12
+        if octets[0] == 172 and 16 <= octets[1] <= 31:
+            return True
+        # 192.168.0.0/16
+        if octets[0] == 192 and octets[1] == 168:
+            return True
+    except ValueError:
+        pass
+    
+    return False
+
+
 def call_llm(base_url: str, model: str, prompt: str, system: str = "",
              temperature: float = 0.7, max_tokens: int = 1500, timeout: int = 180,
              verify_tls: bool = True) -> str:
@@ -193,12 +227,26 @@ def call_llm(base_url: str, model: str, prompt: str, system: str = "",
     
     Raises:
         SecurityError: If HTTPS required but not used (when CONFIG.require_https)
+    
+    Note:
+        Ollama does NOT natively support TLS. HTTP is allowed for:
+        - localhost/127.0.0.1 (always)
+        - Private networks (192.168.x.x, 10.x.x.x) when allow_private_network_http=True
+        - All endpoints when require_https=False (current default)
     """
     # Check HTTPS requirement
     if HARDENING_AVAILABLE and CONFIG and hasattr(CONFIG, 'require_https'):
         if CONFIG.require_https and not base_url.startswith('https://'):
             # Allow localhost without HTTPS
-            if 'localhost' not in base_url and '127.0.0.1' not in base_url:
+            if 'localhost' in base_url or '127.0.0.1' in base_url:
+                pass  # OK - localhost always allowed
+            # Allow private network HTTP if configured
+            elif hasattr(CONFIG, 'allow_private_network_http') and CONFIG.allow_private_network_http:
+                if _is_private_network(base_url):
+                    pass  # OK - private network allowed
+                else:
+                    raise SecurityError(f"HTTPS required for public endpoints: {base_url}")
+            else:
                 raise SecurityError(f"HTTPS required but URL is {base_url}")
     
     payload = {
