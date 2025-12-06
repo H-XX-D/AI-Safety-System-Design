@@ -69,7 +69,8 @@ class TestSecureConfig:
         assert "-i" in cmd
         assert "/tmp/test_key" in cmd
         assert "gin@192.168.0.242" in cmd
-        assert "StrictHostKeyChecking=yes" in " ".join(cmd)
+        # Changed from StrictHostKeyChecking=yes to accept-new for first-connection convenience
+        assert "StrictHostKeyChecking=accept-new" in " ".join(cmd)
     
     def test_node_ollama_url(self):
         """Test Ollama URL generation."""
@@ -360,19 +361,20 @@ class TestSafetyGates:
     """Tests for safety gate logic."""
     
     def test_safety_check_fails_closed(self):
-        """Test that safety check fails closed on errors."""
+        """Test that safety check fails closed on errors by raising exception."""
         # Mock the call_llm to simulate failure
         with patch("scripts.run_20step.call_llm") as mock_llm:
             mock_llm.side_effect = Exception("Network error")
             
             # Import after patching
-            from scripts.run_20step import safety_check
+            from scripts.run_20step import safety_check, SafetyCheckFailed
             
-            is_safe, reason = safety_check("test content")
+            # Should raise SafetyCheckFailed on error (fail closed)
+            with pytest.raises(SafetyCheckFailed) as exc_info:
+                safety_check("test content")
             
-            # Should fail closed (not safe) on error
-            assert is_safe is False
-            assert "human review" in reason.lower()
+            # Exception message should mention the error
+            assert "Network error" in str(exc_info.value)
     
     def test_dangerous_content_detected(self):
         """Test that dangerous content is flagged."""

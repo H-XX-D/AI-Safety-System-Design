@@ -26,6 +26,11 @@ import logging
 logger = logging.getLogger("orkastrator.config")
 
 
+class SecurityError(Exception):
+    """Raised when a security requirement is violated."""
+    pass
+
+
 class AuthMethod(Enum):
     """Authentication methods for cluster nodes."""
     SSH_KEY = "ssh_key"           # Preferred: SSH key-based auth
@@ -49,26 +54,17 @@ class NodeConfig:
     def get_ssh_command_prefix(self) -> List[str]:
         """Get SSH command prefix based on auth method."""
         if self.auth_method == AuthMethod.SSH_KEY:
-            key_path = self.ssh_key_path or str(Path.home() / ".ssh" / "id_orkastrator")
+            key_path = self.ssh_key_path or str(Path.home() / ".ssh" / "id_ed25519")
             return [
                 "ssh",
                 "-i", key_path,
-                "-o", "StrictHostKeyChecking=yes",
+                "-o", "StrictHostKeyChecking=accept-new",
                 "-o", "BatchMode=yes",
                 f"{self.user}@{self.ip}"
             ]
         elif self.auth_method == AuthMethod.SSH_PASSWORD:
-            # DEPRECATED: Log warning
-            logger.warning(f"Node {self.name} using deprecated password auth - migrate to SSH keys")
-            password = os.environ.get(f"ORKA_NODE_{self.name}_PASSWORD", "")
-            if not password:
-                raise ValueError(f"No password for {self.name} - set ORKA_NODE_{self.name}_PASSWORD env var")
-            return [
-                "sshpass", "-p", password,
-                "ssh",
-                "-o", "StrictHostKeyChecking=no",
-                f"{self.user}@{self.ip}"
-            ]
+            # DEPRECATED: Refuse to use password auth
+            raise SecurityError(f"Node {self.name}: Password authentication is DISABLED. Use SSH keys only.")
         return []  # Local node
     
     @property

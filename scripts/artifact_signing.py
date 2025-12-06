@@ -446,6 +446,55 @@ class SecureVersionStore:
         logger.info(f"Verified artifact {latest_artifact.artifact_id}")
         return True
 
+    def verify_artifact_by_id(self, artifact_id: str, content: str = None, signature: str = None) -> bool:
+        """Verify a specific artifact by its ID.
+        
+        Args:
+            artifact_id: The unique artifact identifier
+            content: Optional - verify content matches stored artifact hash
+            signature: Optional - verify this signature matches stored signature
+        
+        Returns True if:
+        - Artifact exists
+        - Artifact signature is valid
+        - If content provided: content hash matches stored hash
+        - If signature provided: signature matches stored signature
+        """
+        artifact_path = self.store_path / f"{artifact_id}.json"
+        
+        if not artifact_path.exists():
+            logger.error(f"Artifact not found: {artifact_id}")
+            return False
+        
+        try:
+            data = json.loads(artifact_path.read_text())
+            artifact = SignedArtifact.from_dict(data)
+            
+            # Verify stored signature is valid
+            valid, msg = self.signer.verify_artifact(artifact)
+            if not valid:
+                logger.error(f"Artifact {artifact_id} signature invalid: {msg}")
+                return False
+            
+            # If content provided, verify it matches
+            if content is not None:
+                content_hash = hashlib.sha256(content.encode()).hexdigest()
+                if content_hash != artifact.content_hash:
+                    logger.error(f"Content hash mismatch for {artifact_id}")
+                    return False
+            
+            # If signature provided, verify it matches stored signature
+            if signature is not None:
+                if signature != artifact.signature:
+                    logger.error(f"Signature mismatch for {artifact_id}")
+                    return False
+                    
+            logger.info(f"Verified artifact {artifact_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to verify artifact {artifact_id}: {e}")
+            return False
+
 
 # Global instances
 _signer: Optional[ArtifactSigner] = None

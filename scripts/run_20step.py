@@ -81,73 +81,65 @@ except ImportError as e:
 # ============================================================
 # CLUSTER CONFIGURATION
 # ============================================================
-# Config is loaded from secure_config when HARDENING_AVAILABLE=True.
-# Fallback values below are for legacy/testing only.
+# HARDENED: No fallback values. Hardening modules REQUIRED.
+
+def _require_hardening():
+    """Abort if hardening modules not available."""
+    if not HARDENING_AVAILABLE:
+        print("\n" + "=" * 60)
+        print("FATAL: Hardening modules REQUIRED but not available")
+        print("=" * 60)
+        print("This workflow requires:")
+        print("  - scripts/secure_config.py")
+        print("  - scripts/hidden_eval.py")
+        print("  - scripts/artifact_signing.py")
+        print("  - scripts/structured_logging.py")
+        print("\nRun from scripts/ directory or fix PYTHONPATH")
+        print("=" * 60 + "\n")
+        sys.exit(1)
 
 def _get_researchers() -> Dict:
-    """Get researcher config from secure_config or fallback."""
-    if HARDENING_AVAILABLE and CONFIG:
-        result = {}
-        for name in ["GIN", "TIF", "ORIN", "ARCHI", "TORI", "NOVEL"]:
-            node = CONFIG.get_node(name)
-            if node:
-                result[name] = (node.ollama_url, node.model)
-        return result
-    # FALLBACK (legacy mode only)
-    return {
-        "GIN": ("http://192.168.0.242:11434", "deepseek-r1:1.5b"),
-        "TIF": ("http://192.168.0.213:11434", "deepseek-r1:1.5b"),
-        "ORIN": ("http://192.168.0.160:11434", "deepseek-r1:1.5b"),
-        "ARCHI": ("http://192.168.0.232:11434", "qwen2.5:3b"),
-        "TORI": ("http://192.168.0.235:11434", "gemma3:4b"),
-        "NOVEL": ("http://192.168.0.146:11434", "gemma:2b"),
-    }
+    """Get researcher config from secure_config. No fallback."""
+    _require_hardening()
+    result = {}
+    for name in ["GIN", "TIF", "ORIN", "ARCHI", "TORI", "NOVEL"]:
+        node = CONFIG.get_node(name)
+        if node:
+            result[name] = (node.ollama_url, node.model)
+    if not result:
+        print("FATAL: No researcher nodes configured")
+        sys.exit(1)
+    return result
 
 def _get_special_nodes():
-    """Get PAGEQA, ORKA, GUARD from secure_config or fallback."""
-    if HARDENING_AVAILABLE and CONFIG:
-        pageqa = CONFIG.get_node("PAGEQA")
-        orka = CONFIG.get_node("ORKA")
-        return (
-            (pageqa.ollama_url if pageqa else "http://192.168.0.168:11434", 
-             pageqa.model if pageqa else "qwen2.5:3b"),
-            (orka.ollama_url if orka else "http://localhost:11434", 
-             orka.model if orka else "qwen2.5:14b"),
-            (orka.ollama_url if orka else "http://localhost:11434", 
-             CONFIG.guard_model if CONFIG else "llama-guard3:1b"),
-        )
-    # FALLBACK
+    """Get PAGEQA, ORKA, GUARD from secure_config. No fallback."""
+    _require_hardening()
+    pageqa = CONFIG.get_node("PAGEQA")
+    orka = CONFIG.get_node("ORKA")
+    if not orka:
+        print("FATAL: ORKA node not configured")
+        sys.exit(1)
     return (
-        ("http://192.168.0.168:11434", "qwen2.5:3b"),
-        ("http://localhost:11434", "qwen2.5:14b"),
-        ("http://localhost:11434", "llama-guard3:1b"),
+        (pageqa.ollama_url if pageqa else None, pageqa.model if pageqa else None),
+        (orka.ollama_url, orka.model),
+        (orka.ollama_url, CONFIG.guard_model),
     )
 
 def _get_node_ssh() -> Dict:
-    """Get SSH info for all nodes."""
-    if HARDENING_AVAILABLE and CONFIG:
-        return {name: (node.user, node.ip) for name, node in CONFIG.nodes.items()}
-    # FALLBACK (legacy mode)
-    return {
-        "GIN": ("gin", "192.168.0.242"),
-        "TIF": ("tif", "192.168.0.213"),
-        "ORIN": ("orin", "192.168.0.160"),
-        "ARCHI": ("archi", "192.168.0.232"),
-        "TORI": ("tori", "192.168.0.235"),
-        "NOVEL": ("guard", "192.168.0.146"),
-        "PAGEQA": ("page", "192.168.0.168"),
-    }
+    """Get SSH info for all nodes. No fallback."""
+    _require_hardening()
+    return {name: (node.user, node.ip) for name, node in CONFIG.nodes.items()}
 
 def _get_ssh_command(node_name: str) -> List[str]:
-    """Get SSH command for node using key auth (hardened) or password fallback."""
-    if HARDENING_AVAILABLE and CONFIG:
-        node = CONFIG.get_node(node_name)
-        if node:
-            return node.get_ssh_command_prefix()
-    # FALLBACK (insecure - password auth)
-    fallback_ssh = _get_node_ssh()
-    user, ip = fallback_ssh.get(node_name, ("user", "localhost"))
-    return ["sshpass", "-p", "1", "ssh", "-o", "StrictHostKeyChecking=no", f"{user}@{ip}"]
+    """Get SSH command for node. Key-based auth only - no password fallback."""
+    _require_hardening()
+    node = CONFIG.get_node(node_name)
+    if not node:
+        raise ValueError(f"Node {node_name} not found in config")
+    cmd = node.get_ssh_command_prefix()
+    # Verify it's NOT using password auth
+    if "sshpass" in cmd:
+        raise SecurityError(f"Node {node_name} uses deprecated password auth - migrate to SSH keys")
 
 # Initialize config on import
 RESEARCHERS = _get_researchers()
@@ -166,9 +158,44 @@ IMPROVEMENT_CATEGORIES = [
 ]
 
 
+# Custom exceptions
+class SecurityError(Exception):
+    """Raised when security requirements are not met."""
+    pass
+
+class SafetyCheckFailed(Exception):
+    """Raised when safety check fails (fail-closed)."""
+    pass
+
+
 def call_llm(base_url: str, model: str, prompt: str, system: str = "",
-             temperature: float = 0.7, max_tokens: int = 1500, timeout: int = 180) -> str:
-    """Call an Ollama LLM endpoint."""
+             temperature: float = 0.7, max_tokens: int = 1500, timeout: int = 180,
+             verify_tls: bool = True) -> str:
+    """Call an Ollama LLM endpoint with optional TLS verification.
+    
+    Args:
+        base_url: Ollama API base URL (http:// or https://)
+        model: Model name
+        prompt: User prompt
+        system: System prompt
+        temperature: Sampling temperature
+        max_tokens: Max tokens to generate
+        timeout: Request timeout in seconds
+        verify_tls: Verify TLS certificates (True for production)
+    
+    Returns:
+        Model response text
+    
+    Raises:
+        SecurityError: If HTTPS required but not used (when CONFIG.require_https)
+    """
+    # Check HTTPS requirement
+    if HARDENING_AVAILABLE and CONFIG and hasattr(CONFIG, 'require_https'):
+        if CONFIG.require_https and not base_url.startswith('https://'):
+            # Allow localhost without HTTPS
+            if 'localhost' not in base_url and '127.0.0.1' not in base_url:
+                raise SecurityError(f"HTTPS required but URL is {base_url}")
+    
     payload = {
         "model": model,
         "prompt": prompt,
@@ -182,12 +209,20 @@ def call_llm(base_url: str, model: str, prompt: str, system: str = "",
         payload["system"] = system
 
     try:
-        response = requests.post(f"{base_url}/api/generate", json=payload, timeout=timeout)
+        response = requests.post(
+            f"{base_url}/api/generate", 
+            json=payload, 
+            timeout=timeout,
+            verify=verify_tls if base_url.startswith('https://') else True
+        )
+        response.raise_for_status()  # Raise on HTTP errors
         data = response.json()
         result = data.get("response", "")
         if not result and "thinking" in data:
             result = data.get("thinking", "")
         return result
+    except requests.exceptions.SSLError as e:
+        raise SecurityError(f"TLS verification failed: {e}")
     except Exception as e:
         return f"[Error: {e}]"
 
@@ -205,53 +240,131 @@ def strip_code_fences(code: str) -> str:
     return code
 
 
-def safety_check(content: str) -> Tuple[bool, str]:
+def safety_check(content: str, fail_closed: bool = True) -> Tuple[bool, str]:
     """
     Run safety check using llama-guard3 on ORKA.
-    Returns (is_safe, reason).
-    """
-    guard_url, guard_model = GUARD
     
-    prompt = f"""Check if this AI improvement proposal is safe to deploy:
+    HARDENED: Fail-closed by default. Any error = unsafe.
+    
+    Args:
+        content: Content to check
+        fail_closed: If True, any error/ambiguity = unsafe
+    
+    Returns:
+        (is_safe, reason)
+    
+    Raises:
+        SafetyCheckFailed: If fail_closed=True and check cannot complete
+    """
+    _require_hardening()
+    
+    guard_url, guard_model = GUARD
+    if not guard_url or not guard_model:
+        if fail_closed:
+            raise SafetyCheckFailed("Guard model not configured")
+        return False, "Guard model not configured - defaulting to unsafe"
+    
+    prompt = f"""You are a safety classifier for AI system deployments.
 
-{content[:1000]}
+Evaluate this AI improvement proposal for safety:
 
-Respond with:
-safe - if the content is appropriate for AI system deployment
-unsafe - if the content could cause harm, is deceptive, or violates safety guidelines"""
+---
+{content[:2000]}
+---
+
+Respond with EXACTLY one of:
+- "SAFE" if the content is appropriate for AI system deployment
+- "UNSAFE: <reason>" if the content could cause harm, is deceptive, or violates safety guidelines
+
+You MUST respond with SAFE or UNSAFE. No other response is valid."""
 
     try:
-        response = call_llm(guard_url, guard_model, prompt,
-                           "You are a safety classifier. Evaluate content for deployment safety.",
-                           temperature=0.1, max_tokens=100, timeout=30)
+        response = call_llm(
+            guard_url, guard_model, prompt,
+            "You are a strict safety classifier. Respond only with SAFE or UNSAFE: <reason>",
+            temperature=0.0,  # Deterministic
+            max_tokens=100, 
+            timeout=30
+        )
         
-        is_safe = "unsafe" not in response.lower()[:50]
-        return is_safe, response[:200]
-    except Exception:
-        # If safety check fails, default to requiring human review
-        return False, "Safety check failed - requires human review"
+        response_upper = response.strip().upper()
+        
+        # Strict parsing - require explicit SAFE
+        if response_upper.startswith("SAFE") and "UNSAFE" not in response_upper:
+            return True, "Safety check passed"
+        elif response_upper.startswith("UNSAFE"):
+            return False, response.strip()
+        else:
+            # Ambiguous response - fail closed
+            logger = get_logger() if HARDENING_AVAILABLE else None
+            if logger:
+                logger.safety_failure(content[:100], f"Ambiguous safety response: {response[:100]}")
+            if fail_closed:
+                return False, f"Ambiguous safety response (fail-closed): {response[:100]}"
+            return False, f"Ambiguous response - defaulting to unsafe: {response[:100]}"
+            
+    except SecurityError:
+        raise  # Re-raise security errors
+    except Exception as e:
+        # Any error = unsafe when fail_closed
+        logger = get_logger() if HARDENING_AVAILABLE else None
+        if logger:
+            logger.safety_failure(content[:100], f"Safety check error: {e}")
+        if fail_closed:
+            raise SafetyCheckFailed(f"Safety check failed: {e}")
+        return False, f"Safety check error - defaulting to unsafe: {e}"
 
 
-def deploy_to_cluster(improvement_type: str, artifact: str, workspace: Path, version: int = 1) -> Tuple[Dict[str, bool], int]:
+def deploy_to_cluster(
+    improvement_type: str, 
+    artifact: str, 
+    workspace: Path, 
+    signature: str,
+    artifact_id: str,
+    version: int = 1
+) -> Tuple[Dict[str, bool], int]:
     """Deploy approved improvement to all cluster nodes with versioning.
     
-    Uses secure SSH (key-based auth) when hardening is enabled.
-    Verifies artifact signature before deployment.
+    HARDENED:
+    - Requires valid signature (no deployment without signing)
+    - SSH key-based auth only (no password)
+    - Verifies artifact integrity before each node deployment
+    
+    Args:
+        improvement_type: Category of improvement
+        artifact: The artifact content
+        workspace: Working directory
+        signature: Cryptographic signature (REQUIRED)
+        artifact_id: Unique artifact ID from signing (REQUIRED)
+        version: Version number
+    
+    Returns:
+        (results_dict, version_id)
+    
+    Raises:
+        SecurityError: If signature invalid or security requirements not met
     """
+    _require_hardening()
+    
     results: Dict[str, bool] = {}
     version_id = int(time.time())
     
     # ============================================================
     # SECURITY CHECK: Verify artifact signature before deployment
     # ============================================================
-    if HARDENING_AVAILABLE:
-        signer = get_signer()
-        # Artifact should already be signed - verify
-        store = get_version_store()
-        if not store.verify_latest(artifact):
-            print("  ❌ ARTIFACT SIGNATURE VERIFICATION FAILED - ABORTING DEPLOYMENT")
-            return {}, 0
-        print("  ✅ Artifact signature verified")
+    store = get_version_store()
+    
+    # Verify the specific artifact (not just "latest")
+    if not store.verify_artifact_by_id(artifact_id, artifact, signature):
+        raise SecurityError(
+            f"ARTIFACT SIGNATURE VERIFICATION FAILED\n"
+            f"  Artifact ID: {artifact_id}\n"
+            f"  This deployment has been BLOCKED."
+        )
+    
+    logger = get_logger()
+    logger.signature_verification(artifact_id, True, "ORKA")
+    print(f"  ✅ Artifact {artifact_id} signature verified")
     
     # Determine target path based on type
     target_paths = {
@@ -267,38 +380,45 @@ def deploy_to_cluster(improvement_type: str, artifact: str, workspace: Path, ver
     backup_dir = ".orkastrator/versions"
     
     print(f"\n  Deploying to ~/.orkastrator/ (version: {version_id})...")
+    print(f"  Using secure SSH (key-based auth)")
     
     for node_name in NODE_SSH.keys():
         try:
-            # Get SSH command (secure key-based when hardening enabled)
+            # Get SSH command - will raise SecurityError if password-based
             ssh_prefix = _get_ssh_command(node_name)
             
-            # Create directories including versions
+            # Create directories
             mkdir_remote = "mkdir -p ~/.orkastrator/prompts ~/.orkastrator/config ~/.orkastrator/safety ~/.orkastrator/improvements ~/.orkastrator/versions"
-            subprocess.run(ssh_prefix + [mkdir_remote], capture_output=True, timeout=15)
+            subprocess.run(ssh_prefix + [mkdir_remote], capture_output=True, timeout=15, check=True)
             
-            # Backup current version if exists
+            # Backup current version
             backup_name = target_path.replace("/", "_").replace(".", "_") + f"_{version_id}.bak"
             backup_remote = f"cp ~/{target_path} ~/{backup_dir}/{backup_name} 2>/dev/null || true"
             subprocess.run(ssh_prefix + [backup_remote], capture_output=True, timeout=15)
             
-            # Deploy via base64
+            # Deploy via base64 with integrity check
             encoded = base64.b64encode(artifact.encode()).decode()
-            deploy_remote = f"echo '{encoded}' | base64 -d > ~/{target_path}"
+            # Include artifact_id for audit trail
+            deploy_remote = f"echo '{encoded}' | base64 -d > ~/{target_path} && echo '{artifact_id}' > ~/{backup_dir}/current_artifact_id"
             result = subprocess.run(ssh_prefix + [deploy_remote], capture_output=True, timeout=15)
             
             results[node_name] = result.returncode == 0
             
-            if HARDENING_AVAILABLE and result.returncode == 0:
-                print(f"    ✅ {node_name}: deployed (secure SSH)")
-            elif result.returncode == 0:
-                print(f"    ⚠️  {node_name}: deployed (legacy SSH)")
+            if result.returncode == 0:
+                print(f"    ✅ {node_name}: deployed (artifact: {artifact_id[:8]}...)")
+                logger.deployment(artifact_id, improvement_type, [node_name], 1)
             else:
                 print(f"    ❌ {node_name}: failed")
                 
-        except Exception:
+        except SecurityError as e:
+            print(f"    🔒 {node_name}: BLOCKED - {e}")
             results[node_name] = False
-            print(f"    ❌ {node_name}: exception")
+        except subprocess.CalledProcessError as e:
+            print(f"    ❌ {node_name}: SSH failed - {e}")
+            results[node_name] = False
+        except Exception as e:
+            results[node_name] = False
+            print(f"    ❌ {node_name}: {e}")
     
     # Local deployment with backup
     local_path = Path.home() / target_path
@@ -311,11 +431,14 @@ def deploy_to_cluster(improvement_type: str, artifact: str, workspace: Path, ver
     
     local_path.parent.mkdir(parents=True, exist_ok=True)
     local_path.write_text(artifact)
+    (local_backup_dir / "current_artifact_id").write_text(artifact_id)
     results["LOCAL"] = True
     
-    # Save version manifest
+    # Save version manifest with signature info
     manifest = {
         "version_id": version_id,
+        "artifact_id": artifact_id,
+        "signature": signature[:64] + "...",  # Truncated for manifest
         "improvement_type": improvement_type,
         "target_path": target_path,
         "deployed_at": time.strftime("%Y-%m-%d %H:%M:%S"),
@@ -329,7 +452,12 @@ def deploy_to_cluster(improvement_type: str, artifact: str, workspace: Path, ver
 
 
 def rollback_deployment(version_id: int, improvement_type: str = None):
-    """Rollback to a previous version across all nodes."""
+    """Rollback to a previous version across all nodes.
+    
+    HARDENED: Uses key-based SSH only.
+    """
+    _require_hardening()
+    
     backup_dir = ".orkastrator/versions"
     manifest_path = Path.home() / backup_dir / f"manifest_{version_id}.json"
     
@@ -342,14 +470,25 @@ def rollback_deployment(version_id: int, improvement_type: str = None):
     backup_name = target_path.replace("/", "_").replace(".", "_") + f"_{version_id}.bak"
     
     print(f"\n  Rolling back to version {version_id}...")
+    print(f"  Using secure SSH (key-based auth)")
     results = {}
     
-    for node_name, (user, ip) in NODE_SSH.items():
+    for node_name in NODE_SSH.keys():
         try:
-            rollback_cmd = f"sshpass -p '1' ssh -o StrictHostKeyChecking=no {user}@{ip} 'cp ~/{backup_dir}/{backup_name} ~/{target_path}'"
-            result = subprocess.run(rollback_cmd, shell=True, capture_output=True, timeout=15)
+            # Get secure SSH command
+            ssh_prefix = _get_ssh_command(node_name)
+            rollback_remote = f"cp ~/{backup_dir}/{backup_name} ~/{target_path}"
+            result = subprocess.run(ssh_prefix + [rollback_remote], capture_output=True, timeout=15)
             results[node_name] = result.returncode == 0
-        except Exception:
+            if result.returncode == 0:
+                print(f"    ✅ {node_name}: rolled back")
+            else:
+                print(f"    ❌ {node_name}: failed")
+        except SecurityError as e:
+            print(f"    🔒 {node_name}: BLOCKED - {e}")
+            results[node_name] = False
+        except Exception as e:
+            print(f"    ❌ {node_name}: {e}")
             results[node_name] = False
     
     # Local rollback

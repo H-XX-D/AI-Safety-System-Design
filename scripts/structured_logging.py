@@ -204,6 +204,16 @@ class StructuredLogger:
             data={"content_preview": content_preview[:100], "details": details},
             alert=not result,
         )
+
+    def safety_failure(self, content_preview: str, reason: str):
+        """Log a safety failure (convenience method)."""
+        self._log(
+            LogLevel.ALERT,
+            EventType.SAFETY_FAILURE,
+            f"Safety FAILURE: {reason}",
+            data={"content_preview": content_preview[:100], "reason": reason},
+            alert=True,
+        )
     
     def sandbox_execution(self, engine: str, success: bool, output: str = None):
         """Log sandbox execution."""
