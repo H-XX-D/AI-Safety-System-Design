@@ -99,3 +99,8 @@ Qwen2.5-1.5B-GRPO-1ep/
 *.pt
 *.pth
 *.gguf
+
+# Large installer files
+miniconda.sh
+get-pip.py
+distutils/

@@ -17,7 +17,7 @@ Database Schema:
 - history.jsonl: Audit trail of all penalty changes
 
 Usage:
-    from models.orka_penalty_tracker import models.orka_penalty_tracker
+    import models.orka_penalty_tracker as orka_penalty_tracker
 
     # Get current penalty for system 1
     penalty = orka_penalty_tracker.get_permanent_penalty(1)
