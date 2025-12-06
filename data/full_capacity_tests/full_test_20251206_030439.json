@@ -1,0 +1,25 @@
+{
+  "timestamp": "20251206_030439",
+  "total_time_seconds": 15.615687608718872,
+  "researchers": [
+    "GIN"
+  ],
+  "tasks": [
+    {
+      "proposer": "GIN",
+      "status": "FAILED",
+      "queued_at": 1765019063.5502892,
+      "started_at": 1765019063.5506349,
+      "completed_at": 1765019079.165847,
+      "duration_seconds": 15.615212202072144,
+      "result": null,
+      "error": "Interrupted by user"
+    }
+  ],
+  "summary": {
+    "total": 1,
+    "completed": 0,
+    "failed": 1,
+    "deployed": 0
+  }
+}

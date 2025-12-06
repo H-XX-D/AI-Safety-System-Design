@@ -1,0 +1,25 @@
+{
+  "timestamp": "20251206_032829",
+  "total_time_seconds": 440.715931892395,
+  "researchers": [
+    "GIN"
+  ],
+  "tasks": [
+    {
+      "proposer": "GIN",
+      "status": "FAILED",
+      "queued_at": 1765020068.6017551,
+      "started_at": 1765020068.6022096,
+      "completed_at": 1765020509.317191,
+      "duration_seconds": 440.71498131752014,
+      "result": null,
+      "error": "HUMAN APPROVAL GATE: No input available (non-interactive mode)"
+    }
+  ],
+  "summary": {
+    "total": 1,
+    "completed": 0,
+    "failed": 1,
+    "deployed": 0
+  }
+}

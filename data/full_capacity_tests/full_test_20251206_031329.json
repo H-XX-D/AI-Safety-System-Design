@@ -1,0 +1,30 @@
+{
+  "timestamp": "20251206_031329",
+  "total_time_seconds": 20.989949703216553,
+  "researchers": [
+    "GIN",
+    "ORIN",
+    "TIF",
+    "TORI",
+    "ARCHI",
+    "NOVEL"
+  ],
+  "tasks": [
+    {
+      "proposer": "GIN",
+      "status": "FAILED",
+      "queued_at": 1765019588.2239933,
+      "started_at": 1765019588.224424,
+      "completed_at": 1765019609.213915,
+      "duration_seconds": 20.98949122428894,
+      "result": null,
+      "error": "Interrupted by user"
+    }
+  ],
+  "summary": {
+    "total": 1,
+    "completed": 0,
+    "failed": 1,
+    "deployed": 0
+  }
+}
