@@ -104,3 +104,15 @@ Qwen2.5-1.5B-GRPO-1ep/
 miniconda.sh
 get-pip.py
 distutils/
+
+# Virtual environments (all patterns)
+.venv*/
+venv*/
+*.venv/
+
+# threedlm submodule binary artifacts
+threedlm/
+
+# Archive large files
+Archive Files/Research Artifacts/worm_usb_dir/
+
