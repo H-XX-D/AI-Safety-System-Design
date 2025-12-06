@@ -73,6 +73,11 @@ try:
     from hidden_eval import get_evaluator, HiddenEvaluator
     from artifact_signing import get_signer, get_version_store
     from structured_logging import get_logger
+    from security_gates import (
+        get_node_verifier, get_safety_gate, get_hard_gate,
+        NodeVerifier, MultiSignalSafetyGate, HardGate,
+        TransferIntegrity, SafetyGateResult, SecurityError as GateSecurityError
+    )
     HARDENING_AVAILABLE = True
     CONFIG = get_config()
 except ImportError as e:
@@ -1413,9 +1418,43 @@ This is the version that will be deployed if approved."""
     hidden_eval_passed = True
     hidden_eval_score = 85.0  # Default if hardening not available
     eval_result_researcher = {"note": "Hardening not available"}
+    safety_gate_result = None
     
     if HARDENING_AVAILABLE:
-        print("  [1/3] Running ORKA hidden evaluation...")
+        # ============================================================
+        # HARD GATE 1: Multi-signal safety check
+        # ============================================================
+        print("  [1/4] Running multi-signal SAFETY GATE...")
+        try:
+            safety_gate = get_safety_gate(guard_url=GUARD[0])
+            safety_gate_result = safety_gate.evaluate(
+                content=improvement_code,
+                artifact_type=improvement_type,
+                include_hidden_eval=False,  # Will do hidden eval separately
+                include_llm_check=True,
+            )
+            
+            if not safety_gate_result.passed:
+                print(f"    ❌ SAFETY GATE FAILED")
+                print(f"       Blocked by: {safety_gate_result.blocked_by}")
+                for sig in safety_gate_result.signals:
+                    status = "✅" if sig.passed else "❌"
+                    print(f"       {status} {sig.name}: {sig.details[:50]}")
+                raise SecurityError(f"SAFETY GATE BLOCKED: {safety_gate_result.blocked_by}")
+            else:
+                print(f"    ✅ Safety gate PASSED (confidence: {safety_gate_result.overall_confidence:.1%})")
+                for sig in safety_gate_result.signals:
+                    print(f"       ✅ {sig.name}: {sig.details[:50]}")
+        except SecurityError:
+            raise  # Re-raise security errors
+        except Exception as e:
+            # Fail closed on any error
+            raise SecurityError(f"SAFETY GATE ERROR (fail-closed): {e}")
+        
+        # ============================================================
+        # HARD GATE 2: Hidden evaluation
+        # ============================================================
+        print("  [2/4] Running ORKA hidden evaluation (HARD GATE)...")
         evaluator = get_evaluator()
         
         # Generate hidden tests based on proposal (researcher cannot see these)
@@ -1435,6 +1474,17 @@ This is the version that will be deployed if approved."""
         hidden_eval_passed = eval_result.passed
         hidden_eval_score = eval_result.score
         
+        # HARD GATE: If hidden eval fails, deployment is BLOCKED
+        if not hidden_eval_passed:
+            print(f"    ❌ HIDDEN EVAL GATE FAILED (score: {hidden_eval_score:.1f}/70 required)")
+            raise SecurityError(
+                f"HIDDEN EVAL GATE BLOCKED\n"
+                f"  Score: {hidden_eval_score:.1f}/70 required\n"
+                f"  This artifact CANNOT be deployed."
+            )
+        else:
+            print(f"    ✅ Hidden eval PASSED (score: {hidden_eval_score:.1f})")
+        
         # Researcher sees ONLY sanitized view
         eval_result_researcher = eval_result.to_researcher_view()
         
@@ -1447,13 +1497,13 @@ This is the version that will be deployed if approved."""
             categories=eval_result.category_scores
         )
         
-        print(f"        Passed: {hidden_eval_passed}, Score: {hidden_eval_score:.1f}")
         print(f"        (Detailed metrics hidden from proposer)")
     else:
         print("  [1/3] Hidden eval skipped (hardening not available)")
+        print("    ⚠️  WARNING: Running in legacy mode without security gates!")
     
     # Calculate reward
-    print("  [2/3] Calculating reward...")
+    print("  [3/4] Calculating reward..." if HARDENING_AVAILABLE else "  [2/3] Calculating reward...")
     reward = 0.3  # Base
     reward += 0.2 * (votes["approve"] / total) if total > 0 else 0
     reward += 0.2 if sandbox_passed else 0
@@ -1463,25 +1513,29 @@ This is the version that will be deployed if approved."""
     # Hidden eval bonus (researcher doesn't know exact formula)
     if HARDENING_AVAILABLE:
         reward += 0.1 if hidden_eval_passed else -0.2
+        # Safety gate confidence bonus
+        if safety_gate_result:
+            reward += 0.05 * safety_gate_result.overall_confidence
     reward = round(min(1.0, max(0.0, reward)), 3)
     
-    # Determine deployment eligibility
+    # Determine deployment eligibility (all HARD gates must have passed to get here)
     deploy_eligible = vote_result == "APPROVE" and sandbox_passed and hidden_eval_passed
     
     # ============================================================
-    # HUMAN APPROVAL GATE (required when hardening enabled)
+    # HARD GATE 3: HUMAN APPROVAL (required when hardening enabled)
     # ============================================================
     human_approved = False
     human_approver = None
     
     if deploy_eligible and HARDENING_AVAILABLE:
-        print("\n  [3/3] HUMAN APPROVAL REQUIRED")
+        print("\n  [4/4] HUMAN APPROVAL REQUIRED (HARD GATE)")
         print("=" * 50)
         print(f"  Proposer: {proposer}")
         print(f"  Category: {improvement_type}")
         print(f"  Vote: {vote_result}")
-        print(f"  Sandbox: PASSED")
+        print("  Sandbox: PASSED")
         print(f"  Hidden Eval: {eval_result_researcher}")
+        print(f"  Safety Gate: {safety_gate_result.overall_confidence:.1%} confidence" if safety_gate_result else "  Safety Gate: N/A")
         print(f"  Reward Score: {reward}")
         print("")
         print("  Code Preview (first 300 chars):")
@@ -1502,26 +1556,27 @@ This is the version that will be deployed if approved."""
                     print(f"  ✅ APPROVED by {human_approver}")
                 else:
                     print("  ❌ REJECTED by human")
+                    raise SecurityError("HUMAN APPROVAL GATE: Deployment rejected by human operator")
             except EOFError:
-                print("  ❌ No input available - REJECTED")
+                raise SecurityError("HUMAN APPROVAL GATE: No input available (non-interactive mode)")
         
         # Log human approval decision
         logger = get_logger()
         logger.human_approval(human_approved, human_approver or "unknown")
     elif deploy_eligible:
-        # Hardening not available - auto-approve (legacy mode)
-        human_approved = True
-        human_approver = "AUTO (legacy mode)"
-        print("  [3/3] Auto-approving (hardening not enabled)")
+        # Hardening not available - BLOCK deployment in non-hardened mode
+        print("  ⛔ DEPLOYMENT BLOCKED: Hardening modules required for production deployment")
+        raise SecurityError("DEPLOYMENT BLOCKED: Cannot deploy without hardening modules")
     else:
-        print("  [3/3] Not eligible for deployment")
+        print("  [4/4] Not eligible for deployment (gates failed)")
     
-    # Final deploy decision
+    # Final deploy decision (if we reach here, all gates passed)
     deploy = deploy_eligible and human_approved
     
     # Build reward content (researcher view - no hidden details)
     hidden_eval_info = "HIDDEN (ORKA only)" if HARDENING_AVAILABLE else "N/A"
     human_approval_info = f"{human_approver}" if human_approved else "REJECTED"
+    safety_gate_info = f"{safety_gate_result.overall_confidence:.1%}" if safety_gate_result else "N/A"
     
     reward_content = f"""# Step 20: Reward & Deployment
 
@@ -1551,6 +1606,7 @@ This is the version that will be deployed if approved."""
     
     # If hardening enabled, sign the artifact
     artifact_id = None
+    artifact_signature = None
     if HARDENING_AVAILABLE and deploy:
         print("\n  Signing and storing artifact...")
         store = get_version_store()
@@ -1566,6 +1622,7 @@ This is the version that will be deployed if approved."""
             }
         )
         artifact_id = signed_artifact.artifact_id
+        artifact_signature = signed_artifact.signature
         reward_content += f"\n## Signed Artifact\n- ID: {artifact_id}\n- Signature: verified ✅\n"
         
         # Log to structured logger
@@ -1584,7 +1641,35 @@ This is the version that will be deployed if approved."""
         print("DEPLOYING TO ALL NODES")
         print("=" * 50)
         
-        deployment_results, version_id = deploy_to_cluster(improvement_type, improvement_code, workspace)
+        # Verify nodes before deployment (if hardening available)
+        if HARDENING_AVAILABLE:
+            print("  Verifying node health...")
+            node_verifier = get_node_verifier()
+            for node_name, (node_url, node_model) in RESEARCHERS.items():
+                try:
+                    # Extract IP from URL
+                    import re
+                    ip_match = re.search(r'http://([^:]+)', node_url)
+                    node_ip = ip_match.group(1) if ip_match else "localhost"
+                    health = node_verifier.verify_node(node_name, node_ip, node_model)
+                    if health.is_healthy:
+                        print(f"    ✅ {node_name}: healthy ({health.latency_ms:.0f}ms)")
+                    else:
+                        print(f"    ⚠️  {node_name}: {health.status.value} - {health.error_message}")
+                except Exception as e:
+                    print(f"    ⚠️  {node_name}: verification error - {e}")
+        
+        # Require signature for deployment
+        if not artifact_id or not artifact_signature:
+            raise SecurityError("DEPLOYMENT BLOCKED: Artifact must be signed before deployment")
+        
+        deployment_results, version_id = deploy_to_cluster(
+            improvement_type, 
+            improvement_code, 
+            workspace,
+            signature=artifact_signature,
+            artifact_id=artifact_id,
+        )
         successful = sum(1 for v in deployment_results.values() if v)
         total_nodes = len(deployment_results)
         

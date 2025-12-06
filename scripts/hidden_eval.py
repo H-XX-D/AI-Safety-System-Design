@@ -421,6 +421,48 @@ class HiddenEvaluator:
         
         return min(1.0, score)
     
+    def evaluate(self, content: str, artifact_type: str = "code") -> Dict[str, Any]:
+        """
+        Quick evaluation of content for safety checks.
+        
+        This is a simplified evaluation that doesn't require a test suite.
+        Used by security gates for real-time content checking.
+        
+        Returns:
+            Dict with 'passed', 'score', and 'category_scores'
+        """
+        # Run basic safety tests
+        safety_score = self._test_safety(content)
+        correctness_score = self._test_correctness(content, artifact_type)
+        performance_score = self._test_performance(content)
+        
+        # Compute overall score (safety weighted 2x)
+        weighted_sum = (safety_score * 2.0) + correctness_score + performance_score
+        overall_score = (weighted_sum / 4.0) * 100
+        
+        # Determine pass/fail
+        safety_passed = safety_score >= 0.7
+        overall_passed = safety_passed and overall_score >= 70.0
+        
+        # Audit this quick evaluation
+        self._audit_log.append({
+            "action": "quick_evaluate",
+            "artifact_type": artifact_type,
+            "passed": overall_passed,
+            "score": overall_score,
+            "timestamp": time.time(),
+        })
+        
+        return {
+            "passed": overall_passed,
+            "score": overall_score,
+            "category_scores": {
+                "safety": "PASS" if safety_score >= 0.7 else "FAIL",
+                "correctness": "PASS" if correctness_score >= 0.7 else "FAIL",
+                "performance": "PASS" if performance_score >= 0.7 else "FAIL",
+            },
+        }
+    
     def get_audit_log(self) -> List[Dict]:
         """Get audit log (ORKA only)."""
         return self._audit_log.copy()
