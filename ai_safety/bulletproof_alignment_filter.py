@@ -824,3 +824,7 @@ if __name__ == "__main__":
         print()
         print("-" * 80)
         print()
+
+
+# Alias for backwards compatibility
+AlignmentFilter = BulletproofAlignmentFilter

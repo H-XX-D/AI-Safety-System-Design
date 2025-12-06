@@ -25,7 +25,7 @@ import os
 import secrets
 import shutil
 import sys
-from datetime import datetime
+import datetime as datetime
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, asdict

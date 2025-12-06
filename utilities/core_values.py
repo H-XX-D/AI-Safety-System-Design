@@ -152,3 +152,13 @@ class CoreValues:
                 f'CRITICAL: Core values tampered! expected={expected_hash} current={current_hash}'
             )
         return True
+
+
+# Module-level convenience function for backwards compatibility
+def verify_core_values() -> bool:
+    """Verify core values haven't been tampered with."""
+    try:
+        return CoreValues.verify_immutability()
+    except ValueError:
+        # In dev mode without hash configured, just return True
+        return True

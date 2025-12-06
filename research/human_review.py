@@ -12,7 +12,7 @@ functions directly without requiring interactive input.
 from __future__ import annotations
 from typing import List, Dict, Any
 from dataclasses import dataclass
-from security.worm_manifest import worm_manifest
+import security.worm_manifest as worm_manifest
 import hmac
 import hashlib
 import json

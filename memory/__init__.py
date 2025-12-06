@@ -76,6 +76,13 @@ from .research_workflow import (
     ResearchWorkflow, ResearchStage, PaperEntry, Hypothesis, 
     Experiment, NoteSummary
 )
+from .orchestrator_adapter import (
+    OrchestratorMemoryAdapter,
+    SharedMemoryOrchestra,
+    ProposalContext,
+    create_adapter_for_nano,
+    NANO_CLUSTER,
+)
 
 __all__ = [
     # Core memory tiers
@@ -86,6 +93,13 @@ __all__ = [
     
     # Memory manager
     'MemoryManager',
+    
+    # Orchestrator integration
+    'OrchestratorMemoryAdapter',
+    'SharedMemoryOrchestra',
+    'ProposalContext',
+    'create_adapter_for_nano',
+    'NANO_CLUSTER',
     
     # RAG
     'RAGRetriever',

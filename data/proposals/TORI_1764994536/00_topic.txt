@@ -1,0 +1,2 @@
+Proposer: TORI
+Topic: The emergent properties of multi-agent reinforcement learning in simulated ecological systems.

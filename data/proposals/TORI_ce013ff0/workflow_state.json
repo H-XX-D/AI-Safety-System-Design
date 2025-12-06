@@ -1,0 +1,14 @@
+{
+  "id": "TORI_ce013ff0",
+  "agent": "TORI",
+  "topic": "Quantifying and Mitigating the Emergent Behavioral Risks of Highly Compressed, Multi-Agent Systems Operating on Edge Devices",
+  "workspace_path": "data/proposals/TORI_ce013ff0",
+  "current_step": 1,
+  "status": "active",
+  "created_at": 1764992969.930463,
+  "updated_at": 1764992969.9304638,
+  "completed_steps": [],
+  "step_timestamps": {},
+  "vote_result": null,
+  "reward_score": null
+}

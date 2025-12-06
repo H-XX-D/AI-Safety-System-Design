@@ -664,3 +664,7 @@ if __name__ == "__main__":
     print("\nVERIFICATION RESULT:")
     print(f"Status: {'PASS' if verified else 'FAIL'}")
     print(f"Message: {message}")
+
+
+# Alias for backwards compatibility
+Translator = AirGappedTranslator

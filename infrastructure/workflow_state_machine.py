@@ -3,7 +3,7 @@ Workflow state machine that enforces proposal phase transitions.
 """
 from __future__ import annotations
 
-from datetime import datetime
+import datetime as datetime
 from typing import Any, Dict, List, Optional, Set
 
 from infrastructure.workflow_types import (

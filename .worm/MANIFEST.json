@@ -1,0 +1,32 @@
+{
+  "created": "2025-12-05T17:44:39.247614",
+  "version": "0.4.1-dev",
+  "system_name": "ORKASTRATOR",
+  "root_hash": "9748ea5e4f00718662fbd1cddee3861ed37971dff2fb1987c6fe4330e84c97ae",
+  "file_count": 13,
+  "core_hashes": {
+    "core_values": "69580d923c8faad5bed02dacc0428f279d5ce7dd2dc603d5659ed7c7719b5af3",
+    "alignment_filter": "24316616597c95ced1332e307e758f052bdf04c496d0dbd1afcd99f927ead15f",
+    "seventh_validator": "901f5702e3c34bfd76a79f529106dd6c14c55d0293e22aa3ba3d248186029924",
+    "deception_detector": "1d76fefeaed1ae334625da874e68e28ac6b62842287993ad3c0536873edf5b78",
+    "worm_usb_verifier": "27c1607f3b731476444940e3fe77910f07a6b63f051e549eda3c46c7e6eff2ed",
+    "worm_manifest": "a36df2a61cce034382b2f9ea2c802b45d4ecd0e38699deaf3e486ae0c4d6832d",
+    "orchestrator": "4767653f3285907ec2cda72cd2a3012a0d4cc7c7ceceb8d6594a17fa15732c56",
+    "translator": "cb27dfe8baf31bce088046121fa2868ba94d003648511030e9c438db529f954d"
+  },
+  "file_hashes": {
+    "README.txt": "53cba81476255a6e87c756e7db5e458a7c56b884fa95c75e709262fdbdf86ce4",
+    "artifacts/core_values.json": "69580d923c8faad5bed02dacc0428f279d5ce7dd2dc603d5659ed7c7719b5af3",
+    "artifacts/bulletproof_alignment_filter.py": "24316616597c95ced1332e307e758f052bdf04c496d0dbd1afcd99f927ead15f",
+    "artifacts/seventh_validator.py": "901f5702e3c34bfd76a79f529106dd6c14c55d0293e22aa3ba3d248186029924",
+    "artifacts/worm_usb_verifier.py": "27c1607f3b731476444940e3fe77910f07a6b63f051e549eda3c46c7e6eff2ed",
+    "artifacts/deception_detector.py": "1d76fefeaed1ae334625da874e68e28ac6b62842287993ad3c0536873edf5b78",
+    "artifacts/orchestrator_v2.py": "4767653f3285907ec2cda72cd2a3012a0d4cc7c7ceceb8d6594a17fa15732c56",
+    "artifacts/worm_manifest.py": "a36df2a61cce034382b2f9ea2c802b45d4ecd0e38699deaf3e486ae0c4d6832d",
+    "artifacts/translator.py": "cb27dfe8baf31bce088046121fa2868ba94d003648511030e9c438db529f954d",
+    "data/system/system_info.json": "a1aeba91d569e7b4c040d45bc28ebd5b82a971ee202dbe2eca99eafd1f644a06",
+    "data/system/core_hashes.json": "c1a25e83093717ecf0065d596b6e4f8ffe1655219c177ae6e26b76859202f34e",
+    "data/compression_templates/dictionary.json": "613c338f22b7432b549a26abe5db36bf7253a47c02da64a83521fb765db0daff",
+    "data/compression_templates/common_patterns.json": "15cb1e11da658b8e7e3669a25fd9130759f08faea3bdee47f629e997542a7c28"
+  }
+}

@@ -7,7 +7,7 @@ Includes all 16 sections, charts, and proper formatting.
 """
 
 import io
-from datetime import datetime
+import datetime as datetime
 from typing import Dict, List, Any, Optional
 from pathlib import Path
 

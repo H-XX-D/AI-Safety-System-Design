@@ -1,0 +1,14 @@
+{
+  "id": "TORI_6e7cd6b7",
+  "agent": "TORI",
+  "topic": "efficient transformer attention mechanisms for edge devices",
+  "workspace_path": "data/proposals/TORI_6e7cd6b7",
+  "current_step": 1,
+  "status": "active",
+  "created_at": 1764992708.284683,
+  "updated_at": 1764992708.2846847,
+  "completed_steps": [],
+  "step_timestamps": {},
+  "vote_result": null,
+  "reward_score": null
+}

@@ -61,13 +61,21 @@ from security.worm_usb_verifier import (
 from infrastructure.memory_merkle import MemoryStorage, MemoryType
 from infrastructure.memory_auditor import MemoryContentAuditor
 from ai_safety.deception_detector import DeceptionDetector
-from security.worm_manifest import worm_manifest
+import security.worm_manifest as worm_manifest
 from infrastructure.validation_pipeline import ValidationPipeline, StagePlan
 from ai_safety.deception_incident import DeceptionType, Severity as IncidentSeverity
 from core.orchestrator_utils import map_deception_to_policy_severity as _map_dec_to_policy, build_control_hooks as _build_hooks
 from types import SimpleNamespace
-from ai_safety.interpretability_monitor import interpretability_monitor
+import ai_safety.interpretability_monitor as interpretability_monitor
 from sandbox.isolation import SandboxExecutionManager, SandboxIsolationError, HostCgroupLimiter
+
+# 3-Tier Memory Integration (optional - graceful fallback if not available)
+try:
+    from memory.orchestrator_adapter import OrchestratorMemoryAdapter
+    MEMORY_ADAPTER_AVAILABLE = True
+except ImportError:
+    OrchestratorMemoryAdapter = None  # type: ignore
+    MEMORY_ADAPTER_AVAILABLE = False
 from core.orchestrator_types import ProcessStatus as _ProcessStatus, Message as _Message
 from utilities.control_actions import ControlHooks, SystemControlHooks, DryRunHooks, execute_plan, plan_for_severity
 from research.improvement_policy import Severity as PolicySeverity
@@ -1352,6 +1360,27 @@ class Orchestrator:
         self.audit_thread = threading.Thread(target=self._continuous_memory_audit, daemon=True)
         self.audit_thread.start()
 
+        # 3-Tier Memory System (RAG, shared memory, etc.)
+        self.memory_adapter: Optional[Any] = None
+        if MEMORY_ADAPTER_AVAILABLE:
+            try:
+                # Get orchestra URL from config
+                orchestra_cfg = cast(Dict[str, Any], cfg.get('orchestra', {}))
+                orchestra_url = str(orchestra_cfg.get('shared_memory_url', 'http://localhost:5000'))
+                
+                self.memory_adapter = OrchestratorMemoryAdapter(
+                    agent_id="ORKA",
+                    data_dir="./data/memory/orka",
+                    orchestra_url=orchestra_url,
+                    merkle_storage=memory_storage,
+                    auto_sync=True,
+                    sync_interval=30.0
+                )
+                self.logger.info("memory_adapter_initialized type=3tier")
+            except Exception as e:
+                self.logger.warning("memory_adapter_init_failed error=%s", str(e))
+                self.memory_adapter = None
+
         # Deception, debate, and interpretability components
         self.deception_detector = DeceptionDetector()
         self.debate_engine = DebateEngine()
@@ -1431,7 +1460,7 @@ class Orchestrator:
             worm_cfg = cfg.get('worm', {})
             ps = cast(Dict[str, Any], worm_cfg.get('penalty_schedule', {}))
             if ps:
-                from security.worm_manifest import worm_manifest as _wm
+                import security.worm_manifest as _wm
                 ini = float(ps.get('initial', 1.0))
                 dec = float(ps.get('decay', 0.90))
                 flo = float(ps.get('floor', 0.40))
@@ -1722,6 +1751,35 @@ class Orchestrator:
         
         # Score hypothesis quality (if this is from a hypothesis)
         hypothesis_score = self._score_hypothesis_quality(proposal)
+        
+        # Enrich proposal with RAG context from 3-tier memory
+        if self.memory_adapter:
+            try:
+                proposal_content = proposal.get('description', '') or proposal.get('code', '') or str(proposal)
+                context = self.memory_adapter.get_proposal_context(
+                    proposal_content=proposal_content,
+                    proposal_type=proposal.get('improvement_type', 'improvement'),
+                    max_similar=5,
+                    max_patterns=3
+                )
+                # Store context for reviewers
+                self.active_proposals[proposal_id]['rag_context'] = context.to_dict()
+                
+                # Store proposal in memory
+                self.memory_adapter.store_proposal(
+                    title=proposal.get('title', 'Untitled'),
+                    content=proposal_content,
+                    proposer_id=str(proposal.get('proposer_id', 'unknown')),
+                    confidence=float(proposal.get('confidence', 0.5)),
+                    domain=proposal.get('improvement_type', 'general')
+                )
+                _log_structured(self.logger, 'debug', 'rag_context_attached', {
+                    'proposal_id': proposal_id,
+                    'similar_count': len(context.similar_proposals),
+                    'pattern_count': len(context.relevant_patterns)
+                })
+            except Exception as e:
+                _log_structured(self.logger, 'warning', 'rag_context_failed', {'proposal_id': proposal_id, 'error': str(e)})
         
     def broadcast_hypothesis_improvement(self, focus_area: str = "general"):
         """
@@ -4218,6 +4276,25 @@ class Orchestrator:
                 self._rollback_schedule.pop(proposal_id, None)
             except Exception:
                 pass
+        
+        # Record outcome in 3-tier memory
+        if self.memory_adapter:
+            try:
+                record = self.active_proposals.get(proposal_id, {})
+                reviews = record.get('reviews', [])
+                reward = float(record.get('reward', 0.0))
+                confidence = float(record.get('proposal', {}).get('confidence', 0.5))
+                self.memory_adapter.record_proposal_outcome(
+                    proposal_id=proposal_id,
+                    outcome='approved' if approved else 'rejected',
+                    confidence_final=confidence,
+                    reward=reward if approved else 0.0,
+                    reviews=reviews,
+                    orka_assessment=record.get('rag_context', {})
+                )
+            except Exception as e:
+                _log_structured(self.logger, 'warning', 'memory_outcome_failed', {'proposal_id': proposal_id, 'error': str(e)})
+        
         final_status = str(self.active_proposals[proposal_id].get('status', 'unknown'))
         self._notify_ui_completion(proposal_id, final_status)
 

@@ -1,0 +1,50 @@
+{
+  "system_name": "ORKASTRATOR",
+  "version": "0.4.1-dev",
+  "created": "2025-12-05T17:44:39.245799",
+  "node_type": "nano_agent",
+  "cluster_config": {
+    "orchestrator": {
+      "name": "ORKA",
+      "ip": "192.168.0.249",
+      "model": "qwen2.5:14b"
+    },
+    "agents": {
+      "GIN": {
+        "ip": "192.168.0.242",
+        "model": "deepseek-r1:1.5b",
+        "role": "code_gen"
+      },
+      "ORIN": {
+        "ip": "192.168.0.160",
+        "model": "deepseek-r1:1.5b",
+        "role": "nvidia_expert"
+      },
+      "TIF": {
+        "ip": "192.168.0.213",
+        "model": "deepseek-r1:1.5b",
+        "role": "technical"
+      },
+      "TORI": {
+        "ip": "192.168.0.235",
+        "model": "gemma3:4b",
+        "role": "code_review"
+      },
+      "PAGEQA": {
+        "ip": "192.168.0.168",
+        "model": "qwen2.5:3b",
+        "role": "research"
+      },
+      "ARCHI": {
+        "ip": "192.168.0.232",
+        "model": "qwen2.5:3b",
+        "role": "architecture"
+      },
+      "GUARD": {
+        "ip": "192.168.0.146",
+        "model": "llama-guard3:1b",
+        "role": "safety"
+      }
+    }
+  }
+}

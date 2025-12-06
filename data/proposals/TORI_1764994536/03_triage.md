@@ -1,0 +1,3 @@
+The 2018 paper by Hopper et al. ("Emergent Cooperation in Multi-Agent Learning") is the most important. 
+
+**Why?** It demonstrated *genuine* emergent cooperation in a complex, realistic simulated ecosystem (the Alpaca environment) without any human-designed rules. This was a pivotal moment, proving MARL could produce sophisticated social behavior from purely reinforcement learning. It shifted the field’s focus from rule-based agents to learning-based strategies.

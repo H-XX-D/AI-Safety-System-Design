@@ -1,4 +1,4 @@
-from datetime import datetime
+import datetime as datetime
 import os
 import sys
 
@@ -49,7 +49,7 @@ def run_debug() -> None:
         })
 
     results = orchestrator.active_proposals[proposal['proposal_id']]['test_results']
-    from pprint import pprint
+    import pprint as pprint
     pprint(results)
 
 

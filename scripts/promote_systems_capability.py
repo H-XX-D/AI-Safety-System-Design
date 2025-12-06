@@ -28,7 +28,7 @@ import subprocess
 import sys
 from pathlib import Path
 from typing import Dict, Any, Optional
-from datetime import datetime
+import datetime as datetime
 
 # Add project root to path
 PROJECT_ROOT = Path(__file__).parent.parent
@@ -248,7 +248,7 @@ def test_and_promote_cache_policy(
 
 def load_proposal(proposal_id: str) -> Optional[Dict[str, Any]]:
     """
-    Load a proposal from orchestrator's active proposals or history.
+    Load a proposal from core.orchestrator's active proposals or history.
     
     Args:
         proposal_id: Proposal ID
@@ -256,7 +256,7 @@ def load_proposal(proposal_id: str) -> Optional[Dict[str, Any]]:
     Returns:
         Proposal dict if found, None otherwise
     """
-    # Try to load from orchestrator
+    # Try to load from core.orchestrator
     try:
         from core.orchestrator import Orchestrator
         orch = Orchestrator()
@@ -278,7 +278,7 @@ def main():
     parser.add_argument('--proposal-id', required=True, help='Proposal ID to test')
     parser.add_argument('--dry-run', action='store_true', help='Test only, do not apply')
     parser.add_argument('--apply', action='store_true', help='Apply promotion if criteria met')
-    parser.add_argument('--proposal-json', help='Path to proposal JSON file (instead of loading from orchestrator)')
+    parser.add_argument('--proposal-json', help='Path to proposal JSON file (instead of loading from core.orchestrator)')
     args = parser.parse_args()
     
     if args.dry_run and args.apply:

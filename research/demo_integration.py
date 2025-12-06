@@ -20,7 +20,7 @@ from __future__ import annotations
 import json
 import os
 import random
-from datetime import datetime
+import datetime as datetime
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 
@@ -28,7 +28,7 @@ from core.orchestrator import Orchestrator
 from infrastructure.memory_merkle import MemoryStorage, MemoryType
 from utilities.config_loader import load_config
 from research.research_system import ResearchSystem, SystemSpecialization, TemplateLLMAdapter
-from ai_safety.interpretability_monitor import interpretability_monitor
+import ai_safety.interpretability_monitor as interpretability_monitor
 from ai_safety.semantic_deception_classifier import build_training_bundle, save_training_bundle
 
 # ------------------------- Helpers -------------------------

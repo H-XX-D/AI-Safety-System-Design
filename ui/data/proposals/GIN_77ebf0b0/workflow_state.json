@@ -1,0 +1,14 @@
+{
+  "id": "GIN_77ebf0b0",
+  "agent": "GIN",
+  "topic": "Improve memory efficiency in code generation",
+  "workspace_path": "data/proposals/GIN_77ebf0b0",
+  "current_step": 1,
+  "status": "active",
+  "created_at": 1764989826.2992663,
+  "updated_at": 1764989826.2992668,
+  "completed_steps": [],
+  "step_timestamps": {},
+  "vote_result": null,
+  "reward_score": null
+}

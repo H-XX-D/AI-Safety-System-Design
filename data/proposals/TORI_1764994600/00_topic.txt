@@ -1,0 +1,2 @@
+Proposer: TORI
+Topic: :The impact of multi-modal prompting on emergent creative writing in large language models.

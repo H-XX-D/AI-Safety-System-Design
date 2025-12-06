@@ -204,15 +204,14 @@ class ReputationMatrix:
 
     # ----------------------- Enhanced metrics (new) -----------------------
     def _parse_ts(self, ts: str):
-        from datetime import datetime as _dt
         try:
-            return _dt.fromisoformat(ts)
+            return datetime.fromisoformat(ts)
         except Exception:
             # Fallback for non-ISO formats if encountered
             try:
-                return _dt.strptime(ts, "%Y-%m-%d %H:%M:%S")
+                return datetime.strptime(ts, "%Y-%m-%d %H:%M:%S")
             except Exception:
-                return _dt.now()
+                return datetime.now()
 
     def _decay_weight(self, age_days: float, half_life_days: float) -> float:
         # Exponential decay: weight halves every half_life_days

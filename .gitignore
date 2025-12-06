@@ -90,3 +90,12 @@ temp/
 
 # WORM USB mount (if applicable)
 worm_mount/
+
+# Local models (ignored)
+models/
+Qwen2.5-1.5B-GRPO-1ep/
+*.bin
+*.safetensors
+*.pt
+*.pth
+*.gguf

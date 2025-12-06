@@ -16,7 +16,7 @@ import json
 from typing import Optional, cast, Dict, Any
 import logging
 from ai_safety.deception_incident import DeceptionIncidentTracker
-from security.attestation import verify as verify_attestation
+from .attestation import verify as verify_attestation
 
 logger = logging.getLogger(__name__)
 

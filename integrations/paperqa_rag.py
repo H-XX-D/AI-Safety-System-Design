@@ -22,15 +22,21 @@ import hashlib
 from pathlib import Path
 from typing import Dict, List, Optional, Any, Callable
 from dataclasses import dataclass, field
-from datetime import datetime
+import datetime as datetime
 from threading import Lock
 
 # Project root
 PROJECT_ROOT = Path(__file__).parent.parent
 
-# Llama server configuration (local, self-contained)
-LLAMA_SERVER_URL = os.environ.get("LLAMA_SERVER_URL", "http://localhost:8080/v1")
-LLAMA_MODEL_NAME = os.environ.get("LLAMA_MODEL_NAME", "phi-3.5-mini")
+# PAGEQA nano configuration for evidence queries
+# PAGEQA runs qwen2.5:3b at 192.168.0.168:11434
+PAGEQA_IP = os.environ.get("PAGEQA_IP", "192.168.0.168")
+PAGEQA_PORT = os.environ.get("PAGEQA_PORT", "11434")
+PAGEQA_MODEL = os.environ.get("PAGEQA_MODEL", "qwen2.5:3b")
+
+# Llama server configuration (falls back to PAGEQA if not set)
+LLAMA_SERVER_URL = os.environ.get("LLAMA_SERVER_URL", f"http://{PAGEQA_IP}:{PAGEQA_PORT}/v1")
+LLAMA_MODEL_NAME = os.environ.get("LLAMA_MODEL_NAME", PAGEQA_MODEL)
 
 
 @dataclass
@@ -592,6 +598,7 @@ Has this been proposed or implemented before?
             }
 
 
+
 # Convenience function for agents to use
 _global_rag: Optional[PaperQAIntegration] = None
 
@@ -633,3 +640,233 @@ def ask_research_sync(question: str) -> str:
     """Synchronous wrapper for ask_research."""
     return asyncio.run(ask_research(question))
 
+
+# =============================================================================
+# DIRECT PAGEQA OLLAMA INTEGRATION
+# =============================================================================
+# This provides a fallback that queries PAGEQA's Ollama directly without
+# requiring the PaperQA library. Documents are indexed locally.
+
+import requests
+
+class DirectPAGEQA:
+    """
+    Direct integration with PAGEQA nano's Ollama for research queries.
+    
+    This is a simpler alternative to PaperQA that:
+    1. Loads local documents for context
+    2. Queries PAGEQA's qwen2.5:3b model directly
+    3. Returns structured research results
+    """
+    
+    def __init__(
+        self,
+        pageqa_ip: str = PAGEQA_IP,
+        pageqa_port: str = PAGEQA_PORT,
+        pageqa_model: str = PAGEQA_MODEL
+    ):
+        self.base_url = f"http://{pageqa_ip}:{pageqa_port}"
+        self.model = pageqa_model
+        self._doc_cache: Dict[str, str] = {}
+        self._doc_loaded = False
+    
+    def _load_documents(self) -> None:
+        """Load local documents for context."""
+        if self._doc_loaded:
+            return
+        
+        doc_dirs = [
+            PROJECT_ROOT / "docs",
+            PROJECT_ROOT / "research",
+        ]
+        
+        for doc_dir in doc_dirs:
+            if not doc_dir.exists():
+                continue
+            for ext in ['.md', '.txt']:
+                for doc_file in doc_dir.glob(f'**/*{ext}'):
+                    try:
+                        content = doc_file.read_text()[:5000]  # Limit per doc
+                        self._doc_cache[doc_file.name] = content
+                    except Exception:
+                        pass
+        
+        self._doc_loaded = True
+    
+    def _find_relevant_docs(self, query: str, max_docs: int = 3) -> List[Dict[str, str]]:
+        """Find documents relevant to the query using simple keyword matching."""
+        self._load_documents()
+        
+        query_words = set(query.lower().split())
+        scored_docs = []
+        
+        for name, content in self._doc_cache.items():
+            content_lower = content.lower()
+            # Simple scoring: count query word occurrences
+            score = sum(1 for word in query_words if word in content_lower)
+            if score > 0:
+                scored_docs.append((name, content[:2000], score))
+        
+        # Sort by score and return top docs
+        scored_docs.sort(key=lambda x: x[2], reverse=True)
+        
+        return [
+            {'name': name, 'text': content, 'score': score}
+            for name, content, score in scored_docs[:max_docs]
+        ]
+    
+    def query(self, question: str, timeout: float = 60.0) -> RAGResult:
+        """
+        Query PAGEQA for research information.
+        
+        Args:
+            question: Research question
+            timeout: Request timeout in seconds
+            
+        Returns:
+            RAGResult with answer and sources
+        """
+        from datetime import datetime
+        
+        # Find relevant documents
+        relevant_docs = self._find_relevant_docs(question)
+        
+        # Build context from relevant docs
+        context = ""
+        if relevant_docs:
+            context = "\n\nRelevant documentation:\n"
+            for doc in relevant_docs:
+                context += f"\n--- {doc['name']} ---\n{doc['text'][:1000]}\n"
+        
+        # Build prompt
+        system_prompt = """You are PAGEQA, a research assistant specialized in AI safety and system design.
+Your role is to provide evidence-grounded research answers.
+When answering:
+1. Cite specific documentation when available
+2. Be precise and technical
+3. Note any limitations or uncertainties
+4. Focus on practical, actionable information"""
+
+        user_prompt = f"""Research question: {question}
+{context}
+
+Provide a comprehensive answer citing any relevant documentation."""
+
+        try:
+            # Query PAGEQA's Ollama
+            response = requests.post(
+                f"{self.base_url}/api/generate",
+                json={
+                    "model": self.model,
+                    "prompt": user_prompt,
+                    "system": system_prompt,
+                    "stream": False,
+                    "options": {
+                        "temperature": 0.3,
+                        "num_predict": 1024
+                    }
+                },
+                timeout=timeout
+            )
+            
+            if response.status_code == 200:
+                answer = response.json().get('response', '')
+                return RAGResult(
+                    query=question,
+                    answer=answer,
+                    sources=relevant_docs,
+                    confidence=0.8 if relevant_docs else 0.5,
+                    timestamp=datetime.now().isoformat(),
+                    cached=False
+                )
+        except Exception as e:
+            print(f"PAGEQA query error: {e}")
+        
+        return RAGResult(
+            query=question,
+            answer=f"Unable to query PAGEQA for: {question}",
+            sources=[],
+            confidence=0.0,
+            timestamp=datetime.now().isoformat(),
+            cached=False
+        )
+    
+    def query_sync(self, question: str, timeout: float = 60.0) -> Dict[str, Any]:
+        """Synchronous query that returns a dict."""
+        result = self.query(question, timeout)
+        return result.to_dict()
+
+
+# Global direct PAGEQA instance
+_direct_pageqa: Optional[DirectPAGEQA] = None
+
+def get_direct_pageqa() -> DirectPAGEQA:
+    """Get or create the direct PAGEQA instance."""
+    global _direct_pageqa
+    if _direct_pageqa is None:
+        _direct_pageqa = DirectPAGEQA()
+    return _direct_pageqa
+
+
+def research_with_pageqa(question: str) -> Dict[str, Any]:
+    """
+    Query PAGEQA for research - the primary entry point for agents.
+    
+    This uses the direct PAGEQA integration which:
+    1. Doesn't require PaperQA library
+    2. Queries the PAGEQA nano's Ollama directly
+    3. Uses local documentation for context
+    
+    Args:
+        question: Research question
+        
+    Returns:
+        Dict with answer, sources, and confidence
+    """
+    return get_direct_pageqa().query_sync(question)
+
+
+def query_pageqa_direct(question: str, timeout: float = 60.0) -> str:
+    """
+    Direct query to PAGEQA nano's Ollama - returns just the answer string.
+    
+    This is a simple wrapper for use by the proposal workflow engine.
+    
+    Args:
+        question: The question to ask PAGEQA
+        timeout: Request timeout in seconds
+        
+    Returns:
+        Answer string from PAGEQA
+    """
+    import requests
+    
+    pageqa_url = f"http://{PAGEQA_IP}:{PAGEQA_PORT}/api/generate"
+    
+    try:
+        response = requests.post(
+            pageqa_url,
+            json={
+                "model": PAGEQA_MODEL,
+                "prompt": f"You are a research assistant. Answer this question concisely with evidence:\n\n{question}",
+                "stream": False,
+                "options": {
+                    "temperature": 0.3,
+                    "num_predict": 512
+                }
+            },
+            timeout=timeout
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            return data.get("response", "No response from PAGEQA")
+        else:
+            return f"PAGEQA error: HTTP {response.status_code}"
+            
+    except requests.exceptions.Timeout:
+        return "PAGEQA query timed out"
+    except requests.exceptions.ConnectionError:
+        return f"Cannot connect to PAGEQA at {PAGEQA_IP}:{PAGEQA_PORT}"
+    except Exception as e:
+        return f"PAGEQA error: {str(e)}"

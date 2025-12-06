@@ -10,7 +10,7 @@ ruff==0.6.0
 
 # Core Dependencies
 requests==2.32.3
-aura-compression==2.0.2
+aura-compression==1.1.4
 pynacl==1.5.0
 
 # Web Framework (for UI)
@@ -28,18 +28,17 @@ openai==1.12.0  # For OpenAI GPT-4 adapter
 anthropic==0.18.1  # For Anthropic Claude adapter
 
 # PaperQA for evidence-grounded governance (optional)
-paper-qa>=5.0.0  # For documentation search and evidence gathering
+paper-qa==4.9.0  # For documentation search and evidence gathering
 
 # Docker & system tools used by some integration tests
 psutil==5.9.8
 docker==7.0.0
 
 # GPU Acceleration (optional)
-jax[cpu]>=0.8.1  # JAX for GPU acceleration (Metal backend on Apple Silicon)
-jax-metal>=0.1.1  # Metal backend plugin for Apple Silicon GPUs
+jax[cpu]==0.4.13  # JAX for GPU acceleration (Metal backend on Apple Silicon)
 
 # Model Compression & HF Pipelines
-torch==2.9.1  # PyTorch runtime (Metal / CUDA acceleration, py3.14 wheels)
+torch==2.1.0  # PyTorch runtime (Metal / CUDA acceleration, py3.14 wheels)
 transformers==4.46.1  # Hugging Face model definitions & utilities
 datasets==3.1.0  # Evaluation + calibration datasets (e.g., SST-2)
 safetensors==0.4.5  # Streaming tensor storage for HF checkpoints

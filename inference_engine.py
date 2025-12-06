@@ -9,6 +9,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
+from model_converter import CompressedModel
 import time
 from typing import Dict, List, Any, Optional, Tuple
 from dataclasses import dataclass

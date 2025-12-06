@@ -78,7 +78,11 @@ class ToolServerManager:
             for tool_type in available_tool_types:
                 try:
                     tool_cls = get_tool_cls(tool_type)
-                    tool_instance = tool_cls(num_workers=1)
+                    # Some Agent0 tools (e.g., ipython_code) don't accept num_workers
+                    try:
+                        tool_instance = tool_cls(num_workers=1)
+                    except TypeError:
+                        tool_instance = tool_cls()
                     self.tools[tool_type] = tool_instance
                     logger.info(f"Initialized tool: {tool_type}")
                 except Exception as e:
@@ -356,4 +360,3 @@ __all__ = [
     'query_paperqa_async',
     'AgentToolRegistry',
 ]
-

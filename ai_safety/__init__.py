@@ -7,7 +7,7 @@ and other AI safety mechanisms.
 """
 
 from .deception_detector import DeceptionDetector
-from .interpretability_monitor import interpretability_monitor
+from . import interpretability_monitor
 from .bulletproof_alignment_filter import BulletproofAlignmentFilter
 
 __all__ = [

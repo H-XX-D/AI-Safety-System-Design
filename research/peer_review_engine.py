@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+import datetime as datetime
 from typing import Any, Callable, Dict, List, Optional
 
 from research.debate_engine import DebateResult

@@ -23,13 +23,41 @@ import asyncio
 from pathlib import Path
 from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass, field
-from datetime import datetime
+import datetime as datetime
 import logging
+import yaml
 
 # Project root
 PROJECT_ROOT = Path(__file__).parent.parent
 
 logger = logging.getLogger(__name__)
+
+
+def _load_cluster_config() -> Dict[str, Any]:
+    """Load cluster configuration from default.yaml."""
+    config_path = PROJECT_ROOT / "config" / "default.yaml"
+    if config_path.exists():
+        with open(config_path) as f:
+            return yaml.safe_load(f).get("cluster", {})
+    return {}
+
+
+def _get_pageqa_url() -> str:
+    """Get the PAGEQA Ollama endpoint URL from config."""
+    config = _load_cluster_config()
+    agents = config.get("agents", {})
+    pageqa = agents.get("PAGEQA", {})
+    host = pageqa.get("host", "192.168.0.168")
+    port = pageqa.get("port", 11434)
+    return f"http://{host}:{port}"
+
+
+def _get_pageqa_model() -> str:
+    """Get the PAGEQA model name from config."""
+    config = _load_cluster_config()
+    agents = config.get("agents", {})
+    pageqa = agents.get("PAGEQA", {})
+    return pageqa.get("model", "qwen2.5:3b")
 
 
 # ============================================================================
@@ -242,7 +270,7 @@ class HypothesisGenerator:
         return self._rag
     
     async def _call_llm(self, system: str, user: str) -> str:
-        """Call LLM for generation."""
+        """Call LLM for generation - uses PAGEQA Nano by default."""
         if self.llm_client:
             # Use provided client
             messages = [
@@ -252,20 +280,26 @@ class HypothesisGenerator:
             response = await self.llm_client.call_single(messages)
             return response.text
         else:
-            # Use local llama.cpp via HTTP
+            # Use PAGEQA Nano (Qwen 2.5 3B) via Ollama API
             import urllib.request
             import json
             
-            url = os.environ.get("LLAMA_SERVER_URL", "http://localhost:8080") + "/v1/chat/completions"
+            # Get PAGEQA endpoint from cluster config
+            pageqa_url = _get_pageqa_url()
+            pageqa_model = _get_pageqa_model()
+            url = f"{pageqa_url}/api/chat"
             
             data = json.dumps({
-                "model": "local",
+                "model": pageqa_model,
                 "messages": [
                     {"role": "system", "content": system},
                     {"role": "user", "content": user}
                 ],
-                "temperature": 0.7,
-                "max_tokens": 2000
+                "stream": False,
+                "options": {
+                    "temperature": 0.7,
+                    "num_predict": 2000
+                }
             }).encode()
             
             try:
@@ -274,12 +308,33 @@ class HypothesisGenerator:
                     data=data,
                     headers={"Content-Type": "application/json"}
                 )
-                with urllib.request.urlopen(req, timeout=60) as resp:
+                with urllib.request.urlopen(req, timeout=120) as resp:
                     result = json.loads(resp.read().decode())
-                    return result["choices"][0]["message"]["content"]
+                    return result.get("message", {}).get("content", "")
             except Exception as e:
-                logger.error(f"LLM call failed: {e}")
-                return f"[LLM unavailable: {e}]"
+                logger.error(f"PAGEQA call failed: {e}")
+                # Fallback to localhost if PAGEQA unavailable
+                fallback_url = os.environ.get("LLAMA_SERVER_URL", "http://localhost:8080") + "/v1/chat/completions"
+                try:
+                    data = json.dumps({
+                        "model": "local",
+                        "messages": [
+                            {"role": "system", "content": system},
+                            {"role": "user", "content": user}
+                        ],
+                        "temperature": 0.7,
+                        "max_tokens": 2000
+                    }).encode()
+                    req = urllib.request.Request(
+                        fallback_url,
+                        data=data,
+                        headers={"Content-Type": "application/json"}
+                    )
+                    with urllib.request.urlopen(req, timeout=60) as resp:
+                        result = json.loads(resp.read().decode())
+                        return result["choices"][0]["message"]["content"]
+                except Exception as e2:
+                    return f"[LLM unavailable: PAGEQA={e}, fallback={e2}]"
     
     async def generate_queries(
         self, 
@@ -575,7 +630,177 @@ def generate_improvement_proposals_sync(
     return asyncio.run(generate_improvement_proposals(target_component, num_proposals))
 
 
+# ============================================================================
+# PAGEQA Direct Client
+# ============================================================================
+
+class PAGEQAClient:
+    """
+    Direct client for the PAGEQA Nano (Qwen 2.5 3B on 192.168.0.168).
+    
+    Used for:
+    - Literature review queries
+    - Paper/document Q&A
+    - Research validation
+    - Citation verification
+    """
+    
+    def __init__(self):
+        """Initialize PAGEQA client with config from cluster."""
+        self.base_url = _get_pageqa_url()
+        self.model = _get_pageqa_model()
+        logger.info(f"PAGEQA client initialized: {self.base_url} with {self.model}")
+    
+    async def query(
+        self,
+        question: str,
+        context: Optional[str] = None,
+        system_prompt: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Query PAGEQA with a research question.
+        
+        Args:
+            question: The research question
+            context: Optional context/documents to reference
+            system_prompt: Optional system prompt override
+            
+        Returns:
+            Dict with 'answer', 'model', 'usage'
+        """
+        import urllib.request
+        
+        default_system = """You are PAGEQA, an expert research assistant specializing in 
+AI safety, machine learning, and scientific literature. Provide accurate, well-reasoned 
+answers with citations when possible. If you don't know something, say so clearly."""
+        
+        messages = [
+            {"role": "system", "content": system_prompt or default_system}
+        ]
+        
+        if context:
+            messages.append({
+                "role": "user", 
+                "content": f"Context:\n{context}\n\nQuestion: {question}"
+            })
+        else:
+            messages.append({"role": "user", "content": question})
+        
+        data = json.dumps({
+            "model": self.model,
+            "messages": messages,
+            "stream": False,
+            "options": {
+                "temperature": 0.3,  # Lower temp for factual answers
+                "num_predict": 2000
+            }
+        }).encode()
+        
+        try:
+            req = urllib.request.Request(
+                f"{self.base_url}/api/chat",
+                data=data,
+                headers={"Content-Type": "application/json"}
+            )
+            with urllib.request.urlopen(req, timeout=120) as resp:
+                result = json.loads(resp.read().decode())
+                return {
+                    "answer": result.get("message", {}).get("content", ""),
+                    "model": self.model,
+                    "done": result.get("done", True),
+                    "total_duration": result.get("total_duration", 0),
+                    "eval_count": result.get("eval_count", 0)
+                }
+        except Exception as e:
+            logger.error(f"PAGEQA query failed: {e}")
+            return {
+                "answer": f"[PAGEQA unavailable: {e}]",
+                "model": self.model,
+                "error": str(e)
+            }
+    
+    def query_sync(
+        self,
+        question: str,
+        context: Optional[str] = None,
+        system_prompt: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Synchronous wrapper for query."""
+        return asyncio.run(self.query(question, context, system_prompt))
+    
+    async def validate_citation(
+        self,
+        claim: str,
+        citation: str
+    ) -> Dict[str, Any]:
+        """
+        Validate if a citation supports a claim.
+        
+        Args:
+            claim: The claim being made
+            citation: The citation text/reference
+            
+        Returns:
+            Dict with 'valid', 'confidence', 'reasoning'
+        """
+        system = """You are a citation verification expert. Analyze if the given citation 
+supports the claim. Be rigorous and skeptical. Rate confidence 0-100."""
+        
+        question = f"""
+Claim: {claim}
+
+Citation: {citation}
+
+Does this citation support the claim? Respond with:
+1. VALID: yes/no/partial
+2. CONFIDENCE: 0-100
+3. REASONING: Brief explanation
+"""
+        
+        result = await self.query(question, system_prompt=system)
+        
+        # Parse response
+        answer = result.get("answer", "")
+        valid = "yes" in answer.lower().split("valid")[1][:20] if "valid" in answer.lower() else False
+        confidence = 50  # Default
+        try:
+            if "confidence" in answer.lower():
+                conf_part = answer.lower().split("confidence")[1][:20]
+                import re
+                nums = re.findall(r'\d+', conf_part)
+                if nums:
+                    confidence = min(100, int(nums[0]))
+        except:
+            pass
+        
+        return {
+            "valid": valid,
+            "confidence": confidence,
+            "reasoning": answer,
+            "model": self.model
+        }
+    
+    async def health_check(self) -> bool:
+        """Check if PAGEQA is available."""
+        import urllib.request
+        try:
+            req = urllib.request.Request(f"{self.base_url}/api/tags")
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                result = json.loads(resp.read().decode())
+                models = [m.get("name", "") for m in result.get("models", [])]
+                return self.model.split(":")[0] in str(models)
+        except Exception as e:
+            logger.warning(f"PAGEQA health check failed: {e}")
+            return False
 
 
+# Create singleton instance
+_pageqa_client: Optional[PAGEQAClient] = None
 
+def get_pageqa_client() -> PAGEQAClient:
+    """Get or create the PAGEQA client singleton."""
+    global _pageqa_client
+    if _pageqa_client is None:
+        _pageqa_client = PAGEQAClient()
+    return _pageqa_client
 

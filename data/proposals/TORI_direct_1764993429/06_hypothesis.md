@@ -1,0 +1,1 @@
+Effective multi-agent coordination strategies will significantly improve the accuracy and efficiency of federated inference optimization by enabling dynamic resource allocation and knowledge sharing among participating clients.

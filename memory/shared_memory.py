@@ -64,7 +64,7 @@ class SharedMemoryClient:
     def __init__(
         self,
         agent_id: str,
-        orchestra_url: str = "http://localhost:5000",
+        orchestra_url: str = "http://localhost:5001",  # Flask UI port
         local_cache_dir: str = "./data/shared_cache",
         sync_interval_seconds: float = 60.0
     ):

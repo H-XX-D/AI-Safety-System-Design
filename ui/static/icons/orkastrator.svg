@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#16213e;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="orbGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00d4ff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0066ff;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="nodeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00ff88;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#00cc66;stop-opacity:1" />
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="128" height="128" rx="24" fill="url(#bgGrad)"/>
+  
+  <!-- Connection lines to outer nodes -->
+  <g stroke="#00d4ff" stroke-width="1.5" opacity="0.6">
+    <line x1="64" y1="64" x2="64" y2="24"/>
+    <line x1="64" y1="64" x2="98" y2="44"/>
+    <line x1="64" y1="64" x2="98" y2="84"/>
+    <line x1="64" y1="64" x2="64" y2="104"/>
+    <line x1="64" y1="64" x2="30" y2="84"/>
+    <line x1="64" y1="64" x2="30" y2="44"/>
+  </g>
+  
+  <!-- Outer ring -->
+  <circle cx="64" cy="64" r="38" fill="none" stroke="url(#orbGrad)" stroke-width="2" opacity="0.4"/>
+  
+  <!-- Center ORKA node -->
+  <circle cx="64" cy="64" r="18" fill="url(#orbGrad)" filter="url(#glow)"/>
+  <text x="64" y="68" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="white" text-anchor="middle">ORKA</text>
+  
+  <!-- Satellite nodes (the 7 nanos) -->
+  <g filter="url(#glow)">
+    <!-- Top -->
+    <circle cx="64" cy="24" r="8" fill="url(#nodeGrad)"/>
+    <!-- Top-right -->
+    <circle cx="98" cy="44" r="8" fill="url(#nodeGrad)"/>
+    <!-- Bottom-right -->
+    <circle cx="98" cy="84" r="8" fill="url(#nodeGrad)"/>
+    <!-- Bottom -->
+    <circle cx="64" cy="104" r="8" fill="url(#nodeGrad)"/>
+    <!-- Bottom-left -->
+    <circle cx="30" cy="84" r="8" fill="url(#nodeGrad)"/>
+    <!-- Top-left -->
+    <circle cx="30" cy="44" r="8" fill="url(#nodeGrad)"/>
+    <!-- Extra node (7th) -->
+    <circle cx="100" cy="64" r="8" fill="url(#nodeGrad)"/>
+  </g>
+  
+  <!-- Safety shield accent -->
+  <path d="M64 95 L50 85 L50 75 L64 80 L78 75 L78 85 Z" fill="#00ff88" opacity="0.3"/>
+</svg>

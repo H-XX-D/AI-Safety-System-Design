@@ -9,7 +9,7 @@ Physically isolated from research systems (air-gapped).
 
 import hashlib
 import json
-from datetime import datetime
+import datetime as datetime
 from typing import Dict, List, Tuple
 from dataclasses import dataclass
 from enum import Enum

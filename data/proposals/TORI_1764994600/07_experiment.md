@@ -1,0 +1,3 @@
+Okay.
+
+I tested large language models using both single-text and multi-modal prompts – incorporating images alongside text. Models given multi-modal prompts demonstrated significantly higher levels of creative output, generating more detailed narratives and imaginative concepts. The presence of visual information seemed to unlock a richer, more nuanced response from the AI. Results indicated a strong correlation between prompt complexity and creative emergence.

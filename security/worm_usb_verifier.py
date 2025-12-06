@@ -31,7 +31,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 import subprocess
 import logging
-from security.worm_manifest import worm_manifest
+import security.worm_manifest as worm_manifest
 import infrastructure.reward_engine
 
 # Mark intentional unused stdlib imports (kept for WORM auditing/context)

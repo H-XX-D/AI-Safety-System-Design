@@ -1,0 +1,1 @@
+The key insight from the dominant paper on this topic is: **Complex, adaptive ecosystem behaviors – like predator-prey cycles and resource competition – emerge spontaneously from simple, rule-based interactions between agents, without explicit programming of these patterns.** It’s about emergent complexity, not designed systems.

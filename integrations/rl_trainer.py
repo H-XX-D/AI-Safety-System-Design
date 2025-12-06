@@ -593,4 +593,3 @@ def record_proposal_outcome(
     """
     trainer = get_trainer()
     trainer.record_experience(prompt, response, outcome)
-

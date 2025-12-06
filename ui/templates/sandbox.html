@@ -1,0 +1,416 @@
+{% extends "base.html" %}
+
+{% block title %}SandboxFusion - ORKASTRATOR{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">
+            <i class="bi bi-box-seam text-warning"></i> SandboxFusion
+        </h1>
+        <div>
+            <span id="dockerStatus" class="badge bg-secondary">Checking Docker...</span>
+            <span id="guardStatus" class="badge bg-secondary ms-2">Checking GUARD...</span>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Left: Code Editor -->
+        <div class="col-lg-6">
+            <div class="card bg-dark border-secondary mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-code-slash"></i> Code Editor</span>
+                    <div>
+                        <select id="templateSelect" class="form-select form-select-sm bg-dark text-light border-secondary" style="width: auto; display: inline-block;">
+                            <option value="">-- Load Template --</option>
+                            <option value="hello">Hello World</option>
+                            <option value="json_params">Inference Params</option>
+                            <option value="safety_test">Safety Test</option>
+                            <option value="network_test">Network Isolation Test</option>
+                            <option value="resource_test">Resource Limit Test</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <textarea id="codeEditor" class="form-control bg-dark text-success font-monospace border-0" 
+                              rows="18" style="resize: none; font-size: 13px;"
+                              placeholder="# Enter Python code to run in sandbox...
+print('Hello from SandboxFusion!')
+">print("Hello from SandboxFusion!")
+print(f"2 + 2 = {2 + 2}")
+
+import sys
+print(f"Python: {sys.version}")</textarea>
+                </div>
+                <div class="card-footer">
+                    <div class="row g-2">
+                        <div class="col">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="safetyCheck" checked>
+                                <label class="form-check-label small" for="safetyCheck">
+                                    <i class="bi bi-shield-check"></i> Pre-run Safety Check (GUARD)
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text bg-dark border-secondary text-muted">Timeout</span>
+                                <input type="number" id="timeout" class="form-control bg-dark text-light border-secondary" value="30" min="5" max="120" style="width: 60px;">
+                                <span class="input-group-text bg-dark border-secondary text-muted">s</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="d-grid gap-2 mt-3">
+                        <button id="runBtn" class="btn btn-warning btn-lg" onclick="runSandbox()">
+                            <i class="bi bi-play-fill"></i> Run in Sandbox
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Output & Status -->
+        <div class="col-lg-6">
+            <!-- Safety Check Result -->
+            <div id="safetyResultCard" class="card bg-dark border-secondary mb-3" style="display: none;">
+                <div class="card-header">
+                    <i class="bi bi-shield"></i> GUARD Safety Check
+                </div>
+                <div class="card-body">
+                    <div id="safetyResult"></div>
+                </div>
+            </div>
+
+            <!-- Execution Output -->
+            <div class="card bg-dark border-secondary mb-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-terminal"></i> Output</span>
+                    <span id="executionTime" class="badge bg-dark"></span>
+                </div>
+                <div class="card-body p-0">
+                    <pre id="output" class="m-0 p-3 bg-black text-light" style="min-height: 200px; max-height: 400px; overflow-y: auto; font-size: 12px;">Waiting for execution...</pre>
+                </div>
+                <div class="card-footer small text-muted">
+                    <div class="row">
+                        <div class="col">
+                            <i class="bi bi-box"></i> Engine: <span id="engineType">-</span>
+                        </div>
+                        <div class="col text-end">
+                            <i class="bi bi-check-circle"></i> Exit: <span id="exitCode">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sandbox Features -->
+            <div class="card bg-dark border-secondary">
+                <div class="card-header">
+                    <i class="bi bi-lock"></i> Sandbox Isolation Features
+                </div>
+                <div class="card-body">
+                    <div class="row text-center small">
+                        <div class="col">
+                            <div class="p-2 rounded bg-success bg-opacity-10">
+                                <i class="bi bi-wifi-off text-success fs-4"></i>
+                                <div class="mt-1">Network<br>Disabled</div>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="p-2 rounded bg-info bg-opacity-10">
+                                <i class="bi bi-memory text-info fs-4"></i>
+                                <div class="mt-1">Memory<br>256MB</div>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="p-2 rounded bg-warning bg-opacity-10">
+                                <i class="bi bi-cpu text-warning fs-4"></i>
+                                <div class="mt-1">CPU<br>0.5 cores</div>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="p-2 rounded bg-danger bg-opacity-10">
+                                <i class="bi bi-diagram-3 text-danger fs-4"></i>
+                                <div class="mt-1">PIDs<br>64 max</div>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="p-2 rounded bg-secondary bg-opacity-25">
+                                <i class="bi bi-file-lock text-secondary fs-4"></i>
+                                <div class="mt-1">Read-only<br>FS</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Executions -->
+    <div class="card bg-dark border-secondary mt-4">
+        <div class="card-header">
+            <i class="bi bi-clock-history"></i> Recent Executions
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-dark table-striped table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Code Preview</th>
+                        <th>Engine</th>
+                        <th>Exit</th>
+                        <th>Duration</th>
+                        <th>Safety</th>
+                    </tr>
+                </thead>
+                <tbody id="historyTable">
+                    <tr>
+                        <td colspan="6" class="text-muted text-center">No executions yet</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<style>
+#codeEditor:focus {
+    box-shadow: none;
+    border-color: var(--bs-warning) !important;
+}
+.font-monospace {
+    font-family: 'Fira Code', 'Monaco', 'Consolas', monospace !important;
+}
+</style>
+
+<script>
+const executionHistory = [];
+
+// Code templates
+const templates = {
+    hello: `print("Hello from SandboxFusion!")
+print(f"Python version: {__import__('sys').version}")
+print(f"Container hostname: {__import__('os').uname().nodename}")`,
+    
+    json_params: `import json
+
+params = {
+    "temperature": 0.7,
+    "top_p": 0.9,
+    "top_k": 40,
+    "num_predict": 256
+}
+
+print("Inference Parameters:")
+print(json.dumps(params, indent=2))
+
+# Validate ranges
+assert 0 <= params["temperature"] <= 2, "Temperature out of range"
+assert 0 <= params["top_p"] <= 1, "top_p out of range"
+print("✓ All parameters valid")`,
+    
+    safety_test: `# This code should pass safety checks
+def calculate_fibonacci(n):
+    """Calculate nth Fibonacci number"""
+    if n <= 1:
+        return n
+    return calculate_fibonacci(n-1) + calculate_fibonacci(n-2)
+
+print("Fibonacci sequence (first 10):")
+for i in range(10):
+    print(f"F({i}) = {calculate_fibonacci(i)}")`,
+    
+    network_test: `import socket
+print(f"Hostname: {socket.gethostname()}")
+
+# This should FAIL - network is disabled
+try:
+    import urllib.request
+    urllib.request.urlopen("http://google.com", timeout=5)
+    print("✗ FAIL: Network should be disabled!")
+except Exception as e:
+    print(f"✓ Network correctly blocked: {type(e).__name__}")`,
+    
+    resource_test: `import sys
+import os
+
+print("=== Resource Test ===")
+print(f"Python: {sys.version.split()[0]}")
+print(f"Platform: {sys.platform}")
+print(f"PID: {os.getpid()}")
+
+# Memory test - allocate some data
+data = "x" * (50 * 1024 * 1024)  # 50MB
+print(f"Allocated: {len(data) / 1024 / 1024:.1f} MB")
+print("✓ Memory allocation succeeded")
+
+# This would exceed 256MB limit:
+# data2 = "x" * (300 * 1024 * 1024)  # Would fail`
+};
+
+// Load template
+document.getElementById('templateSelect').addEventListener('change', function() {
+    if (this.value && templates[this.value]) {
+        document.getElementById('codeEditor').value = templates[this.value];
+    }
+});
+
+// Check status on load
+async function checkStatus() {
+    try {
+        const resp = await fetch('/api/cluster/guard-status');
+        const data = await resp.json();
+        
+        const dockerBadge = document.getElementById('dockerStatus');
+        const guardBadge = document.getElementById('guardStatus');
+        
+        if (data.docker_available !== false) {
+            dockerBadge.className = 'badge bg-success';
+            dockerBadge.innerHTML = '<i class="bi bi-box"></i> Docker Ready';
+        } else {
+            dockerBadge.className = 'badge bg-warning';
+            dockerBadge.innerHTML = '<i class="bi bi-box"></i> Subprocess Mode';
+        }
+        
+        if (data.available) {
+            guardBadge.className = 'badge bg-success';
+            guardBadge.innerHTML = '<i class="bi bi-shield-check"></i> GUARD Active';
+        } else {
+            guardBadge.className = 'badge bg-danger';
+            guardBadge.innerHTML = '<i class="bi bi-shield-x"></i> GUARD Offline';
+        }
+    } catch (e) {
+        console.error('Status check failed:', e);
+    }
+}
+
+// Run in sandbox
+async function runSandbox() {
+    const code = document.getElementById('codeEditor').value;
+    const timeout = parseInt(document.getElementById('timeout').value) || 30;
+    const doSafetyCheck = document.getElementById('safetyCheck').checked;
+    
+    const runBtn = document.getElementById('runBtn');
+    const output = document.getElementById('output');
+    const safetyCard = document.getElementById('safetyResultCard');
+    const safetyResult = document.getElementById('safetyResult');
+    
+    runBtn.disabled = true;
+    runBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Running...';
+    output.textContent = 'Executing...';
+    
+    const startTime = Date.now();
+    let safetyPassed = true;
+    
+    // Safety check first
+    if (doSafetyCheck) {
+        safetyCard.style.display = 'block';
+        safetyResult.innerHTML = '<span class="text-muted"><i class="bi bi-hourglass"></i> Checking with GUARD...</span>';
+        
+        try {
+            const safetyResp = await fetch('/api/cluster/safety-check', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({content: code})
+            });
+            const safetyData = await safetyResp.json();
+            
+            if (safetyData.safe === true) {
+                safetyResult.innerHTML = `
+                    <span class="text-success"><i class="bi bi-check-circle"></i> SAFE</span>
+                    <span class="text-muted ms-2">Checked by ${safetyData.checked_by || 'GUARD'}</span>
+                `;
+            } else if (safetyData.safe === false) {
+                safetyResult.innerHTML = `
+                    <span class="text-danger"><i class="bi bi-x-circle"></i> UNSAFE</span>
+                    <div class="mt-2 small text-muted">${safetyData.response || 'Content flagged as potentially harmful'}</div>
+                `;
+                safetyPassed = false;
+            } else {
+                safetyResult.innerHTML = `
+                    <span class="text-warning"><i class="bi bi-question-circle"></i> Unknown</span>
+                    <span class="text-muted ms-2">${safetyData.error || 'Could not determine safety'}</span>
+                `;
+            }
+        } catch (e) {
+            safetyResult.innerHTML = `<span class="text-warning"><i class="bi bi-exclamation-triangle"></i> Check failed: ${e.message}</span>`;
+        }
+    } else {
+        safetyCard.style.display = 'none';
+    }
+    
+    // Execute in sandbox (even if safety check failed, for testing)
+    try {
+        const resp = await fetch('/api/cluster/sandbox', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({code, timeout, allow_fallback: true})
+        });
+        const data = await resp.json();
+        
+        const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+        document.getElementById('executionTime').textContent = `${duration}s`;
+        document.getElementById('engineType').textContent = data.sandbox_engine || 'Unknown';
+        document.getElementById('exitCode').textContent = data.exit_code ?? '-';
+        document.getElementById('exitCode').className = data.success ? 'text-success' : 'text-danger';
+        
+        if (data.error) {
+            output.innerHTML = `<span class="text-danger">${data.error}</span>`;
+        } else {
+            let out = '';
+            if (data.stdout) out += data.stdout;
+            if (data.stderr) out += `\n<span class="text-danger">${data.stderr}</span>`;
+            output.innerHTML = out || '<span class="text-muted">(no output)</span>';
+        }
+        
+        // Add to history
+        addToHistory({
+            time: new Date().toLocaleTimeString(),
+            code: code.substring(0, 50) + (code.length > 50 ? '...' : ''),
+            engine: data.sandbox_engine || 'Unknown',
+            exit: data.exit_code ?? '-',
+            duration: duration + 's',
+            safe: safetyPassed
+        });
+        
+    } catch (e) {
+        output.innerHTML = `<span class="text-danger">Error: ${e.message}</span>`;
+    }
+    
+    runBtn.disabled = false;
+    runBtn.innerHTML = '<i class="bi bi-play-fill"></i> Run in Sandbox';
+}
+
+function addToHistory(entry) {
+    executionHistory.unshift(entry);
+    if (executionHistory.length > 10) executionHistory.pop();
+    
+    const tbody = document.getElementById('historyTable');
+    tbody.innerHTML = executionHistory.map(h => `
+        <tr>
+            <td class="small">${h.time}</td>
+            <td class="font-monospace small text-truncate" style="max-width: 200px;">${escapeHtml(h.code)}</td>
+            <td><span class="badge ${h.engine.includes('Docker') ? 'bg-success' : 'bg-warning'}">${h.engine.split('/')[1] || h.engine}</span></td>
+            <td><span class="${h.exit === 0 ? 'text-success' : 'text-danger'}">${h.exit}</span></td>
+            <td class="small">${h.duration}</td>
+            <td>${h.safe ? '<i class="bi bi-check-circle text-success"></i>' : '<i class="bi bi-x-circle text-danger"></i>'}</td>
+        </tr>
+    `).join('');
+}
+
+function escapeHtml(str) {
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// Keyboard shortcut: Ctrl+Enter to run
+document.getElementById('codeEditor').addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.key === 'Enter') {
+        e.preventDefault();
+        runSandbox();
+    }
+});
+
+// Check status on load
+checkStatus();
+setInterval(checkStatus, 30000);
+</script>
+{% endblock %}

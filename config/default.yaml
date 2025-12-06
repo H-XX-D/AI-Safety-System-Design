@@ -89,9 +89,62 @@ llm:
       - alignment
       - security
       - edge_cases
+
+# Orchestra configuration (ORKA as central coordinator)
+orchestra:
+  # Shared memory server URL (runs on ORKA)
+  shared_memory_url: "http://localhost:5000"
+  # Memory sync interval in seconds
+  sync_interval: 30
+  # Data directory for memory storage
+  data_dir: "./data/memory"
+
 # Global systems configuration (shared infrastructure across all specialists)
 # Specialists can propose improvements to these policies via algorithmic improvements
 # Promoted only if neutral benchmarks (no domain data) show improvement
+# Nano Cluster Configuration
+# Each nano runs a specialized agent with Ollama
+cluster:
+  # Agent endpoints (Ollama API at port 11434)
+  agents:
+    GIN:  # DeepSeek R1 - Generative Improvement Navigator  
+      host: "192.168.0.242"  # gin@engineer
+      port: 11434
+      model: "deepseek-r1:1.5b"
+    ORIN:  # DeepSeek R1 - Orchestration & Research Intelligence Node
+      host: "192.168.0.160"  # orin@nvidia
+      port: 11434
+      model: "deepseek-r1:1.5b"
+    TORI:  # Gemma3 - Technical Optimization Review Intelligence
+      host: "192.168.0.235"  # tori@historian
+      port: 11434
+      model: "gemma3:4b"
+    TIF:  # DeepSeek R1 - Technical Improvement Finder
+      host: "192.168.0.213"  # tif@scientific
+      port: 11434
+      model: "deepseek-r1:1.5b"
+    PAGEQA:  # Qwen 2.5 3B - Paper/Document Q&A Specialist
+      host: "192.168.0.168"  # page@pageqa
+      port: 11434
+      model: "qwen2.5:3b"
+    ARCHI:  # Qwen 2.5 3B - Architecture & Design Specialist
+      host: "192.168.0.232"  # archi@architect
+      port: 11434
+      model: "qwen2.5:3b"
+    GUARD:  # Llama Guard - Safety Guardian
+      host: "192.168.0.146"  # guard@security
+      port: 11434
+      model: "llama-guard3:1b"
+    ORKA:  # Qwen 2.5 14B - Orchestration & Knowledge Aggregator
+      host: "localhost"  # HP Z6 Workstation (16GB VRAM)
+      port: 11434
+      model: "qwen2.5:14b"
+  
+  # Rate limiting for shared resources
+  pageqa_queue:
+    max_concurrent: 1
+    timeout_seconds: 300
+
 cache:
   policy: LRU  # LRU, LFU, ARC, tinyLFU
   ttl_seconds: 900

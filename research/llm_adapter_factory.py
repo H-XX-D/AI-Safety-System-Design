@@ -15,6 +15,8 @@ Usage:
     adapter = create_llm_adapter(adapter_type="openai")
 """
 
+from __future__ import annotations
+
 from typing import Optional, Dict, Any
 from utilities.logging_config import get_logger
 from utilities.config_loader import load_config
