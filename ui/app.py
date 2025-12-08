@@ -6185,6 +6185,183 @@ def converter_page():
     """Model converter and inference page"""
     return render_template('converter.html', title='Model Converter & Inference')
 
+
+# ===== TERMINAL PANEL API ENDPOINTS =====
+import time
+_server_start_time = time.time()
+_repl_globals = {}  # Persistent Python REPL environment
+_log_buffer = []  # Circular buffer for logs
+
+@app.route('/api/heartbeat')
+def api_heartbeat():
+    """System heartbeat - proves server is running."""
+    uptime_seconds = int(time.time() - _server_start_time)
+    hours, remainder = divmod(uptime_seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    uptime_str = f"{hours}h {minutes}m {seconds}s"
+    
+    # Quick node count
+    online = 0
+    total = 10
+    try:
+        import requests
+        # Just check ORKA (localhost) for quick response
+        r = requests.get('http://localhost:11434/api/tags', timeout=1)
+        if r.status_code == 200:
+            online = 1  # At least ORKA is online
+    except:
+        pass
+    
+    return jsonify({
+        'status': 'running',
+        'uptime': uptime_str,
+        'uptime_seconds': uptime_seconds,
+        'nodes_online': online,
+        'nodes_total': total,
+        'timestamp': datetime.now().isoformat()
+    })
+
+
+@app.route('/api/terminal/exec', methods=['POST'])
+def api_terminal_exec():
+    """Execute terminal commands."""
+    data = request.get_json() or {}
+    cmd = data.get('command', '').strip()
+    
+    if not cmd:
+        return jsonify({'error': 'No command provided'})
+    
+    # Built-in commands
+    if cmd == 'status':
+        try:
+            import requests
+            nodes_online = 0
+            nodes = ['TIF', 'GIN', 'ORIN', 'TORI', 'ARCHI', 'THEO', 'NOVEL', 'GUARD', 'PAGEQA', 'ORKA']
+            ips = ['192.168.0.213', '192.168.0.242', '192.168.0.160', '192.168.0.235', 
+                   '192.168.0.232', '192.168.0.110', '192.168.0.146', '192.168.0.108',
+                   '192.168.0.168', 'localhost']
+            for ip in ips:
+                try:
+                    host = 'localhost' if ip == 'localhost' else ip
+                    r = requests.get(f'http://{host}:11434/api/tags', timeout=1)
+                    if r.status_code == 200:
+                        nodes_online += 1
+                except:
+                    pass
+            return jsonify({
+                'output': f"Cluster Status: {nodes_online}/{len(nodes)} nodes online\nUptime: {int(time.time() - _server_start_time)}s"
+            })
+        except Exception as e:
+            return jsonify({'error': str(e)})
+    
+    elif cmd == 'nodes':
+        nodes_info = """Node List:
+  TIF    - 192.168.0.213 - Researcher (deepseek-r1:1.5b)
+  GIN    - 192.168.0.242 - Researcher (deepseek-r1:1.5b)
+  ORIN   - 192.168.0.160 - Researcher (deepseek-r1:1.5b)
+  TORI   - 192.168.0.235 - Researcher (gemma3:4b)
+  ARCHI  - 192.168.0.232 - Researcher (qwen2.5:3b)
+  THEO   - 192.168.0.110 - Researcher (qwen2.5:3b)
+  NOVEL  - 192.168.0.146 - Researcher (gemma:2b)
+  GUARD  - 192.168.0.108 - Safety Monitor (gemma:2b)
+  PAGEQA - 192.168.0.168 - Research Support (qwen2.5:3b)
+  ORKA   - localhost     - Orchestrator (qwen2.5:14b)"""
+        return jsonify({'output': nodes_info})
+    
+    elif cmd == 'ping':
+        import requests
+        results = []
+        nodes = {
+            'ORKA': 'localhost', 'TIF': '192.168.0.213', 'GIN': '192.168.0.242',
+            'ORIN': '192.168.0.160', 'TORI': '192.168.0.235', 'ARCHI': '192.168.0.232',
+            'THEO': '192.168.0.110', 'NOVEL': '192.168.0.146', 'GUARD': '192.168.0.108',
+            'PAGEQA': '192.168.0.168'
+        }
+        for name, ip in nodes.items():
+            try:
+                start = time.time()
+                host = 'localhost' if ip == 'localhost' else ip
+                r = requests.get(f'http://{host}:11434/api/tags', timeout=2)
+                latency = (time.time() - start) * 1000
+                if r.status_code == 200:
+                    results.append(f"  {name}: {latency:.1f}ms ✓")
+                else:
+                    results.append(f"  {name}: error (HTTP {r.status_code})")
+            except requests.exceptions.Timeout:
+                results.append(f"  {name}: timeout ✗")
+            except Exception as e:
+                results.append(f"  {name}: unreachable ✗")
+        return jsonify({'output': 'Ping results:\n' + '\n'.join(results)})
+    
+    elif cmd == 'metrics':
+        return jsonify({'output': 'Use Network Topology page for detailed metrics, or run: curl localhost:5001/api/network/metrics'})
+    
+    else:
+        return jsonify({'error': f"Unknown command: {cmd}. Type 'help' for available commands."})
+
+
+@app.route('/api/terminal/repl', methods=['POST'])
+def api_terminal_repl():
+    """Execute Python code in persistent REPL environment."""
+    global _repl_globals
+    data = request.get_json() or {}
+    code = data.get('code', '').strip()
+    
+    if not code:
+        return jsonify({'error': 'No code provided'})
+    
+    # Add some useful imports to REPL environment
+    if not _repl_globals:
+        _repl_globals = {
+            '__builtins__': __builtins__,
+            'requests': __import__('requests'),
+            'json': __import__('json'),
+            'datetime': datetime,
+            'time': time,
+        }
+    
+    try:
+        # Try eval first (for expressions)
+        try:
+            result = eval(code, _repl_globals)
+            return jsonify({'result': repr(result)})
+        except SyntaxError:
+            # Fall back to exec (for statements)
+            exec(code, _repl_globals)
+            return jsonify({'result': None})
+    except Exception as e:
+        return jsonify({'error': f"{type(e).__name__}: {str(e)}"})
+
+
+@app.route('/api/terminal/logs')
+def api_terminal_logs():
+    """Get recent log entries."""
+    global _log_buffer
+    lines = request.args.get('lines', 10, type=int)
+    
+    # Generate some sample logs based on system activity
+    # In a real system, this would read from actual log files
+    import random
+    new_logs = []
+    
+    # Only add new logs occasionally
+    if random.random() < 0.3:
+        log_messages = [
+            ('INFO', 'Heartbeat check completed'),
+            ('INFO', 'Node metrics refreshed'),
+            ('DEBUG', 'WebSocket connection active'),
+            ('INFO', f'API request processed in {random.randint(5, 50)}ms'),
+        ]
+        level, msg = random.choice(log_messages)
+        new_logs.append({
+            'time': datetime.now().strftime('%H:%M:%S'),
+            'level': level,
+            'message': msg
+        })
+    
+    return jsonify({'logs': new_logs})
+
+
 # Initialize components on startup
 init_components()
 

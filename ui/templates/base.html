@@ -91,10 +91,19 @@
                 {% block breadcrumb %}Dashboard{% endblock %}
             </div>
             <div class="top-bar-actions">
+                <!-- Persistent System Heartbeat Indicator -->
+                <div id="systemHeartbeat" class="system-heartbeat" title="System Active - Last heartbeat: now">
+                    <span class="heartbeat-pulse"></span>
+                    <span class="heartbeat-text">LIVE</span>
+                    <span class="heartbeat-timer" id="heartbeatTimer">0s</span>
+                </div>
                 <div id="wormBadge" class="worm-badge worm-verified" title="WORM Integrity Verified">
                     <i class="fas fa-shield-check"></i>
                     <span id="wormBadgeText">WORM ✓</span>
                 </div>
+                <button class="icon-button" id="fullscreenBtn" title="Toggle Fullscreen" onclick="toggleFullscreen()">
+                    <i class="fas fa-expand"></i>
+                </button>
                 <button class="icon-button" title="Settings" onclick="window.location.href='/settings'">
                     <i class="fas fa-sliders-h"></i>
                 </button>
@@ -103,8 +112,77 @@
         <div id="haltBanner" class="halt-banner"><i class="fas fa-triangle-exclamation"></i> System halted due to WORM integrity policy. Review and clear once verified.</div>
         <div id="globalBanner" class="alert-banner info" style="display:none;"><span id="globalBannerText"></span><span class="close" onclick="hideBanner()">✕</span></div>
 
-        <div class="content-area">
+        <div class="content-area" id="contentArea">
             {% block content %}{% endblock %}
+        </div>
+
+        <!-- Bottom Terminal/REPL Panel -->
+        <div class="terminal-panel" id="terminalPanel">
+            <div class="terminal-panel-header">
+                <div class="terminal-tabs">
+                    <button class="terminal-tab active" data-tab="terminal" onclick="switchTerminalTab('terminal')">
+                        <i class="fas fa-terminal"></i> Terminal
+                    </button>
+                    <button class="terminal-tab" data-tab="repl" onclick="switchTerminalTab('repl')">
+                        <i class="fas fa-code"></i> Python REPL
+                    </button>
+                    <button class="terminal-tab" data-tab="logs" onclick="switchTerminalTab('logs')">
+                        <i class="fas fa-stream"></i> Live Logs
+                    </button>
+                    <button class="terminal-tab" data-tab="nodes" onclick="switchTerminalTab('nodes')">
+                        <i class="fas fa-server"></i> Node Status
+                    </button>
+                </div>
+                <div class="terminal-controls">
+                    <span class="terminal-status" id="terminalStatus">
+                        <span class="status-pulse"></span>
+                        <span id="terminalStatusText">Connected</span>
+                    </span>
+                    <button class="terminal-ctrl-btn" onclick="clearTerminal()" title="Clear">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                    <button class="terminal-ctrl-btn" onclick="toggleTerminalSize()" title="Maximize/Minimize" id="terminalSizeBtn">
+                        <i class="fas fa-chevron-up"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="terminal-body">
+                <!-- Terminal Tab -->
+                <div class="terminal-content active" id="terminalTab">
+                    <div class="terminal-output" id="terminalOutput">
+<span class="term-success">OrKheStrA Terminal v1.0</span>
+<span class="term-muted">Type 'help' for commands, 'clear' to clear screen</span>
+<span class="term-muted">─────────────────────────────────────────────────</span>
+</div>
+                    <div class="terminal-input-line">
+                        <span class="terminal-prompt">orka@cluster:~$</span>
+                        <input type="text" class="terminal-input" id="terminalInput" placeholder="Enter command..." autocomplete="off" spellcheck="false">
+                    </div>
+                </div>
+                <!-- Python REPL Tab -->
+                <div class="terminal-content" id="replTab">
+                    <div class="terminal-output" id="replOutput">
+<span class="term-info">Python 3.11 - OrKheStrA Interactive Shell</span>
+<span class="term-muted">>>> </span>
+</div>
+                    <div class="terminal-input-line">
+                        <span class="terminal-prompt">>>></span>
+                        <input type="text" class="terminal-input" id="replInput" placeholder="Python expression..." autocomplete="off" spellcheck="false">
+                    </div>
+                </div>
+                <!-- Live Logs Tab -->
+                <div class="terminal-content" id="logsTab">
+                    <div class="terminal-output terminal-logs" id="logsOutput">
+<span class="term-muted">[Waiting for log stream...]</span>
+</div>
+                </div>
+                <!-- Node Status Tab -->
+                <div class="terminal-content" id="nodesTab">
+                    <div class="terminal-output" id="nodesOutput">
+<span class="term-muted">[Fetching node status...]</span>
+</div>
+                </div>
+            </div>
         </div>
     </main>
 
@@ -263,32 +341,6 @@
         </div>
     </div>
 
-    <!-- Floating AI Terminal Button -->
-    <button id="aiTerminalBtn" class="ai-terminal-btn" title="Open AI Terminal" onclick="toggleAiTerminal()">
-        <i class="fas fa-terminal"></i>
-    </button>
-
-    <!-- AI Terminal Modal -->
-    <div class="ai-terminal-modal" id="aiTerminalModal">
-        <div class="ai-terminal-header">
-            <div>
-                <i class="fas fa-robot"></i> AI Terminal (OpenAI CLI)
-            </div>
-            <button class="icon-button" onclick="toggleAiTerminal()" title="Close">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-        <div class="ai-terminal-body">
-            <label for="aiCommand">Command</label>
-            <input id="aiCommand" class="input" value="openai api chat.completions.create -m gpt-4o-mini -g &quot;Hello&quot;" />
-            <div class="terminal-actions">
-                <button class="btn btn-primary" onclick="runAiCommand()">Run</button>
-                <button class="btn btn-secondary" onclick="clearAiOutput()">Clear</button>
-            </div>
-            <pre id="aiOutput" class="terminal-output">Ready.</pre>
-        </div>
-    </div>
-
     <!-- Custom JS -->
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     <div id="wormBadgePanel" class="worm-panel"></div>
@@ -376,6 +428,280 @@
         } catch (e) {
             out.textContent = 'Error: ' + e.message;
         }
+    }
+
+    // Fullscreen toggle
+    function toggleFullscreen() {
+        const btn = document.getElementById('fullscreenBtn');
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().then(() => {
+                btn.innerHTML = '<i class="fas fa-compress"></i>';
+                btn.title = 'Exit Fullscreen';
+            });
+        } else {
+            document.exitFullscreen().then(() => {
+                btn.innerHTML = '<i class="fas fa-expand"></i>';
+                btn.title = 'Toggle Fullscreen';
+            });
+        }
+    }
+    document.addEventListener('fullscreenchange', () => {
+        const btn = document.getElementById('fullscreenBtn');
+        if (document.fullscreenElement) {
+            btn.innerHTML = '<i class="fas fa-compress"></i>';
+        } else {
+            btn.innerHTML = '<i class="fas fa-expand"></i>';
+        }
+    });
+
+    // Persistent System Heartbeat - proves system is running
+    let heartbeatSeconds = 0;
+    let lastHeartbeatResponse = Date.now();
+    let heartbeatFailed = false;
+
+    function updateHeartbeatTimer() {
+        heartbeatSeconds++;
+        const timer = document.getElementById('heartbeatTimer');
+        const heartbeat = document.getElementById('systemHeartbeat');
+        if (timer) {
+            timer.textContent = heartbeatSeconds + 's';
+        }
+        // If no server response in 10s, show warning
+        const elapsed = (Date.now() - lastHeartbeatResponse) / 1000;
+        if (elapsed > 10 && !heartbeatFailed) {
+            heartbeatFailed = true;
+            heartbeat.classList.add('heartbeat-warning');
+            heartbeat.querySelector('.heartbeat-text').textContent = 'STALL?';
+        }
+    }
+
+    async function checkServerHeartbeat() {
+        try {
+            const res = await fetch('/api/heartbeat', { timeout: 5000 });
+            if (res.ok) {
+                const data = await res.json();
+                lastHeartbeatResponse = Date.now();
+                heartbeatFailed = false;
+                const heartbeat = document.getElementById('systemHeartbeat');
+                heartbeat.classList.remove('heartbeat-warning');
+                heartbeat.querySelector('.heartbeat-text').textContent = 'LIVE';
+                heartbeat.title = `System Active - Uptime: ${data.uptime || 'N/A'} - Nodes: ${data.nodes_online || '?'}/${data.nodes_total || '?'}`;
+            }
+        } catch (e) {
+            // Server not responding
+            const heartbeat = document.getElementById('systemHeartbeat');
+            if (heartbeat && !heartbeatFailed) {
+                heartbeatFailed = true;
+                heartbeat.classList.add('heartbeat-warning');
+                heartbeat.querySelector('.heartbeat-text').textContent = 'OFFLINE';
+            }
+        }
+    }
+
+    // Start heartbeat monitoring
+    setInterval(updateHeartbeatTimer, 1000);
+    setInterval(checkServerHeartbeat, 3000);
+    checkServerHeartbeat(); // Initial check
+
+    // ========== PERSISTENT TERMINAL PANEL ==========
+    // Load collapsed state from localStorage
+    const terminalCollapsed = localStorage.getItem('terminalCollapsed') === 'true';
+    const terminalActiveTab = localStorage.getItem('terminalActiveTab') || 'terminal';
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        const panel = document.getElementById('terminalPanel');
+        const contentArea = document.getElementById('contentArea');
+        
+        // Restore collapsed state
+        if (terminalCollapsed) {
+            panel.classList.add('collapsed');
+            document.getElementById('terminalSizeBtn').innerHTML = '<i class="fas fa-chevron-up"></i>';
+        }
+        
+        // Restore active tab
+        switchTerminalTab(terminalActiveTab);
+        
+        // Terminal input handlers
+        document.getElementById('terminalInput').addEventListener('keydown', handleTerminalInput);
+        document.getElementById('replInput').addEventListener('keydown', handleReplInput);
+        
+        // Start live log streaming
+        startLogStream();
+        
+        // Fetch initial node status
+        fetchNodeStatus();
+        setInterval(fetchNodeStatus, 5000);
+    });
+
+    function toggleTerminalSize() {
+        const panel = document.getElementById('terminalPanel');
+        const btn = document.getElementById('terminalSizeBtn');
+        panel.classList.toggle('collapsed');
+        
+        const isCollapsed = panel.classList.contains('collapsed');
+        localStorage.setItem('terminalCollapsed', isCollapsed);
+        
+        if (isCollapsed) {
+            btn.innerHTML = '<i class="fas fa-chevron-up"></i>';
+        } else {
+            btn.innerHTML = '<i class="fas fa-chevron-down"></i>';
+        }
+    }
+
+    function switchTerminalTab(tabName) {
+        // Update tab buttons
+        document.querySelectorAll('.terminal-tab').forEach(tab => {
+            tab.classList.toggle('active', tab.dataset.tab === tabName);
+        });
+        // Update content
+        document.querySelectorAll('.terminal-content').forEach(content => {
+            content.classList.remove('active');
+        });
+        document.getElementById(tabName + 'Tab').classList.add('active');
+        localStorage.setItem('terminalActiveTab', tabName);
+    }
+
+    function clearTerminal() {
+        const activeTab = localStorage.getItem('terminalActiveTab') || 'terminal';
+        const outputId = activeTab === 'terminal' ? 'terminalOutput' : 
+                         activeTab === 'repl' ? 'replOutput' :
+                         activeTab === 'logs' ? 'logsOutput' : 'nodesOutput';
+        const output = document.getElementById(outputId);
+        if (activeTab === 'terminal') {
+            output.innerHTML = '<span class="term-success">OrKheStrA Terminal v1.0</span>\n<span class="term-muted">Type \'help\' for commands</span>\n';
+        } else if (activeTab === 'repl') {
+            output.innerHTML = '<span class="term-info">Python 3.11 - OrKheStrA Interactive Shell</span>\n<span class="term-muted">>>> </span>\n';
+        } else {
+            output.innerHTML = '<span class="term-muted">[Cleared]</span>\n';
+        }
+    }
+
+    async function handleTerminalInput(e) {
+        if (e.key !== 'Enter') return;
+        const input = e.target;
+        const cmd = input.value.trim();
+        if (!cmd) return;
+        
+        const output = document.getElementById('terminalOutput');
+        output.innerHTML += `<span class="term-prompt">orka@cluster:~$</span> ${escapeHtml(cmd)}\n`;
+        input.value = '';
+        
+        if (cmd === 'clear') {
+            clearTerminal();
+            return;
+        }
+        if (cmd === 'help') {
+            output.innerHTML += `<span class="term-info">Available commands:</span>
+  <span class="term-cyan">status</span>    - Show cluster status
+  <span class="term-cyan">nodes</span>     - List all nodes
+  <span class="term-cyan">ping</span>      - Ping all nodes
+  <span class="term-cyan">metrics</span>   - Show network metrics
+  <span class="term-cyan">clear</span>     - Clear terminal
+  <span class="term-cyan">help</span>      - Show this help
+`;
+            scrollTerminal(output);
+            return;
+        }
+        
+        try {
+            const res = await fetch('/api/terminal/exec', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ command: cmd })
+            });
+            const data = await res.json();
+            if (data.error) {
+                output.innerHTML += `<span class="term-error">${escapeHtml(data.error)}</span>\n`;
+            } else {
+                output.innerHTML += `<span class="term-output">${escapeHtml(data.output || data.result || JSON.stringify(data, null, 2))}</span>\n`;
+            }
+        } catch (err) {
+            output.innerHTML += `<span class="term-error">Error: ${err.message}</span>\n`;
+        }
+        scrollTerminal(output);
+    }
+
+    async function handleReplInput(e) {
+        if (e.key !== 'Enter') return;
+        const input = e.target;
+        const code = input.value.trim();
+        if (!code) return;
+        
+        const output = document.getElementById('replOutput');
+        output.innerHTML += `<span class="term-prompt">>>></span> ${escapeHtml(code)}\n`;
+        input.value = '';
+        
+        try {
+            const res = await fetch('/api/terminal/repl', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code: code })
+            });
+            const data = await res.json();
+            if (data.error) {
+                output.innerHTML += `<span class="term-error">${escapeHtml(data.error)}</span>\n`;
+            } else if (data.result !== undefined && data.result !== null && data.result !== 'None') {
+                output.innerHTML += `<span class="term-success">${escapeHtml(String(data.result))}</span>\n`;
+            }
+        } catch (err) {
+            output.innerHTML += `<span class="term-error">Error: ${err.message}</span>\n`;
+        }
+        scrollTerminal(output);
+    }
+
+    function startLogStream() {
+        const output = document.getElementById('logsOutput');
+        // Poll for logs every 2 seconds
+        setInterval(async () => {
+            try {
+                const res = await fetch('/api/terminal/logs?lines=5');
+                const data = await res.json();
+                if (data.logs && data.logs.length > 0) {
+                    data.logs.forEach(log => {
+                        const level = log.level || 'INFO';
+                        const cls = level === 'ERROR' ? 'term-error' : 
+                                   level === 'WARNING' ? 'term-warning' : 
+                                   level === 'DEBUG' ? 'term-muted' : 'term-info';
+                        output.innerHTML += `<span class="${cls}">[${log.time || new Date().toLocaleTimeString()}] ${escapeHtml(log.message)}</span>\n`;
+                    });
+                    scrollTerminal(output);
+                    // Keep only last 200 lines
+                    const lines = output.innerHTML.split('\n');
+                    if (lines.length > 200) {
+                        output.innerHTML = lines.slice(-200).join('\n');
+                    }
+                }
+            } catch (e) { /* ignore */ }
+        }, 2000);
+    }
+
+    async function fetchNodeStatus() {
+        const output = document.getElementById('nodesOutput');
+        try {
+            const res = await fetch('/api/network/metrics');
+            const data = await res.json();
+            let html = `<span class="term-info">═══ Node Status (${new Date().toLocaleTimeString()}) ═══</span>\n`;
+            const nodes = data.nodes || {};
+            for (const [name, info] of Object.entries(nodes)) {
+                const status = info.online ? '<span class="term-success">●</span>' : '<span class="term-error">○</span>';
+                const latency = info.latency_ms ? `${info.latency_ms.toFixed(1)}ms` : 'N/A';
+                const models = info.models_loaded ? info.models_loaded.join(', ') : 'none';
+                html += `${status} <span class="term-cyan">${name.padEnd(8)}</span> ${info.ip.padEnd(15)} ${latency.padStart(8)} | ${models}\n`;
+            }
+            output.innerHTML = html;
+        } catch (e) {
+            output.innerHTML = `<span class="term-error">Failed to fetch node status: ${e.message}</span>\n`;
+        }
+    }
+
+    function scrollTerminal(el) {
+        el.scrollTop = el.scrollHeight;
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
     </script>
     {% block extra_scripts %}{% endblock %}
