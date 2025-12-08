@@ -406,10 +406,28 @@ class MetaResearchSystem:
         self.proposals[proposal_id] = proposal
         logger.info(f"Improvement proposal submitted: {proposal_id}")
         
+        # Register with AURA numpy template store for compression
+        template_id = None
+        try:
+            from communication.aura_proposal_hook import register_proposal as aura_register
+            template_id = aura_register({
+                'id': proposal_id,
+                'text': motivation,
+                'type': 'proposal',
+                'proposer': proposer_id,
+            })
+            if template_id is not None:
+                logger.debug(f"Registered AURA template {template_id} for {proposal_id}")
+        except ImportError:
+            pass  # AURA not available
+        except Exception as e:
+            logger.warning(f"Failed to register AURA template: {e}")
+        
         return {
             'proposal_id': proposal_id,
             'status': 'submitted',
-            'next_phase': 'peer_review'
+            'next_phase': 'peer_review',
+            'aura_template_id': template_id
         }
     
     def peer_review(self, proposal_id: str, reviewer_id: int, approved: bool, comments: str) -> Dict[str, Any]:

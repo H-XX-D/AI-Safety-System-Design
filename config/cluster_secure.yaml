@@ -22,7 +22,7 @@ cluster:
     ORKA:
       ip: "localhost"
       port: 11434
-      model: "qwen2.5:14b"
+      model: "qwen2.5:3b"
       role: "orchestrator"
       auth_method: "none"  # Local node
       
@@ -30,7 +30,7 @@ cluster:
       ip: "192.168.0.242"
       port: 11434
       user: "gin"
-      model: "deepseek-r1:1.5b"
+      model: "gemma2:2b"
       role: "researcher"
       auth_method: "ssh_key"
       ssh_key_path: "~/.ssh/id_orkastrator"
@@ -40,7 +40,7 @@ cluster:
       ip: "192.168.0.213"
       port: 11434
       user: "tif"
-      model: "deepseek-r1:1.5b"
+      model: "phi3:mini"
       role: "researcher"
       auth_method: "ssh_key"
       ssh_key_path: "~/.ssh/id_orkastrator"
@@ -50,7 +50,7 @@ cluster:
       ip: "192.168.0.160"
       port: 11434
       user: "orin"
-      model: "deepseek-r1:1.5b"
+      model: "qwen2.5:3b"
       role: "researcher"
       auth_method: "ssh_key"
       ssh_key_path: "~/.ssh/id_orkastrator"
@@ -70,31 +70,46 @@ cluster:
       ip: "192.168.0.235"
       port: 11434
       user: "tori"
-      model: "gemma3:4b"
+      model: "llama3.2:3b"
       role: "researcher"
       auth_method: "ssh_key"
       ssh_key_path: "~/.ssh/id_orkastrator"
       fingerprint: ""
       
-    NOVEL:
+    NOVEL:  # Novel Ideas Generator
       ip: "192.168.0.146"
       port: 11434
-      user: "guard"
-      model: "gemma:2b"
+      user: "novel"
+      model: "qwen2.5:3b"
       role: "researcher"
       auth_method: "ssh_key"
       ssh_key_path: "~/.ssh/id_orkastrator"
       fingerprint: ""
       
-    PAGEQA:
+    THEO:  # Theoretical Edge - old PAGE nano
       ip: "192.168.0.168"
       port: 11434
       user: "page"
       model: "qwen2.5:3b"
-      role: "research"
+      role: "researcher"
       auth_method: "ssh_key"
       ssh_key_path: "~/.ssh/id_orkastrator"
       fingerprint: ""
+      
+    PAGEQA:  # Paper/Document Q&A - runs on ORKA system (no guard needed)
+      ip: "localhost"
+      port: 11434
+      model: "paperqa"
+      role: "research"
+      auth_method: "none"
+
+    GUARD:
+      ip: "localhost"
+      port: 11434
+      model: "llama-guard3:1b"
+      role: "safety"
+      auth_method: "none"
+
 
 security:
   # Require Docker sandbox - no subprocess fallback
@@ -117,7 +132,7 @@ models:
   guard_model: "llama-guard3:1b"
   
   # Main orchestrator model
-  orchestrator_model: "qwen2.5:14b"
+  orchestrator_model: "qwen2.5:3b"
 
 # HIDDEN EVALUATION CONFIG
 # ========================

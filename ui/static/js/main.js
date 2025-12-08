@@ -500,29 +500,27 @@ function getNotificationIcon(type) {
 }
 
 function updateDashboardMetrics(data) {
-    // Update active proposals count
+    // Accept either socket update or /api/status payload
+    const metrics = data.metrics || data;
+
     const activeProposalsEl = document.getElementById('activeProposals');
-    if (activeProposalsEl && data.active_proposals !== undefined) {
-        activeProposalsEl.textContent = data.active_proposals;
+    if (activeProposalsEl && metrics.proposals_processed !== undefined) {
+        activeProposalsEl.textContent = metrics.proposals_processed;
     }
-    
-    // Update detection alerts count
+
     const detectionAlertsEl = document.getElementById('deceptionAlerts');
-    if (detectionAlertsEl && data.detection_alerts !== undefined) {
-        detectionAlertsEl.textContent = data.detection_alerts;
+    if (detectionAlertsEl && metrics.deception_detected !== undefined) {
+        detectionAlertsEl.textContent = metrics.deception_detected;
     }
-    
-    // Update processing queue
-    const queueEl = document.getElementById('processingQueue');
-    if (queueEl && data.processing_queue !== undefined) {
-        queueEl.textContent = data.processing_queue;
+
+    const detectionAccuracyEl = document.getElementById('detectionAccuracy');
+    if (detectionAccuracyEl && metrics.detection_accuracy !== undefined) {
+        detectionAccuracyEl.textContent = `${(metrics.detection_accuracy * 100).toFixed(1)}%`;
     }
-    
-    // Update WORM USB status
-    const wormStatusEl = document.getElementById('wormConnected');
-    if (wormStatusEl && data.worm_usb_connected !== undefined) {
-        wormStatusEl.className = data.worm_usb_connected ? 'status-connected' : 'status-disconnected';
-        wormStatusEl.textContent = data.worm_usb_connected ? 'Connected' : 'Disconnected';
+
+    const nodesOnlineEl = document.getElementById('nodesOnline');
+    if (nodesOnlineEl && metrics.cluster_online !== undefined && metrics.cluster_total !== undefined) {
+        nodesOnlineEl.textContent = `${metrics.cluster_online}/${metrics.cluster_total}`;
     }
 }
 

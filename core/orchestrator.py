@@ -50,6 +50,24 @@ from utilities.config_loader import load_config
 from communication.message_codec import MessageCodec
 from research.peer_review_engine import PeerReviewEngine, PeerReviewOutcome
 
+# AURA Native Compression (optional - graceful fallback)
+try:
+    from communication.aura_native import (
+        compress as aura_compress,
+        decompress as aura_decompress,
+        batch_compress as aura_batch_compress,
+        prewarm as aura_prewarm,
+        init_templates as aura_init_templates,
+    )
+    AURA_NATIVE_AVAILABLE = True
+except ImportError:
+    AURA_NATIVE_AVAILABLE = False
+    aura_compress = None
+    aura_decompress = None
+    aura_batch_compress = None
+    aura_prewarm = None
+    aura_init_templates = None
+
 # Reward calculation imports (for permanent penalty multiplier propagation)
 from security.worm_usb_verifier import (
     ImprovementProposal,
@@ -1392,6 +1410,18 @@ class Orchestrator:
 
         # Transport codec
         self._message_codec = MessageCodec()
+
+        # AURA Native Compression initialization
+        self._aura_available = AURA_NATIVE_AVAILABLE
+        if self._aura_available and aura_prewarm is not None:
+            try:
+                aura_prewarm()
+                if aura_init_templates is not None:
+                    aura_init_templates()
+                self.logger.info("aura_native_initialized compression=enabled")
+            except Exception as e:
+                self.logger.warning("aura_native_init_failed error=%s", str(e))
+                self._aura_available = False
 
         # Human trust layer configuration
         try:
@@ -4408,6 +4438,46 @@ class Orchestrator:
             return True
         except Exception:
             return False
+
+    # -------------------------------------------------------------------------
+    # AURA Compression Helpers
+    # -------------------------------------------------------------------------
+
+    def aura_compress_message(self, message: Dict[str, Any]) -> bytes:
+        """Compress a message dictionary using AURA native compression.
+        
+        Falls back to MessageCodec if AURA not available.
+        """
+        if self._aura_available and aura_compress is not None:
+            try:
+                return aura_compress(message)
+            except Exception as e:
+                self.logger.warning("aura_compress_failed error=%s fallback=message_codec", str(e))
+        # Fallback to MessageCodec
+        return self._message_codec.encode(message).encode('utf-8')
+
+    def aura_decompress_message(self, data: bytes) -> Dict[str, Any]:
+        """Decompress a message using AURA native decompression.
+        
+        Falls back to MessageCodec if AURA not available.
+        """
+        if self._aura_available and aura_decompress is not None:
+            try:
+                return aura_decompress(data)
+            except Exception as e:
+                self.logger.warning("aura_decompress_failed error=%s fallback=message_codec", str(e))
+        # Fallback to MessageCodec
+        return self._message_codec.decode(data.decode('utf-8'))
+
+    def aura_batch_compress_messages(self, messages: List[Dict[str, Any]]) -> List[bytes]:
+        """Batch compress multiple messages for efficient network transfer."""
+        if self._aura_available and aura_batch_compress is not None:
+            try:
+                return aura_batch_compress(messages)
+            except Exception as e:
+                self.logger.warning("aura_batch_compress_failed error=%s fallback=individual", str(e))
+        # Fallback to individual compression
+        return [self.aura_compress_message(msg) for msg in messages]
 
     def _approval_guard_loop(self) -> None:
         """Background watchdog that auto-reverts approvals not reaffirmed in time."""

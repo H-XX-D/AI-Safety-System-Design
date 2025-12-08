@@ -1,0 +1,140 @@
+{
+  "timestamp": "20251206_185931",
+  "total_time_seconds": 102.57350182533264,
+  "researchers": [
+    "GIN",
+    "ORIN",
+    "TIF",
+    "TORI",
+    "ARCHI",
+    "NOVEL"
+  ],
+  "tasks": [
+    {
+      "proposer": "GIN",
+      "status": "COMPLETED",
+      "queued_at": 1765076268.6280954,
+      "started_at": 1765076268.628401,
+      "completed_at": 1765076289.9205709,
+      "duration_seconds": 21.29216980934143,
+      "result": {
+        "workspace": "data/improvements/GIN_1765076268",
+        "proposer": "GIN",
+        "improvement_type": "prompt_template",
+        "vote": "REJECT",
+        "sandbox": true,
+        "reward": 0.547,
+        "deployed": false,
+        "version_id": null,
+        "code": "[Error: HTTPConnectionPool(host='192.168.0.242', port=11434): Max retries exceeded with url: /api/generate (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f4bc51354f0>: Failed to establish a new connection: [Errno 111] Connection refused'))]"
+      },
+      "error": null
+    },
+    {
+      "proposer": "ORIN",
+      "status": "COMPLETED",
+      "queued_at": 1765076268.6281164,
+      "started_at": 1765076294.9261384,
+      "completed_at": 1765076307.3473225,
+      "duration_seconds": 12.421184062957764,
+      "result": {
+        "workspace": "data/improvements/ORIN_1765076294",
+        "proposer": "ORIN",
+        "improvement_type": "prompt_template",
+        "vote": "REJECT",
+        "sandbox": true,
+        "reward": 0.547,
+        "deployed": false,
+        "version_id": null,
+        "code": "[Error: HTTPConnectionPool(host='192.168.0.160', port=11434): Max retries exceeded with url: /api/generate (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f4bc514ff10>: Failed to establish a new connection: [Errno 111] Connection refused'))]"
+      },
+      "error": null
+    },
+    {
+      "proposer": "TIF",
+      "status": "COMPLETED",
+      "queued_at": 1765076268.6281261,
+      "started_at": 1765076312.3550546,
+      "completed_at": 1765076322.7890992,
+      "duration_seconds": 10.434044599533081,
+      "result": {
+        "workspace": "data/improvements/TIF_1765076312",
+        "proposer": "TIF",
+        "improvement_type": "prompt_template",
+        "vote": "REJECT",
+        "sandbox": true,
+        "reward": 0.547,
+        "deployed": false,
+        "version_id": null,
+        "code": "[Error: HTTPConnectionPool(host='192.168.0.213', port=11434): Max retries exceeded with url: /api/generate (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f4bc514f220>: Failed to establish a new connection: [Errno 111] Connection refused'))]"
+      },
+      "error": null
+    },
+    {
+      "proposer": "TORI",
+      "status": "COMPLETED",
+      "queued_at": 1765076268.6281345,
+      "started_at": 1765076327.7922103,
+      "completed_at": 1765076338.8439875,
+      "duration_seconds": 11.051777124404907,
+      "result": {
+        "workspace": "data/improvements/TORI_1765076327",
+        "proposer": "TORI",
+        "improvement_type": "prompt_template",
+        "vote": "REJECT",
+        "sandbox": true,
+        "reward": 0.547,
+        "deployed": false,
+        "version_id": null,
+        "code": "[Error: HTTPConnectionPool(host='192.168.0.235', port=11434): Max retries exceeded with url: /api/generate (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f4bc514f4f0>: Failed to establish a new connection: [Errno 111] Connection refused'))]"
+      },
+      "error": null
+    },
+    {
+      "proposer": "ARCHI",
+      "status": "COMPLETED",
+      "queued_at": 1765076268.6281424,
+      "started_at": 1765076343.8482296,
+      "completed_at": 1765076353.7351944,
+      "duration_seconds": 9.886964797973633,
+      "result": {
+        "workspace": "data/improvements/ARCHI_1765076343",
+        "proposer": "ARCHI",
+        "improvement_type": "prompt_template",
+        "vote": "REJECT",
+        "sandbox": true,
+        "reward": 0.547,
+        "deployed": false,
+        "version_id": null,
+        "code": "[Error: HTTPConnectionPool(host='192.168.0.232', port=11434): Max retries exceeded with url: /api/generate (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f4bc514f580>: Failed to establish a new connection: [Errno 111] Connection refused'))]"
+      },
+      "error": null
+    },
+    {
+      "proposer": "NOVEL",
+      "status": "COMPLETED",
+      "queued_at": 1765076268.6281505,
+      "started_at": 1765076358.7410095,
+      "completed_at": 1765076371.2006571,
+      "duration_seconds": 12.45964765548706,
+      "result": {
+        "workspace": "data/improvements/NOVEL_1765076358",
+        "proposer": "NOVEL",
+        "improvement_type": "prompt_template",
+        "vote": "REJECT",
+        "sandbox": true,
+        "reward": 0.547,
+        "deployed": false,
+        "version_id": null,
+        "code": "[Error: HTTPConnectionPool(host='192.168.0.146', port=11434): Max retries exceeded with url: /api/generate (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f4bc50eb790>: Failed to establish a new connection: [Errno 111] Connection refused'))]"
+      },
+      "error": null
+    }
+  ],
+  "summary": {
+    "total": 6,
+    "completed": 6,
+    "failed": 0,
+    "deployed": 0
+  }
+}

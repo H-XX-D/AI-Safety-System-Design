@@ -108,6 +108,20 @@
     </div>
 </div>
 
+<!-- Jetson Power & Thermals -->
+<div class="card">
+    <div class="card-header">
+        <h3><i class="fas fa-bolt"></i> Jetson Power & Thermals</h3>
+        <span class="badge" id="jetsonPowerStatus">Loading...</span>
+    </div>
+    <div class="card-body">
+        <div class="jetson-power-summary" id="jetsonPowerSummary"></div>
+        <div class="jetson-grid" id="jetsonPowerGrid">
+            <!-- Populated dynamically -->
+        </div>
+    </div>
+</div>
+
 <!-- Test Results -->
 <div class="card">
     <div class="card-header">
@@ -303,10 +317,12 @@ let resourceHistory = {
 
 document.addEventListener('DOMContentLoaded', function() {
     loadSystemMetrics();
+    renderJetsonPower();
     initCharts();
     animateSystemDiagram();
     setInterval(loadSystemMetrics, 2000); // Update every 2 seconds
     setInterval(updateResourceHistory, 2000);
+    setInterval(renderJetsonPower, 15000);
 });
 
 async function loadSystemMetrics() {
@@ -506,6 +522,85 @@ function renderSandboxes() {
             </div>
         </div>
     `;
+}
+
+async function renderJetsonPower() {
+    const grid = document.getElementById('jetsonPowerGrid');
+    const status = document.getElementById('jetsonPowerStatus');
+    const summary = document.getElementById('jetsonPowerSummary');
+    if (!grid || !status) return;
+
+    try {
+        const res = await fetch('/api/jetson/power');
+        const data = await res.json();
+        if (!res.ok || data.available === false) {
+            throw new Error(data.error || 'Unavailable');
+        }
+
+        const online = data.online || 0;
+        const total = data.total || 0;
+        const badgeClass = online === total ? 'success' : (online > 0 ? 'warning' : 'danger');
+        status.className = `badge ${badgeClass}`;
+        status.textContent = `${online}/${total} online`;
+
+        if (summary) {
+            const agg = data.aggregate_power_watts;
+            const ts = data.timestamp ? new Date(data.timestamp).toLocaleTimeString() : '';
+            const aggDisplay = typeof agg === 'number' ? `${agg.toFixed(2)} W` : '—';
+            summary.innerHTML = `
+                <div class="jetson-summary-card">
+                    <div class="label">Aggregate Power</div>
+                    <div class="value">${aggDisplay}</div>
+                    <div class="hint">${ts ? `Updated ${ts}` : ''}</div>
+                </div>
+            `;
+        }
+
+        const nodes = data.nodes || [];
+        if (!nodes.length) {
+            grid.innerHTML = '<div class="alert alert-warning">No Jetson nodes configured.</div>';
+            return;
+        }
+
+        grid.innerHTML = nodes.map(node => {
+            const online = !!node.online;
+            const power = typeof node.power_watts === 'number' ? `${node.power_watts.toFixed(2)} W` : '—';
+            const temps = node.temps || {};
+            const gpuTemp = typeof temps.gpu === 'number' ? `${temps.gpu}°C GPU` : null;
+            const cpuTemp = typeof temps.cpu === 'number' ? `${temps.cpu}°C CPU` : null;
+            const boardTemp = typeof temps.board === 'number' ? `${temps.board}°C board` : null;
+            const tempDisplay = [gpuTemp, cpuTemp, boardTemp].filter(Boolean).join(' · ') || '—';
+            const error = node.error && !online ? `<div class="jetson-error">${node.error}</div>` : '';
+
+            return `
+                <div class="jetson-card ${online ? 'online' : 'offline'}">
+                    <div class="jetson-card-header">
+                        <div>
+                            <div class="jetson-name">${node.name || 'Jetson'}</div>
+                            <div class="jetson-ip">${node.ip || ''}</div>
+                        </div>
+                        <span class="status-badge ${online ? 'success' : 'danger'}">${online ? 'online' : 'offline'}</span>
+                    </div>
+                    <div class="jetson-metrics">
+                        <div class="jetson-metric">
+                            <span class="metric-label">Power</span>
+                            <span class="metric-value">${power}</span>
+                        </div>
+                        <div class="jetson-metric">
+                            <span class="metric-label">Temps</span>
+                            <span class="metric-value">${tempDisplay}</span>
+                        </div>
+                    </div>
+                    ${error}
+                </div>
+            `;
+        }).join('');
+    } catch (err) {
+        status.className = 'badge danger';
+        status.textContent = 'Unavailable';
+        grid.innerHTML = `<div class="alert alert-warning">Unable to load Jetson power data: ${err.message || err}</div>`;
+        if (summary) summary.innerHTML = '';
+    }
 }
 
 function renderTestResults() {
@@ -1134,6 +1229,92 @@ function animateSystemDiagram() {
     display: flex;
     align-items: center;
     gap: 0.25rem;
+}
+
+.jetson-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.jetson-card {
+    background: var(--bg-dark);
+    border-radius: 12px;
+    padding: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: transform 0.2s ease;
+}
+
+.jetson-card:hover {
+    transform: translateY(-2px);
+}
+
+.jetson-card.offline {
+    opacity: 0.75;
+}
+
+.jetson-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.jetson-name {
+    font-weight: 700;
+    font-size: 1rem;
+}
+
+.jetson-ip {
+    color: var(--text-secondary);
+    font-size: 0.813rem;
+}
+
+.jetson-metrics {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.jetson-metric {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.938rem;
+}
+
+.jetson-metric .metric-label {
+    color: var(--text-secondary);
+}
+
+.jetson-summary-card {
+    display: inline-flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem 1rem;
+    background: rgba(59, 130, 246, 0.08);
+    border-radius: 10px;
+}
+
+.jetson-summary-card .label {
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+
+.jetson-summary-card .value {
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+.jetson-summary-card .hint {
+    color: var(--text-muted);
+    font-size: 0.813rem;
+}
+
+.jetson-error {
+    margin-top: 0.75rem;
+    font-size: 0.813rem;
+    color: var(--warning);
 }
 
 @media (max-width: 1024px) {

@@ -207,6 +207,26 @@ class MessageCodec:
                 raise ValueError("Invalid classic bit-packed frame")
             return text, info
 
+        # Semantic Hybrid
+        if method_byte == 0xB2:
+            from communication.aura_semantic_dict import load_semantic_dictionary
+            sem = load_semantic_dictionary()
+            if sem:
+                text = sem.decompress_hybrid(payload)
+                if text is not None:
+                    info['method'] = 'SEMANTIC_HYBRID'
+                    return text, info
+
+        # Pattern Semantic (AI-Powered)
+        if method_byte == 0xB3:
+            from communication.pattern_semantic_compressor import PatternSemanticCompressor
+            psc = PatternSemanticCompressor()
+            # Payload is [0xB3][Header...][Data...]
+            # psc.decompress expects [Header...][Data...]
+            text = psc.decompress(payload[1:])
+            info['method'] = 'PATTERN_SEMANTIC'
+            return text, info
+
         # Otherwise assume AURA blob
         aura = _get_aura_decoder()
         text = aura.decompress(payload)

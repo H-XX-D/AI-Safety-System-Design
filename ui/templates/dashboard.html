@@ -112,9 +112,96 @@
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 </style>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/orka.css') }}">
 {% endblock %}
 
 {% block content %}
+<!-- OrKheStrA Control Panel - Unregulated AI Self Recursions -->
+<div class="orkehtra-panel card" style="margin-bottom: 24px;">
+    <div class="card-header">
+        <h3><i class="fas fa-atom"></i> <span class="cyberpunk-text">OrKheStrA</span> - Unregulated AI Self Recursions</h3>
+        <span class="badge-info"><i class="fas fa-compress-arrows-alt"></i> AURA Compression Active</span>
+    </div>
+    <div class="card-body">
+        <!-- 10 Model Cluster Grid -->
+        <div class="model-cluster-grid">
+            <div class="model-grid researchers">
+                <div class="model-node" id="dash-node-tif">
+                    <div class="node-status online"></div>
+                    <div class="node-name">TIF</div>
+                    <div class="node-model">deepseek-r1:1.5b</div>
+                </div>
+                <div class="model-node" id="dash-node-gin">
+                    <div class="node-status online"></div>
+                    <div class="node-name">GIN</div>
+                    <div class="node-model">deepseek-r1:1.5b</div>
+                </div>
+                <div class="model-node" id="dash-node-orin">
+                    <div class="node-status online"></div>
+                    <div class="node-name">ORIN</div>
+                    <div class="node-model">deepseek-r1:1.5b</div>
+                </div>
+                <div class="model-node" id="dash-node-tori">
+                    <div class="node-status online"></div>
+                    <div class="node-name">TORI</div>
+                    <div class="node-model">gemma3:4b</div>
+                </div>
+                <div class="model-node" id="dash-node-archi">
+                    <div class="node-status online"></div>
+                    <div class="node-name">ARCHI</div>
+                    <div class="node-model">qwen2.5:3b</div>
+                </div>
+                <div class="model-node" id="dash-node-novel">
+                    <div class="node-status online"></div>
+                    <div class="node-name">NOVEL</div>
+                    <div class="node-model">qwen2.5:3b</div>
+                </div>
+                <div class="model-node governance" id="dash-node-guard">
+                    <div class="node-status online"></div>
+                    <div class="node-name">GUARD</div>
+                    <div class="node-model">llama-guard3:1b</div>
+                </div>
+                <div class="model-node governance" id="dash-node-pageqa">
+                    <div class="node-status online"></div>
+                    <div class="node-name">PAGEQA</div>
+                    <div class="node-model">paperqa-rag</div>
+                </div>
+                <div class="model-node coordinator" id="dash-node-orka">
+                    <div class="node-status online"></div>
+                    <div class="node-name">ORKA</div>
+                    <div class="node-model">qwen2.5:3b</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- AURA Stats & Launch Button -->
+        <div class="aura-stats">
+            <div class="aura-stat">
+                <i class="fas fa-compress"></i>
+                <span class="stat-value" id="dashAuraRatio">21.3x</span>
+                <span class="stat-label">Compression</span>
+            </div>
+            <div class="aura-stat">
+                <i class="fas fa-network-wired"></i>
+                <span class="stat-value" id="dashAuraNodes">10/10</span>
+                <span class="stat-label">Nodes Online</span>
+            </div>
+        </div>
+        
+        <div class="orkehtra-actions">
+            <button type="button" class="btn btn-cyberpunk btn-large" onclick="startUnregulatedAIRecursions()">
+                <i class="fas fa-atom"></i> Start Unregulated AI Self Recursions
+            </button>
+            <div id="dashWorkflowStatus" class="workflow-status" style="display:none;">
+                <div class="status-indicator">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <span id="dashWorkflowStatusText">Initializing...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Stats Cards -->
 <div class="stats-grid">
     <a href="/proposals" class="stat-card-link">
@@ -124,9 +211,9 @@
             </div>
             <div class="stat-content">
                 <div class="stat-label">Active Proposals</div>
-                <div class="stat-value" id="activeProposals">3</div>
-                <div class="stat-change positive">
-                    <i class="fas fa-arrow-up"></i> 2 today
+                <div class="stat-value" id="activeProposals">—</div>
+                <div class="stat-change neutral" id="activeProposalsDelta">
+                    <i class="fas fa-minus"></i> Waiting for data
                 </div>
             </div>
         </div>
@@ -139,9 +226,9 @@
             </div>
             <div class="stat-content">
                 <div class="stat-label">Detection Accuracy</div>
-                <div class="stat-value">78%</div>
-                <div class="stat-change positive">
-                    <i class="fas fa-arrow-up"></i> +2.3%
+                <div class="stat-value" id="detectionAccuracy">—</div>
+                <div class="stat-change neutral" id="detectionAccuracyDelta">
+                    <i class="fas fa-minus"></i> Waiting for data
                 </div>
             </div>
         </div>
@@ -154,9 +241,9 @@
             </div>
             <div class="stat-content">
                 <div class="stat-label">Deception Alerts</div>
-                <div class="stat-value" id="deceptionAlerts">0</div>
-                <div class="stat-change neutral">
-                    <i class="fas fa-minus"></i> No change
+                <div class="stat-value" id="deceptionAlerts">—</div>
+                <div class="stat-change neutral" id="deceptionAlertsDelta">
+                    <i class="fas fa-minus"></i> Waiting for data
                 </div>
             </div>
         </div>
@@ -168,10 +255,10 @@
                 <i class="fas fa-check-circle"></i>
             </div>
             <div class="stat-content">
-                <div class="stat-label">Tests Passing</div>
-                <div class="stat-value">131</div>
-                <div class="stat-change positive">
-                    <i class="fas fa-check"></i> All clear
+                <div class="stat-label">Nodes Online</div>
+                <div class="stat-value" id="nodesOnline">—</div>
+                <div class="stat-change neutral" id="nodesOnlineDelta">
+                    <i class="fas fa-minus"></i> Waiting for data
                 </div>
             </div>
         </div>
@@ -354,6 +441,67 @@
         </div>
     </div>
 </div>
+
+<!-- ORKA Oversight + Pipeline -->
+<div class="orka-container" style="margin-top: 32px;">
+    <div class="workflow-pipeline">
+        <h2><i class="fas fa-project-diagram"></i> Proposal Workflow Pipeline</h2>
+        <div class="pipeline-stages">
+            <div class="pipeline-stage clickable-stage" onclick="showPipelineStage('submitted')" title="Click to view proposals">
+                <div class="stage-count" id="stageCountSubmitted">0</div>
+                <div class="stage-name">Submitted</div>
+            </div>
+            <div class="pipeline-arrow"><i class="fas fa-arrow-right"></i></div>
+            <div class="pipeline-stage clickable-stage" onclick="showPipelineStage('testing')" title="Click to view proposals">
+                <div class="stage-count" id="stageCountTesting">0</div>
+                <div class="stage-name">Testing</div>
+            </div>
+            <div class="pipeline-arrow"><i class="fas fa-arrow-right"></i></div>
+            <div class="pipeline-stage clickable-stage" onclick="showPipelineStage('peer_review')" title="Click to view proposals">
+                <div class="stage-count" id="stageCountPeerReview">0</div>
+                <div class="stage-name">Peer Review</div>
+            </div>
+            <div class="pipeline-arrow"><i class="fas fa-arrow-right"></i></div>
+            <div class="pipeline-stage clickable-stage" onclick="showPipelineStage('orka_review')" title="Click to view proposals">
+                <div class="stage-count" id="stageCountOrkaReview">0</div>
+                <div class="stage-name">ORKASTRATOR Review</div>
+            </div>
+            <div class="pipeline-arrow"><i class="fas fa-arrow-right"></i></div>
+            <div class="pipeline-stage clickable-stage highlighted" onclick="showPipelineStage('pending_val')" title="Click to view proposals">
+                <div class="stage-count" id="stageCountPendingVal">0</div>
+                <div class="stage-name">Pending VAL</div>
+            </div>
+            <div class="pipeline-arrow"><i class="fas fa-arrow-right"></i></div>
+            <div class="pipeline-stage clickable-stage success" onclick="showPipelineStage('approved')" title="Click to view proposals">
+                <div class="stage-count" id="stageCountApproved">0</div>
+                <div class="stage-name">Approved</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="orkehtra-panel card">
+        <div class="card-header">
+            <h3><i class="fas fa-rocket"></i> <span class="cyberpunk-text">OrKEhsTrA</span> Control</h3>
+        </div>
+        <div class="card-body">
+            <div class="orkehtra-description">
+                <p>Launch the complete 20-step proposal workflow across all researcher nodes for comprehensive AI safety research and validation.</p>
+            </div>
+            <div class="orkehtra-actions">
+                <button type="button" class="btn btn-cyberpunk btn-large" onclick="start20StepWorkflow()">
+                    <i class="fas fa-play-circle"></i> <span class="cyberpunk-text">OrKEhsTrA</span> - Start 20-Step Flow
+                </button>
+                <div class="workflow-status" id="workflowStatus" style="display:none;">
+                    <div class="status-indicator">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <span id="workflowStatusText">Initializing workflow...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
 {% endblock %}
 
 {% block extra_scripts %}
@@ -396,6 +544,11 @@ async function loadDashboard() {
 
         // Load WORM status
         refreshWormStatus();
+
+        // Load status metrics
+        const statusRes = await fetch('/api/status');
+        const statusData = await statusRes.json();
+        updateDashboardMetrics(statusData);
     } catch (error) {
         console.error('Error loading dashboard:', error);
         showToast('Error loading dashboard data', 'error');
@@ -775,4 +928,40 @@ setInterval(() => {
     loadCollusionWidget();
 }, 15000);
 </script>
+<script>
+function updateModelGrid(cluster) {
+    if (!cluster || !cluster.nodes) return;
+    const nodes = cluster.nodes;
+    const map = {
+        'TIF': 'dash-node-tif',
+        'GIN': 'dash-node-gin',
+        'ORIN': 'dash-node-orin',
+        'TORI': 'dash-node-tori',
+        'ARCHI': 'dash-node-archi',
+        'NOVEL': 'dash-node-novel',
+        'GUARD': 'dash-node-guard',
+        'PAGEQA': 'dash-node-pageqa',
+        'ORKA': 'dash-node-orka',
+    };
+    Object.keys(map).forEach(code => {
+        const el = document.getElementById(map[code]);
+        const data = nodes[code];
+        if (!el || !data) return;
+        const status = el.querySelector('.node-status');
+        const model = el.querySelector('.node-model');
+        if (status) {
+            status.className = 'node-status ' + (data.online ? 'online' : 'offline');
+            status.title = data.response_time_ms ? `RTT ${data.response_time_ms} ms` : '';
+        }
+        if (model) {
+            model.textContent = data.expected_model || data.model || 'unknown';
+        }
+    });
+    const auraNodes = document.getElementById('dashAuraNodes');
+    if (auraNodes && cluster.online_count !== undefined && cluster.total_count !== undefined) {
+        auraNodes.textContent = `${cluster.online_count}/${cluster.total_count}`;
+    }
+}
+</script>
+<script src="{{ url_for('static', filename='js/orka.js') }}"></script>
 {% endblock %}

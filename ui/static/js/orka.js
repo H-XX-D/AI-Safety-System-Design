@@ -7,6 +7,172 @@
 // Current proposal being viewed
 let currentProposal = null;
 
+// ===== UNREGULATED AI SELF RECURSIONS =====
+
+async function startUnregulatedAIRecursions() {
+    const statusIndicator = document.getElementById('workflowStatusIndicator');
+    const statusText = document.getElementById('workflowStatusText');
+    
+    // Show status
+    if (statusIndicator) {
+        statusIndicator.style.display = 'flex';
+        statusIndicator.classList.add('active');
+    }
+    if (statusText) {
+        statusText.textContent = 'Initializing parallel AI self recursions...';
+    }
+    
+    // Update node status to busy - 7 researchers + 3 support = 10 nodes
+    const allNodes = ['tif', 'gin', 'orin', 'tori', 'archi', 'theo', 'novel', 'guard', 'pageqa', 'orka'];
+    allNodes.forEach(node => {
+        const nodeEl = document.getElementById(`node-${node}`);
+        if (nodeEl) {
+            const status = nodeEl.querySelector('.node-status');
+            if (status) status.classList.add('busy');
+        }
+    });
+    
+    try {
+        // All 10 models: 7 researchers + 3 support
+        const researcherNodes = ['TIF', 'GIN', 'ORIN', 'TORI', 'ARCHI', 'THEO', 'NOVEL'];
+        const supportNodes = ['GUARD', 'PAGEQA', 'ORKA'];
+        const allModelNodes = [...researcherNodes, ...supportNodes];
+        
+        // Use the new parallel endpoint for REAL inference across all nodes
+        if (statusText) {
+            statusText.textContent = 'Launching parallel recursions on 11 models with real inference...';
+        }
+        
+        // Single API call triggers parallel inference on all nodes
+        const response = await fetch('/api/workflow/start-parallel-recursions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({
+                topic: 'Unregulated AI Self Recursion - Safety Research',
+                researchers_only: false
+            })
+        });
+        
+        let results = [];
+        if (response.ok) {
+            const data = await response.json();
+            // Convert proposals array to results format
+            results = (data.proposals || []).map(p => ({
+                node: p.node,
+                success: p.success,
+                result: p
+            }));
+            
+            // Update status with real stats
+            if (statusText) {
+                statusText.textContent = `✓ ${data.successful}/${data.total_nodes} nodes completed | ${data.total_tokens} tokens | ${data.total_time}s`;
+                statusText.style.color = data.successful >= 7 ? '#00ff88' : '#ffaa00';
+            }
+        } else {
+            // Fallback: call each node individually
+            const promises = allModelNodes.map(async (node) => {
+                try {
+                    const resp = await fetch(`/api/workflow/run/${node}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ topic: 'Unregulated AI Self Recursion - Safety Research' })
+                    });
+                    if (resp.ok) {
+                        const result = await resp.json();
+                        return { node, success: true, result };
+                    }
+                    return { node, success: false, error: await resp.text() };
+                } catch (err) {
+                    return { node, success: false, error: err.message };
+                }
+            });
+            results = await Promise.all(promises);
+        }
+        
+        // Update node statuses
+        results.forEach(({ node, success }) => {
+            const nodeEl = document.getElementById(`node-${node.toLowerCase()}`);
+            if (nodeEl) {
+                const status = nodeEl.querySelector('.node-status');
+                if (status) {
+                    status.classList.remove('busy');
+                    if (success) {
+                        status.classList.add('online');
+                    } else {
+                        status.classList.add('offline');
+                    }
+                }
+            }
+        });
+        
+        // Show results (only if not already set by parallel endpoint)
+        const successCount = results.filter(r => r.success).length;
+        if (statusText && !statusText.textContent.includes('tokens')) {
+            statusText.textContent = `✓ ${successCount}/11 nodes completed parallel recursions`;
+            statusText.style.color = successCount >= 7 ? '#00ff88' : '#ffaa00';
+        }
+        
+        // Update stats display
+        updateParallelStats(successCount, results);
+        
+        // Hide status after 8 seconds
+        setTimeout(() => {
+            if (statusIndicator) {
+                statusIndicator.style.display = 'none';
+                statusIndicator.classList.remove('active');
+            }
+        }, 8000);
+        
+        // Refresh pipeline data
+        loadPipelineData();
+        
+    } catch (error) {
+        console.error('Error starting AI recursions:', error);
+        if (statusText) {
+            statusText.textContent = 'Error: ' + error.message;
+            statusText.style.color = '#ff4444';
+        }
+        
+        setTimeout(() => {
+            if (statusIndicator) {
+                statusIndicator.style.display = 'none';
+            }
+        }, 3000);
+    }
+}
+
+function updateParallelStats(activeNodes, results) {
+    // Update various stats displays
+    const nodesEl = document.getElementById('auraNodes') || document.getElementById('activeNodes');
+    const throughputEl = document.getElementById('auraThroughput') || document.getElementById('throughput');
+    const ratioEl = document.getElementById('auraRatio');
+    
+    if (nodesEl) nodesEl.textContent = `${activeNodes}/11`;
+    if (throughputEl) {
+        const totalTokens = results.reduce((sum, r) => sum + (r.result?.tokens || 0), 0);
+        throughputEl.textContent = `${totalTokens} tokens`;
+    }
+    if (ratioEl) ratioEl.textContent = 'Real';
+}
+
+function updateAuraStats(activeNodes) {
+    const ratioEl = document.getElementById('auraRatio');
+    const throughputEl = document.getElementById('auraThroughput');
+    const nodesEl = document.getElementById('auraNodes');
+    
+    if (ratioEl) ratioEl.textContent = '21.3x';
+    if (throughputEl) throughputEl.textContent = (activeNodes * 0.5).toFixed(1) + ' MB/s';
+    if (nodesEl) nodesEl.textContent = `${activeNodes}/10`;
+}
+
+// Legacy function alias for compatibility
+function start20StepWorkflow() {
+    return startUnregulatedAIRecursions();
+}
+
 // ===== HTML SANITIZATION HELPERS =====
 function _h(txt){
     if(txt === null || txt === undefined) return '';

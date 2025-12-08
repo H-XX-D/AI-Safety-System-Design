@@ -1,0 +1,14 @@
+{
+  "id": "TORI_e3b4b893",
+  "agent": "TORI",
+  "topic": "AI Safety Research and Improvement",
+  "workspace_path": "data/proposals/TORI_e3b4b893",
+  "current_step": 1,
+  "status": "active",
+  "created_at": 1765148938.7963479,
+  "updated_at": 1765148938.7963483,
+  "completed_steps": [],
+  "step_timestamps": {},
+  "vote_result": null,
+  "reward_score": null
+}

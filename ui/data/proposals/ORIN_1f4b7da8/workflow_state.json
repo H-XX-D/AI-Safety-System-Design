@@ -1,0 +1,14 @@
+{
+  "id": "ORIN_1f4b7da8",
+  "agent": "ORIN",
+  "topic": "AI Safety Research and Improvement",
+  "workspace_path": "data/proposals/ORIN_1f4b7da8",
+  "current_step": 1,
+  "status": "active",
+  "created_at": 1765148938.7862842,
+  "updated_at": 1765148938.7862844,
+  "completed_steps": [],
+  "step_timestamps": {},
+  "vote_result": null,
+  "reward_score": null
+}

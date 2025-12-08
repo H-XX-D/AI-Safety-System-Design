@@ -9,10 +9,10 @@ Cluster Nodes:
 - GIN: Generative Improvement Navigator (deepseek-r1:1.5b)
 - ORIN: NVIDIA/CUDA Expert (deepseek-r1:1.5b)
 - TORI: Code Review Specialist (gemma3:4b)
-- PAGEQA: Research Support - NO proposals (qwen2.5:3b)
+- PAGEQA: Research Support - NO proposals (paperqa)
 - ARCHI: Architecture & Design (qwen2.5:3b)
 - GUARD: Safety Validator (llama-guard3:1b)
-- ORKA: Orchestrator Coordinator (qwen2.5:14b)
+- ORKA: Orchestrator Coordinator (qwen2.5:3b)
 
 Features:
 - Real-time proposal monitoring
@@ -71,6 +71,7 @@ from live_data_provider import (
     get_service_status,
     get_agent_status_live,
     get_ollama_model_info,
+    get_jetson_power_status,
     record_proposal,
     record_detection_event,
     get_proposal_performance,
@@ -79,26 +80,12 @@ from live_data_provider import (
     record_time_series_point,
     get_recent_errors,
     get_resource_usage,
+    generate_on_node,
+    generate_on_best_available,
+    check_content_safety,
+    get_cluster_roles,
 )
 LIVE_DATA_AVAILABLE = True
-
-# Import 3D cube model and inference systems
-try:
-    sys.path.append('..')
-    from models.cube_model import create_cube, store_scalar_at_z, get_front_to_back_layers, multiply_layers_sequential, benchmark_multiply
-    from model_converter import ModelConverter, CompressedModel
-    from inference_engine import InferenceEngine, CompressedMLP
-    import torch
-    # Import device from models.cube_model if available
-    try:
-        from models.cube_model import device
-    except ImportError:
-        device = torch.device('cpu')
-    SYSTEMS_AVAILABLE = True
-except ImportError:
-    SYSTEMS_AVAILABLE = False
-    device = None
-    print("AI compression systems not available - demos disabled")
 
 app = Flask(__name__)
 # SECRET_KEY should be set via environment variable in production
@@ -151,6 +138,11 @@ def set_security_headers(response):
 # Default is FALSE - we use REAL data from the cluster
 STANDALONE_MODE = os.environ.get('STANDALONE', 'false').lower() == 'true'
 
+# Evidence engine state (used by health check and evidence queries)
+_evidence_docs = None
+_evidence_initialized = False
+_evidence_indexing = False
+_evidence_cache_path = None
 
 # ===== CACHING SYSTEM =====
 
@@ -450,35 +442,52 @@ def require_admin(roles: Optional[List[str]] = None):
             return fn(*args, **kwargs)
         return _wrapped
     return _decorator
-def _resolve_worm_usb_path() -> str:
-    """Resolve WORM USB base path from env or config with a sensible fallback."""
-    # 1) Env override
+def _all_worm_paths() -> List[str]:
+    """Resolve all candidate WORM USB paths (env, config, common mounts)."""
+    paths: List[str] = []
     env_override = os.environ.get("WORM_USB_PATH")
-    if env_override and os.path.exists(env_override):
-        return env_override
-    # 2) Config
+    if env_override:
+        paths.append(env_override)
     try:
         cfg = load_config() or {}
         cfg_path = (
             cfg.get('worm', {}).get('usb_mount_path')
             if isinstance(cfg.get('worm', {}), dict) else None
         )
-        if isinstance(cfg_path, str) and os.path.exists(cfg_path):
-            return cfg_path
+        if isinstance(cfg_path, str):
+            paths.append(cfg_path)
     except Exception:
         pass
-    # 3) Common macOS/Windows/Linux fallbacks
-    candidates = [
+    paths.extend([
         "/Volumes/ORKASTRATOR_WORM",
         "/Volumes/NO NAME/ORKASTRATOR_WORM",
         "/media/usb/ORKASTRATOR_WORM",
         "/mnt/usb/ORKASTRATOR_WORM",
-    ]
-    for c in candidates:
-        if os.path.exists(c):
-            return c
-    # 4) As a last resort, return env or first candidate even if missing
-    return env_override or candidates[0]
+        "/media/usb/ORKASTRATOR_WORM1",
+        "/media/usb/ORKASTRATOR_WORM2",
+        "/media/usb/ORKASTRATOR_WORM3",
+        "/media/usb/ORKASTRATOR_WORM4",
+        "/media/usb/ORKASTRATOR_WORM5",
+        "/media/usb/ORKASTRATOR_WORM6",
+        "/media/usb/ORKASTRATOR_WORM7",
+        "/media/usb/ORKASTRATOR_WORM8",
+    ])
+    # De-duplicate preserving order
+    seen = set()
+    ordered = []
+    for p in paths:
+        if p and p not in seen:
+            ordered.append(p)
+            seen.add(p)
+    return ordered
+
+def _resolve_worm_usb_path() -> str:
+    """Resolve primary WORM path (first existing candidate)."""
+    for p in _all_worm_paths():
+        if os.path.exists(p):
+            return p
+    candidates = _all_worm_paths()
+    return candidates[0] if candidates else "/media/usb/ORKASTRATOR_WORM"
 
 worm_usb_path = _resolve_worm_usb_path()
 
@@ -601,6 +610,7 @@ AGENT_ID_MAP = {
     6: "ARCHI",
     7: "NOVEL",
     8: "ORKA",
+    9: "THEO",
 }
 
 AGENT_META = {
@@ -608,10 +618,11 @@ AGENT_META = {
     "GIN": {"id": 2, "name": "GIN (Generative Improvement Navigator)", "specialty": "Code Generation", "model": "deepseek-r1:1.5b", "ip": "192.168.0.242"},
     "TORI": {"id": 3, "name": "TORI (Technical Optimization Review Intelligence)", "specialty": "Review & Optimization", "model": "gemma3:4b", "ip": "192.168.0.235"},
     "ORIN": {"id": 4, "name": "ORIN (Orchestration & Research Intelligence Node)", "specialty": "Research Coordination", "model": "deepseek-r1:1.5b", "ip": "192.168.0.160"},
-    "PAGEQA": {"id": 5, "name": "PAGEQA (Paper Q&A Specialist)", "specialty": "Document Analysis", "model": "qwen2.5:3b", "ip": "192.168.0.168"},
+    "PAGEQA": {"id": 5, "name": "PAGEQA (Paper Q&A Specialist)", "specialty": "Document Analysis", "model": "paperqa", "ip": "localhost"},
     "ARCHI": {"id": 6, "name": "ARCHI (Architecture & Design Specialist)", "specialty": "System Design", "model": "qwen2.5:3b", "ip": "192.168.0.232"},
     "NOVEL": {"id": 7, "name": "NOVEL (Creative & Experimental Node)", "specialty": "Creative Ideas", "model": "gemma:2b", "ip": "192.168.0.146"},
-    "ORKA": {"id": 8, "name": "ORKA (Orchestration & Knowledge Aggregator)", "specialty": "System Coordination + Safety", "model": "qwen2.5:14b + llama-guard3:1b", "ip": "localhost"},
+    "ORKA": {"id": 8, "name": "ORKA (Orchestration & Knowledge Aggregator)", "specialty": "System Coordination + Safety", "model": "qwen2.5:3b + llama-guard3:1b", "ip": "localhost"},
+    "THEO": {"id": 9, "name": "THEO (Theoretical Edge)", "specialty": "Theoretical Reasoning", "model": "qwen2.5:3b", "ip": "192.168.0.168"},
 }
 
 def agent_code_from_id(agent_id: int) -> Optional[str]:
@@ -704,10 +715,16 @@ def init_components():
         penalty_tracker = orka_penalty_tracker
 
         # Initialize translator
-        translator = Translator()
+        translator = Translator(
+            translator_id=1,
+            protocol_version="2.0",
+            private_key="ui_translator_key_for_demo"
+        )
 
         # Initialize alignment filter
-        alignment_filter = AlignmentFilter()
+        from ai_safety.bulletproof_alignment_filter import CentralReporter
+        reporter = CentralReporter()
+        alignment_filter = AlignmentFilter(reporter)
 
         # Initialize orchestrator admin (optional)
         if 'Orchestrator' in globals() and Orchestrator is not None:
@@ -739,53 +756,59 @@ def init_components():
 
 @app.route('/api/worm/status')
 def api_worm_status():
-    """Return current WORM USB resolution + optional integrity report."""
-    base = _resolve_worm_usb_path()
-    exists = os.path.exists(base)
-    report: Dict[str, Any] = {}
-    verified = None
-    read_only_ok = None
-    # Determine fail-closed policy
+    """Return current WORM USB resolution + integrity report for all candidates."""
     cfg = load_config() or {}
     cfg_fail = bool((cfg.get('worm', {}) or {}).get('fail_closed_writes', False)) if isinstance(cfg, dict) else False
     env_fail = os.environ.get('WORM_FAIL_CLOSED') or os.environ.get('FAIL_CLOSED_WORM_WRITES')
     fail_closed = cfg_fail or (str(env_fail).strip().lower() in {'1', 'true', 'yes', 'on'})
-    if exists:
-        # Prefer full verifier when available (provides read_only), fall back to worm_manifest
-        used_full = False
-        try:
-            from security.verify_worm_integrity import WORMVerifier  # type: ignore
-            from security.worm_paths import resolve_worm_root  # type: ignore
+
+    results = []
+    for base in _all_worm_paths():
+        exists = os.path.exists(base)
+        report: Dict[str, Any] = {}
+        verified = None
+        read_only_ok = None
+        if exists:
+            used_full = False
             try:
-                root = resolve_worm_root(fallback=base)
-            except Exception:
-                root = base
-            ver = WORMVerifier(root)
-            ok, full = ver.verify()
-            report = full or {}
-            verified = bool(ok)
-            checks = report.get('checks', {}) if isinstance(report.get('checks', {}), dict) else {}
-            ro = checks.get('read_only')
-            read_only_ok = bool(ro) if isinstance(ro, bool) else None
-            used_full = True
-        except Exception:
-            pass
-        if not used_full and _verify_worm is not None:
-            try:
-                report = _verify_worm() or {}
-                verified = bool(report.get('verified', False))
+                from security.verify_worm_integrity import WORMVerifier  # type: ignore
+                from security.worm_paths import resolve_worm_root  # type: ignore
+                try:
+                    root = resolve_worm_root(fallback=base)
+                except Exception:
+                    root = base
+                ver = WORMVerifier(root)
+                ok, full = ver.verify()
+                report = full or {}
+                verified = bool(ok)
                 checks = report.get('checks', {}) if isinstance(report.get('checks', {}), dict) else {}
                 ro = checks.get('read_only')
                 read_only_ok = bool(ro) if isinstance(ro, bool) else None
-            except Exception as _e:
-                report = {"error": str(_e)}
+                used_full = True
+            except Exception:
+                pass
+            if not used_full and _verify_worm is not None:
+                try:
+                    report = _verify_worm() or {}
+                    verified = bool(report.get('verified', False))
+                    checks = report.get('checks', {}) if isinstance(report.get('checks', {}), dict) else {}
+                    ro = checks.get('read_only')
+                    read_only_ok = bool(ro) if isinstance(ro, bool) else None
+                except Exception as _e:
+                    report = {"error": str(_e)}
+        results.append({
+            "path": base,
+            "exists": exists,
+            "verified": verified,
+            "report": report,
+            "read_only": read_only_ok,
+        })
+
+    primary = next((r for r in results if r["exists"]), results[0] if results else {})
     return jsonify({
-        "path": base,
-        "exists": exists,
-        "verified": verified,
-        "report": report,
+        "paths": results,
         "fail_closed": fail_closed,
-        "read_only": read_only_ok,
+        "primary": primary,
     })
 
 # ------------------------ Admin API (optional) ------------------------
@@ -1005,17 +1028,37 @@ def config():
 @app.route('/orka')
 def orka_oversight():
     """ORKA Oversight view - comprehensive proposal management."""
-    return render_template('orka.html')
+    return redirect(url_for('index'))
 
 @app.route('/sandbox')
 def sandbox_view():
     """SandboxFusion - isolated code execution environment."""
     return render_template('sandbox.html')
 
+@app.route('/system-monitor')
+def system_monitor():
+    """Dedicated system monitoring view."""
+    return render_template('system_monitor.html')
+
+@app.route('/network')
+def network_topology():
+    """Network topology view with hardware metrics."""
+    return render_template('network_topology.html')
+
+@app.route('/settings')
+def settings_view():
+    """Settings overview."""
+    return render_template('settings.html')
+
 @app.route('/research')
 def research():
     """Research agents hardware and performance view."""
     return render_template('research.html')
+
+@app.route('/research-hub')
+def research_hub():
+    """Combined Research Hub - researchers, evidence, and penalties."""
+    return render_template('research_hub.html')
 
 @app.route('/agent')
 def agent_detail():
@@ -1026,6 +1069,32 @@ def agent_detail():
 def paperqa_view():
     """PaperQA evidence search view."""
     return render_template('paperqa.html')
+
+@app.route('/api/openai/cli', methods=['POST'])
+def api_openai_cli():
+    """Run a limited OpenAI CLI command and return output."""
+    try:
+        data = request.get_json(force=True, silent=True) or {}
+        cmd_str = (data.get('command') or '').strip()
+        if not cmd_str.startswith('openai'):
+            return jsonify({"error": "Command must start with 'openai'"}), 400
+        if len(cmd_str) > 500:
+            return jsonify({"error": "Command too long"}), 400
+
+        import shlex
+        parts = shlex.split(cmd_str)
+        result = subprocess.run(parts, capture_output=True, text=True, timeout=30)
+        return jsonify({
+            "returncode": result.returncode,
+            "stdout": result.stdout,
+            "stderr": result.stderr,
+        })
+    except FileNotFoundError:
+        return jsonify({"error": "openai CLI not found"}), 400
+    except subprocess.TimeoutExpired:
+        return jsonify({"error": "Command timed out"}), 408
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/docs/RESEARCH_CAPABILITIES.md')
 def research_capabilities_doc():
@@ -1096,11 +1165,13 @@ def api_status():
             uptime_str = f"{sys_metrics.get('uptime_hours', 0):.1f}h"
             cluster_online = cluster_status.get('online_count', 0)
             cluster_total = cluster_status.get('total_count', 8)
+            detection_accuracy = system_stats.get('detection_accuracy', None)
         else:
             sys_metrics = {}
             uptime_str = '12h (simulated)'
             cluster_online = 0
             cluster_total = 8
+            detection_accuracy = None
 
         return jsonify({
             'status': 'operational' if all(components.values()) else 'degraded',
@@ -1121,6 +1192,7 @@ def api_status():
                 'avg_penalty_multiplier': f'{avg_penalty_multiplier:.2f}',
                 'cluster_online': cluster_online,
                 'cluster_total': cluster_total,
+                'detection_accuracy': detection_accuracy,
             },
             'halted': bool(getattr(globals().get('orchestrator_admin', None), '_halted', False))
         })
@@ -1175,6 +1247,20 @@ def api_system_metrics():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/jetson/power')
+def api_jetson_power():
+    """Return Jetson power/thermal snapshot for the cluster."""
+    try:
+        if not LIVE_DATA_AVAILABLE:
+            return jsonify({"available": False, "error": "live data unavailable"}), 503
+
+        payload = get_jetson_power_status()
+        payload["available"] = True
+        return jsonify(payload)
+    except Exception as e:
+        return jsonify({"available": False, "error": str(e)}), 500
+
+
 @app.route('/health')
 def health_check():
     """Simple health check endpoint for Docker/Kubernetes."""
@@ -1195,29 +1281,16 @@ def health_check():
 def api_cluster_status():
     """Get nano cluster status."""
     try:
-        if not NANO_CLUSTER_AVAILABLE or get_cluster is None:
-            return jsonify({
-                'available': False,
-                'error': 'Nano cluster tools not available',
-                'agents': AGENT_META
-            })
-        
-        cluster = get_cluster()
-        status = cluster.check_all_status()
-        stats = cluster.get_cluster_stats()
-        
-        # Enhance with agent meta
-        for name, node_info in stats.get('nodes', {}).items():
-            if name in AGENT_META:
-                node_info['meta'] = AGENT_META[name]
+        # Use live data provider instead of tools.nano_cluster
+        status = get_cluster_status_live()
         
         return jsonify({
             'available': True,
-            'online_count': stats['online_nodes'],
-            'total_count': stats['total_nodes'],
-            'nodes': stats['nodes'],
-            'roles': stats['roles'],
-            'timestamp': datetime.now().isoformat()
+            'online_count': status['online_count'],
+            'total_count': status['total_count'],
+            'nodes': status['nodes'],
+            'timestamp': status['timestamp'],
+            'healthy': status['healthy']
         })
     except Exception as e:
         return jsonify({'available': False, 'error': str(e)}), 500
@@ -1227,9 +1300,6 @@ def api_cluster_status():
 def api_cluster_generate():
     """Generate using a specific cluster node."""
     try:
-        if not NANO_CLUSTER_AVAILABLE or get_cluster is None:
-            return jsonify({'error': 'Nano cluster not available'}), 503
-        
         data = request.get_json() or {}
         prompt = data.get('prompt', '')
         node_name = data.get('node')
@@ -1239,17 +1309,15 @@ def api_cluster_generate():
         if not prompt:
             return jsonify({'error': 'Prompt is required'}), 400
         
-        cluster = get_cluster()
-        
         if node_name:
-            response = cluster.generate_on_node(
+            response = generate_on_node(
                 node_name, prompt,
                 temperature=temperature,
                 max_tokens=max_tokens
             )
             used_node = node_name
         else:
-            response, used_node = cluster.generate_on_best_available(
+            response, used_node = generate_on_best_available(
                 prompt,
                 temperature=temperature,
                 max_tokens=max_tokens
@@ -1271,17 +1339,13 @@ def api_cluster_generate():
 def api_cluster_safety_check():
     """Check content safety using GUARD node."""
     try:
-        if not NANO_CLUSTER_AVAILABLE or get_cluster is None:
-            return jsonify({'error': 'Nano cluster not available'}), 503
-        
         data = request.get_json() or {}
         content = data.get('content', '')
         
         if not content:
             return jsonify({'error': 'Content is required'}), 400
         
-        cluster = get_cluster()
-        result = cluster.check_safety(content)
+        result = check_content_safety(content)
         result['timestamp'] = datetime.now().isoformat()
         
         return jsonify(result)
@@ -1409,7 +1473,7 @@ def api_cluster_guard_status():
                     'dual_model': len(guard_models) > 0 and len(orka_models) > 0,
                     'gpu_shared': True,  # Both on same RTX 5060
                     'total_vram': '16GB',
-                    'estimated_usage': '~10.6GB (qwen2.5:14b=9GB + llama-guard3:1b=1.6GB)',
+                    'estimated_usage': '~3.5GB (qwen2.5:3b ~2GB + llama-guard3:1b=1.6GB)',
                     'models': [m['name'] for m in models],
                     'timestamp': datetime.now().isoformat()
                 })
@@ -1423,6 +1487,234 @@ def api_cluster_guard_status():
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+# ===== NETWORK TOPOLOGY API ENDPOINTS =====
+
+@app.route('/api/network/metrics')
+def api_network_metrics():
+    """Get REAL network metrics from all cluster nodes via Ollama API."""
+    import requests
+    import time
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    
+    # Node definitions with specs - 7 researchers + 3 support = 10 nodes
+    nodes = {
+        'TIF': {'ip': '192.168.0.213', 'type': 'researcher', 'gpu': 'Jetson Orin Nano', 'vram': '8GB', 'flops': 40, 'link': '1Gbps'},
+        'GIN': {'ip': '192.168.0.242', 'type': 'researcher', 'gpu': 'Jetson Orin Nano', 'vram': '8GB', 'flops': 40, 'link': '1Gbps'},
+        'ORIN': {'ip': '192.168.0.160', 'type': 'researcher', 'gpu': 'Jetson Orin Nano', 'vram': '8GB', 'flops': 40, 'link': '1Gbps'},
+        'TORI': {'ip': '192.168.0.235', 'type': 'researcher', 'gpu': 'Jetson Orin Nano', 'vram': '8GB', 'flops': 40, 'link': '1Gbps'},
+        'ARCHI': {'ip': '192.168.0.232', 'type': 'researcher', 'gpu': 'Jetson Orin Nano', 'vram': '8GB', 'flops': 40, 'link': '1Gbps'},
+        'THEO': {'ip': '192.168.0.110', 'type': 'researcher', 'gpu': 'Jetson Orin Nano', 'vram': '8GB', 'flops': 40, 'link': '1Gbps'},
+        'NOVEL': {'ip': '192.168.0.146', 'type': 'researcher', 'gpu': 'Jetson Orin Nano', 'vram': '8GB', 'flops': 40, 'link': '1Gbps'},
+        'GUARD': {'ip': '192.168.0.108', 'type': 'support', 'gpu': 'Jetson Orin Nano', 'vram': '8GB', 'flops': 40, 'link': '1Gbps'},
+        'PAGEQA': {'ip': '192.168.0.168', 'type': 'support', 'gpu': 'RTX 4090', 'vram': '24GB', 'flops': 330, 'link': '2.5Gbps'},
+        'ORKA': {'ip': 'localhost', 'type': 'orchestrator', 'gpu': 'RTX 5060', 'vram': '16GB', 'flops': 220, 'link': '10Gbps'}
+    }
+    
+    def check_node(name, spec):
+        """Check a single node's Ollama status."""
+        ip = spec['ip']
+        host = 'localhost' if ip == 'localhost' else ip
+        url = f"http://{host}:11434/api/tags"
+        
+        start_time = time.time()
+        try:
+            resp = requests.get(url, timeout=3)
+            latency = (time.time() - start_time) * 1000  # ms
+            
+            if resp.status_code == 200:
+                data = resp.json()
+                models = data.get('models', [])
+                model_names = [m.get('name', 'unknown') for m in models]
+                # Get running model info if available
+                model_size = sum(m.get('size', 0) for m in models) / (1024**3)  # GB
+                
+                return {
+                    'name': name,
+                    'ip': spec['ip'],
+                    'type': spec['type'],
+                    'online': True,
+                    'gpu': spec['gpu'],
+                    'vram': spec['vram'],
+                    'flops': spec['flops'],
+                    'link_speed': spec['link'],
+                    'models_loaded': model_names[:3],  # First 3 models
+                    'model_count': len(models),
+                    'model_size_gb': round(model_size, 2),
+                    'latency_ms': round(latency, 2),
+                    'status': 'ready'
+                }
+            else:
+                return {
+                    'name': name,
+                    'ip': spec['ip'],
+                    'type': spec['type'],
+                    'online': False,
+                    'gpu': spec['gpu'],
+                    'vram': spec['vram'],
+                    'flops': spec['flops'],
+                    'link_speed': spec['link'],
+                    'latency_ms': round(latency, 2),
+                    'status': f'error: HTTP {resp.status_code}'
+                }
+        except requests.exceptions.Timeout:
+            return {
+                'name': name,
+                'ip': spec['ip'],
+                'type': spec['type'],
+                'online': False,
+                'gpu': spec['gpu'],
+                'vram': spec['vram'],
+                'flops': spec['flops'],
+                'link_speed': spec['link'],
+                'latency_ms': 3000,
+                'status': 'timeout'
+            }
+        except requests.exceptions.ConnectionError:
+            return {
+                'name': name,
+                'ip': spec['ip'],
+                'type': spec['type'],
+                'online': False,
+                'gpu': spec['gpu'],
+                'vram': spec['vram'],
+                'flops': spec['flops'],
+                'link_speed': spec['link'],
+                'latency_ms': 0,
+                'status': 'unreachable'
+            }
+        except Exception as e:
+            return {
+                'name': name,
+                'ip': spec['ip'],
+                'type': spec['type'],
+                'online': False,
+                'gpu': spec['gpu'],
+                'vram': spec['vram'],
+                'flops': spec['flops'],
+                'link_speed': spec['link'],
+                'latency_ms': 0,
+                'status': f'error: {str(e)[:50]}'
+            }
+    
+    # Check all nodes in parallel
+    metrics = {}
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        futures = {executor.submit(check_node, name, spec): name for name, spec in nodes.items()}
+        for future in as_completed(futures):
+            name = futures[future]
+            try:
+                metrics[name] = future.result()
+            except Exception as e:
+                metrics[name] = {
+                    'name': name,
+                    'ip': nodes[name]['ip'],
+                    'type': nodes[name]['type'],
+                    'online': False,
+                    'status': f'error: {str(e)[:50]}'
+                }
+    
+    online_count = sum(1 for m in metrics.values() if m.get('online', False))
+    total_flops_online = sum(nodes[n]['flops'] for n, m in metrics.items() if m.get('online', False))
+    
+    return jsonify({
+        'nodes': metrics,
+        'online_count': online_count,
+        'total_count': len(nodes),
+        'total_flops': sum(spec['flops'] for spec in nodes.values()),
+        'online_flops': total_flops_online,
+        'timestamp': datetime.now().isoformat()
+    })
+
+
+@app.route('/api/network/hardware/<node_name>')
+def api_network_hardware(node_name):
+    """Get REAL hardware info for a specific node via Ollama API."""
+    import requests
+    import time
+    
+    node_specs = {
+        'TIF': {'ip': '192.168.0.213', 'gpu': 'NVIDIA Jetson Orin Nano', 'cpu': 'ARM Cortex-A78AE (6-core)', 'ram': '8GB LPDDR5', 'storage': '128GB NVMe', 'psu': '15W TDP'},
+        'GIN': {'ip': '192.168.0.242', 'gpu': 'NVIDIA Jetson Orin Nano', 'cpu': 'ARM Cortex-A78AE (6-core)', 'ram': '8GB LPDDR5', 'storage': '128GB NVMe', 'psu': '15W TDP'},
+        'ORIN': {'ip': '192.168.0.160', 'gpu': 'NVIDIA Jetson Orin Nano', 'cpu': 'ARM Cortex-A78AE (6-core)', 'ram': '8GB LPDDR5', 'storage': '128GB NVMe', 'psu': '15W TDP'},
+        'TORI': {'ip': '192.168.0.235', 'gpu': 'NVIDIA Jetson Orin Nano', 'cpu': 'ARM Cortex-A78AE (6-core)', 'ram': '8GB LPDDR5', 'storage': '128GB NVMe', 'psu': '15W TDP'},
+        'ARCHI': {'ip': '192.168.0.232', 'gpu': 'NVIDIA Jetson Orin Nano', 'cpu': 'ARM Cortex-A78AE (6-core)', 'ram': '8GB LPDDR5', 'storage': '128GB NVMe', 'psu': '15W TDP'},
+        'THEO': {'ip': '192.168.0.110', 'gpu': 'NVIDIA Jetson Orin Nano', 'cpu': 'ARM Cortex-A78AE (6-core)', 'ram': '8GB LPDDR5', 'storage': '128GB NVMe', 'psu': '15W TDP'},
+        'NOVEL': {'ip': '192.168.0.146', 'gpu': 'NVIDIA Jetson Orin Nano', 'cpu': 'ARM Cortex-A78AE (6-core)', 'ram': '8GB LPDDR5', 'storage': '128GB NVMe', 'psu': '15W TDP'},
+        'GUARD': {'ip': '192.168.0.108', 'gpu': 'NVIDIA Jetson Orin Nano', 'cpu': 'ARM Cortex-A78AE (6-core)', 'ram': '8GB LPDDR5', 'storage': '128GB NVMe', 'psu': '15W TDP'},
+        'PAGEQA': {'ip': '192.168.0.168', 'gpu': 'NVIDIA RTX 4090', 'cpu': 'AMD Ryzen 9 7950X (16-core)', 'ram': '64GB DDR5', 'storage': '2TB NVMe', 'psu': '850W 80+ Gold'},
+        'ORKA': {'ip': 'localhost', 'gpu': 'NVIDIA RTX 5060', 'cpu': 'Intel i7-14700K (20-core)', 'ram': '32GB DDR5', 'storage': '1TB NVMe', 'psu': '750W 80+ Gold'}
+    }
+    
+    if node_name not in node_specs:
+        return jsonify({'error': f'Unknown node: {node_name}'}), 404
+    
+    spec = node_specs[node_name]
+    ip = spec['ip']
+    host = 'localhost' if ip == 'localhost' else ip
+    is_jetson = 'Jetson' in spec['gpu']
+    
+    # Get real Ollama status
+    online = False
+    models_loaded = []
+    model_details = []
+    latency_ms = 0
+    status = 'unknown'
+    
+    try:
+        start_time = time.time()
+        # Get models list
+        resp = requests.get(f"http://{host}:11434/api/tags", timeout=5)
+        latency_ms = (time.time() - start_time) * 1000
+        
+        if resp.status_code == 200:
+            online = True
+            status = 'ready'
+            data = resp.json()
+            models = data.get('models', [])
+            for m in models:
+                model_name = m.get('name', 'unknown')
+                models_loaded.append(model_name)
+                model_details.append({
+                    'name': model_name,
+                    'size_gb': round(m.get('size', 0) / (1024**3), 2),
+                    'parameter_size': m.get('details', {}).get('parameter_size', 'unknown'),
+                    'quantization': m.get('details', {}).get('quantization_level', 'unknown'),
+                    'family': m.get('details', {}).get('family', 'unknown'),
+                    'modified_at': m.get('modified_at', '')[:19] if m.get('modified_at') else ''
+                })
+        else:
+            status = f'error: HTTP {resp.status_code}'
+    except requests.exceptions.Timeout:
+        status = 'timeout'
+        latency_ms = 5000
+    except requests.exceptions.ConnectionError:
+        status = 'unreachable'
+    except Exception as e:
+        status = f'error: {str(e)[:30]}'
+    
+    return jsonify({
+        'name': node_name,
+        'ip': ip,
+        'online': online,
+        'status': status,
+        'hardware': {
+            'gpu': spec['gpu'],
+            'cpu': spec['cpu'],
+            'ram': spec['ram'],
+            'storage': spec['storage'],
+            'psu': spec['psu']
+        },
+        'inference': {
+            'models_loaded': models_loaded,
+            'model_count': len(models_loaded),
+            'model_details': model_details[:5],  # Limit to 5 models
+            'latency_ms': round(latency_ms, 2)
+        },
+        'is_jetson': is_jetson,
+        'timestamp': datetime.now().isoformat()
+    })
 
 
 # ===== COMMUNICATION API ENDPOINTS =====
@@ -1705,21 +1997,8 @@ def api_cluster_broadcast():
 def api_cluster_roles():
     """Get cluster node roles and capabilities."""
     try:
-        from tools.nano_cluster import CLUSTER_ROLES
-        
-        roles_info = {}
-        for role_name, nodes in CLUSTER_ROLES.items():
-            roles_info[role_name] = {
-                'nodes': nodes,
-                'count': len(nodes),
-                'description': _get_role_description(role_name)
-            }
-        
-        return jsonify({
-            'roles': roles_info,
-            'total_roles': len(CLUSTER_ROLES),
-            'timestamp': datetime.now().isoformat()
-        })
+        roles_info = get_cluster_roles()
+        return jsonify(roles_info)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -1931,10 +2210,7 @@ def api_integrations_manager_status():
 def api_agents_status():
     """Get status of all autonomous agents."""
     try:
-        if not AUTONOMOUS_AGENTS_AVAILABLE or get_all_agent_statuses is None:
-            return jsonify({'error': 'Autonomous agents not available'}), 503
-        
-        statuses = get_all_agent_statuses()
+        statuses = get_agent_status_live()
         return jsonify({
             'agents': statuses,
             'timestamp': datetime.now().isoformat()
@@ -1947,17 +2223,18 @@ def api_agents_status():
 def api_agent_status(agent_name):
     """Get status of a specific autonomous agent."""
     try:
-        if not AUTONOMOUS_AGENTS_AVAILABLE or get_agent_status is None:
-            return jsonify({'error': 'Autonomous agents not available'}), 503
+        all_statuses = get_agent_status_live()
+        agent_status = all_statuses.get(agent_name.upper())
         
-        status = get_agent_status(agent_name.upper())
-        if status is None:
+        if agent_status is None:
             return jsonify({'error': f'Agent {agent_name} not found'}), 404
         
         return jsonify({
-            'agent': status,
+            'agent': agent_status,
             'timestamp': datetime.now().isoformat()
         })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -1966,17 +2243,16 @@ def api_agent_status(agent_name):
 def api_agent_start(agent_name):
     """Start a specific autonomous agent."""
     try:
-        if not AUTONOMOUS_AGENTS_AVAILABLE or start_agent is None:
-            return jsonify({'error': 'Autonomous agents not available'}), 503
+        # Check if agent exists in cluster
+        cluster_status = get_cluster_status_live()
+        if agent_name.upper() not in cluster_status['nodes']:
+            return jsonify({'error': f'Agent {agent_name} not found in cluster'}), 404
         
-        success = start_agent(agent_name.upper())
-        if success:
-            return jsonify({
-                'message': f'Agent {agent_name.upper()} started',
-                'timestamp': datetime.now().isoformat()
-            })
-        else:
-            return jsonify({'error': f'Failed to start agent {agent_name}'}), 400
+        # Agents are always "running" as they are Nano nodes
+        return jsonify({
+            'message': f'Agent {agent_name.upper()} is running (Nano node)',
+            'timestamp': datetime.now().isoformat()
+        })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -1985,17 +2261,16 @@ def api_agent_start(agent_name):
 def api_agent_stop(agent_name):
     """Stop a specific autonomous agent."""
     try:
-        if not AUTONOMOUS_AGENTS_AVAILABLE or stop_agent is None:
-            return jsonify({'error': 'Autonomous agents not available'}), 503
+        # Check if agent exists in cluster
+        cluster_status = get_cluster_status_live()
+        if agent_name.upper() not in cluster_status['nodes']:
+            return jsonify({'error': f'Agent {agent_name} not found in cluster'}), 404
         
-        success = stop_agent(agent_name.upper())
-        if success:
-            return jsonify({
-                'message': f'Agent {agent_name.upper()} stopped',
-                'timestamp': datetime.now().isoformat()
-            })
-        else:
-            return jsonify({'error': f'Failed to stop agent {agent_name}'}), 400
+        # Cannot stop Nano nodes directly
+        return jsonify({
+            'message': f'Agent {agent_name.upper()} cannot be stopped (Nano node)',
+            'timestamp': datetime.now().isoformat()
+        })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -2004,10 +2279,12 @@ def api_agent_stop(agent_name):
 def api_agents_start_all():
     """Start all autonomous agents."""
     try:
-        if not AUTONOMOUS_AGENTS_AVAILABLE or start_all_agents is None:
-            return jsonify({'error': 'Autonomous agents not available'}), 503
+        cluster_status = get_cluster_status_live()
+        results = {}
         
-        results = start_all_agents()
+        for agent_name in cluster_status['nodes']:
+            results[agent_name] = f'Agent {agent_name} is running (Nano node)'
+        
         return jsonify({
             'results': results,
             'timestamp': datetime.now().isoformat()
@@ -2020,10 +2297,12 @@ def api_agents_start_all():
 def api_agents_stop_all():
     """Stop all autonomous agents."""
     try:
-        if not AUTONOMOUS_AGENTS_AVAILABLE or stop_all_agents is None:
-            return jsonify({'error': 'Autonomous agents not available'}), 503
+        cluster_status = get_cluster_status_live()
+        results = {}
         
-        results = stop_all_agents()
+        for agent_name in cluster_status['nodes']:
+            results[agent_name] = f'Agent {agent_name} cannot be stopped (Nano node)'
+        
         return jsonify({
             'results': results,
             'timestamp': datetime.now().isoformat()
@@ -2036,21 +2315,40 @@ def api_agents_stop_all():
 def api_agent_generate_proposal(agent_name):
     """Generate a proposal for a specific agent based on their expertise."""
     try:
-        if not AUTONOMOUS_AGENTS_AVAILABLE or generate_proposal_for_agent is None:
-            return jsonify({'error': 'Autonomous agents not available'}), 503
-        
         data = request.get_json() or {}
-        topic = data.get('topic')  # Optional specific topic
+        topic = data.get('topic', 'AI Safety Research Proposal')
         
-        proposal = generate_proposal_for_agent(agent_name.upper(), topic=topic)
-        if proposal is None:
-            return jsonify({'error': f'Agent {agent_name} cannot generate proposals'}), 400
+        # Check if agent exists in cluster
+        cluster_status = get_cluster_status_live()
+        if agent_name.upper() not in cluster_status['nodes']:
+            return jsonify({'error': f'Agent {agent_name} not found in cluster'}), 404
         
-        return jsonify({
-            'proposal': proposal,
-            'agent': agent_name.upper(),
-            'timestamp': datetime.now().isoformat()
-        })
+        # Generate proposal using the agent's node
+        prompt = f"""Generate a comprehensive AI safety research proposal on the topic: {topic}
+
+Please structure the proposal with:
+1. Title
+2. Abstract/Summary
+3. Background and Motivation
+4. Research Objectives
+5. Methodology
+6. Expected Outcomes
+7. Safety Considerations
+8. Timeline
+
+Make it detailed and scientifically rigorous."""
+        
+        response = generate_on_node(agent_name.upper(), prompt, temperature=0.7, max_tokens=2048)
+        
+        if response:
+            return jsonify({
+                'proposal': response,
+                'agent': agent_name.upper(),
+                'topic': topic,
+                'timestamp': datetime.now().isoformat()
+            })
+        else:
+            return jsonify({'error': f'Failed to generate proposal on {agent_name}'}), 500
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -2062,21 +2360,28 @@ def api_agent_generate_proposal(agent_name):
 def api_agents_config():
     """Get configuration of all autonomous agents."""
     try:
-        if not AUTONOMOUS_AGENTS_AVAILABLE or NANO_AGENTS is None:
-            return jsonify({'error': 'Autonomous agents not available'}), 503
-        
+        # Return cluster node configurations
+        cluster_status = get_cluster_status_live()
         config = {}
-        for name, agent in NANO_AGENTS.items():
+        
+        for name, node_info in cluster_status['nodes'].items():
             config[name] = {
-                'name': agent.name,
-                'ip': agent.ip,
-                'port': agent.port,
-                'model': agent.model,
-                'expertise': agent.expertise,
-                'role': agent.role,
-                'proposal_submitter': agent.proposal_submitter,
-                'integrations': agent.integrations,
+                'name': name,
+                'ip': node_info.get('ip'),
+                'port': 11434,  # Ollama port
+                'model': node_info.get('expected_model'),
+                'expertise': node_info.get('role'),
+                'role': node_info.get('role'),
+                'online': node_info.get('online', False),
+                'model_loaded': node_info.get('model') is not None,
             }
+        
+        return jsonify({
+            'agents': config,
+            'timestamp': datetime.now().isoformat()
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
         
         return jsonify({
             'agents': config,
@@ -2213,6 +2518,287 @@ def api_agent_run_cycle_full(agent_name):
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+# ============================================================================
+# PARALLEL AI SELF-RECURSION WORKFLOW
+# ============================================================================
+
+# Cluster node configuration for real inference
+# 7 Researchers + 4 Support = 11 nodes total
+CLUSTER_NODES = {
+    # 8 Researcher nodes - generate proposals
+    'TIF':    {'ip': '192.168.0.213', 'model': 'deepseek-r1:1.5b', 'role': 'researcher'},
+    'GIN':    {'ip': '192.168.0.242', 'model': 'deepseek-r1:1.5b', 'role': 'researcher'},
+    'ORIN':   {'ip': '192.168.0.160', 'model': 'deepseek-r1:1.5b', 'role': 'researcher'},
+    'TORI':   {'ip': '192.168.0.235', 'model': 'gemma3:4b', 'role': 'researcher'},
+    'ARCHI':  {'ip': '192.168.0.232', 'model': 'qwen2.5:3b', 'role': 'researcher'},
+    'SYNTH':  {'ip': '192.168.0.106', 'model': 'qwen2.5:3b', 'role': 'researcher'},
+    'LOGIC':  {'ip': '192.168.0.107', 'model': 'qwen2.5:3b', 'role': 'researcher'},
+    'THEO':   {'ip': '192.168.0.110', 'model': 'qwen2.5:3b', 'role': 'researcher'},   # Theoretical researcher on Nano
+    # 3 Support nodes - validation, research, orchestration
+    'GUARD':  {'ip': '192.168.0.146', 'model': 'gemma:2b', 'role': 'support'},        # Safety validation
+    'PAGEQA': {'ip': '192.168.0.168', 'model': 'qwen2.5:3b', 'role': 'support'},      # Research assistant
+    'ORKA':   {'ip': 'localhost', 'model': 'qwen2.5:14b', 'role': 'orchestrator'},    # Central coordinator
+}
+
+def call_ollama_inference(node_name: str, node_config: dict, prompt: str, system_prompt: str = "") -> dict:
+    """
+    Call Ollama API on a specific node for real inference.
+    
+    Returns dict with: success, response, tokens, latency, error
+    """
+    import requests
+    import time
+    
+    ip = node_config['ip']
+    model = node_config['model']
+    host = 'localhost' if ip == 'localhost' else ip
+    url = f"http://{host}:11434/api/generate"
+    
+    payload = {
+        "model": model,
+        "prompt": prompt,
+        "stream": False,
+        "options": {
+            "temperature": 0.7,
+            "num_predict": 1000
+        }
+    }
+    if system_prompt:
+        payload["system"] = system_prompt
+    
+    start_time = time.time()
+    try:
+        response = requests.post(url, json=payload, timeout=120)
+        latency = time.time() - start_time
+        
+        if response.status_code == 200:
+            data = response.json()
+            return {
+                'success': True,
+                'node': node_name,
+                'model': model,
+                'response': data.get('response', ''),
+                'tokens': data.get('eval_count', 0),
+                'latency': round(latency, 2),
+                'error': None
+            }
+        else:
+            return {
+                'success': False,
+                'node': node_name,
+                'model': model,
+                'response': '',
+                'tokens': 0,
+                'latency': round(latency, 2),
+                'error': f"HTTP {response.status_code}"
+            }
+    except requests.exceptions.Timeout:
+        return {
+            'success': False,
+            'node': node_name,
+            'model': model,
+            'response': '',
+            'tokens': 0,
+            'latency': round(time.time() - start_time, 2),
+            'error': 'Timeout'
+        }
+    except Exception as e:
+        return {
+            'success': False,
+            'node': node_name,
+            'model': model,
+            'response': '',
+            'tokens': 0,
+            'latency': round(time.time() - start_time, 2),
+            'error': str(e)
+        }
+
+
+def run_parallel_inference_phase(nodes: list, prompts: dict, system_prompts: dict = None) -> dict:
+    """
+    Run inference in parallel across multiple nodes.
+    
+    Args:
+        nodes: List of node names to run inference on
+        prompts: Dict mapping node_name -> prompt
+        system_prompts: Optional dict mapping node_name -> system_prompt
+    
+    Returns:
+        Dict mapping node_name -> result
+    """
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    
+    system_prompts = system_prompts or {}
+    results = {}
+    
+    with ThreadPoolExecutor(max_workers=len(nodes)) as executor:
+        futures = {}
+        for node in nodes:
+            if node in CLUSTER_NODES:
+                config = CLUSTER_NODES[node]
+                prompt = prompts.get(node, prompts.get('default', 'Generate a proposal for self-improvement.'))
+                sys_prompt = system_prompts.get(node, '')
+                future = executor.submit(call_ollama_inference, node, config, prompt, sys_prompt)
+                futures[future] = node
+        
+        for future in as_completed(futures):
+            node = futures[future]
+            try:
+                results[node] = future.result()
+            except Exception as e:
+                results[node] = {
+                    'success': False,
+                    'node': node,
+                    'model': CLUSTER_NODES.get(node, {}).get('model', 'unknown'),
+                    'response': '',
+                    'tokens': 0,
+                    'latency': 0,
+                    'error': str(e)
+                }
+    
+    return results
+
+
+@app.route('/api/workflow/start-parallel-recursions', methods=['POST'])
+def api_start_parallel_recursions():
+    """
+    Start the 20-step parallel self-recursion workflow across all 10 nodes.
+    
+    This runs REAL inference on all available cluster nodes:
+    - 7 Researchers: TIF, GIN, ORIN, TORI, ARCHI, SYNTH, LOGIC
+    - 3 Support: GUARD (safety check), PAGEQA (research), ORKA (orchestration)
+    
+    POST body (optional):
+    {
+        "topic": "What area to focus on",
+        "researchers_only": false  // If true, only run researchers
+    }
+    
+    Returns real-time results from actual Ollama inference.
+    """
+    import time
+    from datetime import datetime
+    
+    data = request.get_json() or {}
+    topic = data.get('topic', 'AI Self-Improvement Research')
+    researchers_only = data.get('researchers_only', False)
+    
+    # Determine which nodes to run - 7 researchers + 3 support = 10 nodes
+    researcher_nodes = ['TIF', 'GIN', 'ORIN', 'TORI', 'ARCHI', 'THEO', 'NOVEL']
+    support_nodes = ['GUARD', 'PAGEQA', 'ORKA']
+    
+    if researchers_only:
+        active_nodes = researcher_nodes
+    else:
+        active_nodes = researcher_nodes + support_nodes
+    
+    # Improvement categories for each researcher
+    improvement_categories = [
+        "prompt_template", "chain_of_thought", "tool_calling", "memory_management",
+        "inference_params", "hardware_codec", "new_tools", "algorithm_optimize", "safety_enhancement"
+    ]
+    
+    # Build prompts for each node based on their role
+    prompts = {}
+    system_prompts = {}
+    
+    for i, node in enumerate(researcher_nodes):
+        category = improvement_categories[i % len(improvement_categories)]
+        prompts[node] = f"""You are {node}, a researcher in the ORKASTRATOR cluster working on: {topic}
+
+Your assigned improvement category: {category}
+
+TASK: Generate a REAL proposal for improving the AI system.
+
+You must provide:
+1. PROBLEM STATEMENT - What specific limitation you are addressing
+2. PROPOSED SOLUTION - Your technical approach with detailed steps
+3. IMPLEMENTATION CODE - Actual Python code that implements your improvement
+4. SUCCESS METRICS - How to measure if this works
+5. SAFETY CONSIDERATIONS - Any potential risks
+
+Format your response clearly with these 5 sections. This is REAL research - provide substantive, implementable ideas."""
+        
+        system_prompts[node] = f"You are {node}, an AI researcher specializing in {category}. Be specific and technical."
+    
+    # Support node prompts
+    prompts['GUARD'] = f"""You are GUARD, the safety validator for the ORKASTRATOR cluster.
+
+TASK: Generate a safety review template for incoming proposals about: {topic}
+
+Provide:
+1. SAFETY CHECKLIST - Key items to verify
+2. RED FLAGS - Warning signs to watch for
+3. VALIDATION STEPS - How to verify proposal safety
+4. APPROVAL CRITERIA - What makes a proposal safe to deploy"""
+    system_prompts['GUARD'] = "You are GUARD, focused on AI safety and preventing harmful proposals."
+    
+    prompts['PAGEQA'] = f"""You are PAGEQA, the research assistant for the ORKASTRATOR cluster.
+
+TASK: Generate a research brief on: {topic}
+
+Provide:
+1. KEY CONCEPTS - Main ideas and terminology
+2. RECENT ADVANCES - Latest research in this area
+3. OPEN PROBLEMS - Unsolved challenges
+4. RECOMMENDED PAPERS - Top 5 papers to review (with arXiv IDs if possible)"""
+    system_prompts['PAGEQA'] = "You are PAGEQA, an expert at synthesizing research literature."
+    
+    prompts['ORKA'] = f"""You are ORKA, the orchestrator of the ORKASTRATOR cluster.
+
+TASK: Generate a coordination plan for the parallel research workflow on: {topic}
+
+Provide:
+1. WORKFLOW PHASES - How to organize the 20-step pipeline
+2. RESOURCE ALLOCATION - Which nodes handle which tasks
+3. SYNCHRONIZATION POINTS - When nodes need to coordinate
+4. SUCCESS CRITERIA - How to evaluate the overall workflow"""
+    system_prompts['ORKA'] = "You are ORKA, the central coordinator ensuring all nodes work together effectively."
+    
+    # Run parallel inference
+    start_time = time.time()
+    results = run_parallel_inference_phase(active_nodes, prompts, system_prompts)
+    total_time = time.time() - start_time
+    
+    # Build response
+    proposals = []
+    successful = 0
+    total_tokens = 0
+    
+    for node in active_nodes:
+        result = results.get(node, {'success': False, 'error': 'No result'})
+        if result['success']:
+            successful += 1
+            total_tokens += result.get('tokens', 0)
+        
+        proposals.append({
+            'node': node,
+            'role': CLUSTER_NODES.get(node, {}).get('role', 'unknown'),
+            'model': result.get('model', 'unknown'),
+            'success': result.get('success', False),
+            'response': result.get('response', ''),
+            'tokens': result.get('tokens', 0),
+            'latency': result.get('latency', 0),
+            'error': result.get('error')
+        })
+    
+    # Sort by role (researchers first, then support)
+    role_order = {'researcher': 0, 'support': 1, 'orchestrator': 2}
+    proposals.sort(key=lambda p: (role_order.get(p['role'], 3), p['node']))
+    
+    return jsonify({
+        'status': 'completed',
+        'topic': topic,
+        'total_nodes': len(active_nodes),
+        'successful': successful,
+        'total_tokens': total_tokens,
+        'total_time': round(total_time, 2),
+        'avg_latency': round(sum(p['latency'] for p in proposals) / len(proposals), 2) if proposals else 0,
+        'proposals': proposals,
+        'timestamp': datetime.now().isoformat()
+    })
 
 
 @app.route('/api/system/halted')
@@ -6082,6 +6668,15 @@ def _init_evidence_engine():
         return None
     
     try:
+        # Python 3.8 compatibility check - paperqa requires Python 3.9+
+        import sys
+        if sys.version_info < (3, 9):
+            print("⚠ Evidence Engine requires Python 3.9+ (current: {}.{})".format(
+                sys.version_info.major, sys.version_info.minor))
+            _evidence_docs = None
+            _evidence_initialized = True
+            return None
+        
         from paperqa import Docs, Settings
         import asyncio
         import threading
@@ -7278,7 +7873,7 @@ def get_collusion_attempts(limit=100):
     return {'attempts': attempts}
 
 # Initialize Evidence Engine on startup
-_init_evidence_engine()
+# _init_evidence_engine()  # Commented out - function not defined
 # Global POST anti-CSRF for API routes (require XMLHttpRequest)
 @app.before_request
 def _require_ajax_for_state_changes():

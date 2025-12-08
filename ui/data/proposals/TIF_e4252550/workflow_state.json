@@ -1,0 +1,14 @@
+{
+  "id": "TIF_e4252550",
+  "agent": "TIF",
+  "topic": "Unregulated AI Self Recursion - Safety Research",
+  "workspace_path": "data/proposals/TIF_e4252550",
+  "current_step": 1,
+  "status": "active",
+  "created_at": 1765150622.3314755,
+  "updated_at": 1765150622.331476,
+  "completed_steps": [],
+  "step_timestamps": {},
+  "vote_result": null,
+  "reward_score": null
+}

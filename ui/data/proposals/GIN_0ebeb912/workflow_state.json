@@ -1,0 +1,14 @@
+{
+  "id": "GIN_0ebeb912",
+  "agent": "GIN",
+  "topic": "AI Safety Research and Improvement",
+  "workspace_path": "data/proposals/GIN_0ebeb912",
+  "current_step": 1,
+  "status": "active",
+  "created_at": 1765148938.7760723,
+  "updated_at": 1765148938.7760727,
+  "completed_steps": [],
+  "step_timestamps": {},
+  "vote_result": null,
+  "reward_score": null
+}

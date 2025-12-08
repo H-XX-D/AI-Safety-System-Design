@@ -1,0 +1,14 @@
+{
+  "id": "ORIN_156e908e",
+  "agent": "ORIN",
+  "topic": "Unregulated AI Self Recursion - Safety Research",
+  "workspace_path": "data/proposals/ORIN_156e908e",
+  "current_step": 1,
+  "status": "active",
+  "created_at": 1765150619.4658384,
+  "updated_at": 1765150619.4658408,
+  "completed_steps": [],
+  "step_timestamps": {},
+  "vote_result": null,
+  "reward_score": null
+}

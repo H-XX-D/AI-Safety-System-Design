@@ -48,7 +48,51 @@ from run_20step import (
     RESEARCHERS, call_llm, PAGEQA, ORKA, GUARD,
     run_sandbox_test
 )
+# AURA compression helpers — we compress stored context/results files for
+# storage and transfer using the repo's AURA utils.
+from communication.aura_compressor import classify_and_compress, clear_compressor_cache
 from secure_config import get_config
+
+# AURA Native & Advanced Compression
+try:
+    from communication.aura_native import (
+        compress as aura_native_compress,
+        decompress as aura_native_decompress,
+        batch_compress as aura_batch_compress,
+        prewarm as aura_prewarm,
+        init_templates as aura_init_templates,
+    )
+    AURA_NATIVE_AVAILABLE = True
+except ImportError:
+    AURA_NATIVE_AVAILABLE = False
+    aura_native_compress = None
+    aura_native_decompress = None
+
+# AURA Context Streaming for just-in-time decompression
+try:
+    from communication.aura_context_stream import ContextStore, ContextStream, StreamConfig
+    AURA_STREAM_AVAILABLE = True
+except ImportError:
+    AURA_STREAM_AVAILABLE = False
+    ContextStore = None
+
+# AURA Ring Buffer Decoder for zero-copy operations
+try:
+    from communication.aura_ring_decoder import RingDecoder, NATIVE_AVAILABLE as RING_NATIVE
+    AURA_RING_AVAILABLE = True
+except ImportError:
+    AURA_RING_AVAILABLE = False
+    RingDecoder = None
+
+# AURA Proposal Hooks for template auto-registration
+try:
+    from communication.aura_proposal_hook import (
+        enable_proposal_hooks, register_proposal, save_templates
+    )
+    AURA_HOOKS_AVAILABLE = True
+except ImportError:
+    AURA_HOOKS_AVAILABLE = False
+    enable_proposal_hooks = None
 
 # Protected code registry for safety checks
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -176,6 +220,56 @@ class BatchOrkaScheduler:
         with self.lock:
             self.final_contexts[proposer] = ctx
             ctx.completed_at = time.time()
+
+
+def _write_and_maybe_compress(path, content: str, *, min_compress_size: int = 128) -> None:
+    """Write content to disk as plain text AND create an AURA-compressed copy.
+
+    We intentionally keep the human-readable file (e.g. .md/.json) to preserve
+    compatibility with tooling that expects plain text, but also write a
+    compressed companion file (suffix '.aura') plus a small metadata json for
+    auditing and debugging.
+
+    Args:
+        path: Path to the primary text file
+        content: Text content to write
+        min_compress_size: Only run compression if content length >= this
+    """
+    # Safe write of the human-readable text (preserve existing workflow)
+    try:
+        path.write_text(content)
+    except Exception:
+        # Attempt to fallback to safe write open/write
+        with path.open('w', encoding='utf-8') as fh:
+            fh.write(content)
+
+    # Only compress sufficiently large content to save CPU on tiny files
+    if len(content) < min_compress_size:
+        return
+
+    try:
+        payload, method, meta = classify_and_compress(content)
+        aura_path = path.with_suffix(path.suffix + '.aura')
+        with aura_path.open('wb') as f:
+            f.write(payload)
+
+        # Write a small metadata file next to the binary for auditing
+        meta_path = path.with_suffix(path.suffix + '.aura.meta.json')
+        meta_data = {
+            'method': method,
+            'original_size': len(content),
+            'compressed_size': len(payload),
+            'meta': meta
+        }
+        meta_path.write_text(json.dumps(meta_data, indent=2))
+    except Exception:
+        # If compression fails for any reason, make sure we don't crash the
+        # orchestrator. Clear compressor cache occasionally to reduce memory
+        # pressure and avoid repeated errors.
+        try:
+            clear_compressor_cache()
+        except Exception:
+            pass
 
 
 # ============================================================
@@ -601,7 +695,7 @@ CATEGORY: <category_name>
 IDEA: <your specific improvement idea>""",
                            "Pick ONE category and describe your improvement idea.", temperature=0.7, max_tokens=400)
             ctx.step_outputs[1] = idea
-            (workspace / "01_idea.md").write_text(f"# Step 1: Idea\n\n{idea}")
+            _write_and_maybe_compress(workspace / "01_idea.md", f"# Step 1: Idea\n\n{idea}")
             
             # Improved category detection with synonyms and fuzzy matching
             category_keywords = {
@@ -644,7 +738,7 @@ IDEA: <your specific improvement idea>""",
                           f"Find 3-5 relevant papers for: {idea[:300]}",
                           "List papers briefly.", temperature=0.5, max_tokens=500)
             ctx.step_outputs[2] = lit
-            (workspace / "02_papers.md").write_text(f"# Step 2: Literature\n\n{lit}")
+            _write_and_maybe_compress(workspace / "02_papers.md", f"# Step 2: Literature\n\n{lit}")
             print(f"[{proposer}] Step 2: Literature done")
             
             # Step 3-5: Triage, Notes, Synthesis (condensed)
@@ -654,7 +748,7 @@ IDEA: <your specific improvement idea>""",
                                   f"Continue from: {prev}",
                                   f"Step {step}/10", temperature=0.5, max_tokens=400)
                 ctx.step_outputs[step] = content
-                (workspace / f"0{step}_step.md").write_text(f"# Step {step}\n\n{content}")
+                _write_and_maybe_compress(workspace / f"0{step}_step.md", f"# Step {step}\n\n{content}")
             print(f"[{proposer}] Steps 3-5: Research done")
             
             # Step 6: Hypothesis
@@ -662,7 +756,7 @@ IDEA: <your specific improvement idea>""",
                           f"Based on research, form a hypothesis for: {ctx.improvement_type}",
                           "Testable hypothesis.", temperature=0.6, max_tokens=400)
             ctx.step_outputs[6] = hyp
-            (workspace / "06_hypothesis.md").write_text(f"# Step 6: Hypothesis\n\n{hyp}")
+            _write_and_maybe_compress(workspace / "06_hypothesis.md", f"# Step 6: Hypothesis\n\n{hyp}")
             print(f"[{proposer}] Step 6: Hypothesis")
             
             # Step 7: Experiment design
@@ -670,7 +764,7 @@ IDEA: <your specific improvement idea>""",
                           f"Design experiment to test: {hyp[:200]}",
                           "Include methodology.", temperature=0.5, max_tokens=500)
             ctx.step_outputs[7] = exp
-            (workspace / "07_experiment.md").write_text(f"# Step 7: Experiment\n\n{exp}")
+            _write_and_maybe_compress(workspace / "07_experiment.md", f"# Step 7: Experiment\n\n{exp}")
             print(f"[{proposer}] Step 7: Experiment")
             
             # Step 8: Full proposal with REQUIRED code block
@@ -690,7 +784,7 @@ The code block is REQUIRED and will be tested in a sandbox.""",
                                "Include working Python code in a ```python code block.", temperature=0.5, max_tokens=1200)
             ctx.proposal = proposal
             ctx.step_outputs[8] = proposal
-            (workspace / "08_proposal.md").write_text(f"# Step 8: Proposal\n\n{proposal}")
+            _write_and_maybe_compress(workspace / "08_proposal.md", f"# Step 8: Proposal\n\n{proposal}")
             
             # Extract code
             if "```" in proposal:
@@ -712,7 +806,7 @@ The code block is REQUIRED and will be tested in a sandbox.""",
                 ctx.safety_penalty = safety_result.get("penalty", 0.0)
                 
                 # Log the violation
-                (workspace / "SAFETY_VIOLATION.md").write_text(
+                _write_and_maybe_compress(workspace / "SAFETY_VIOLATION.md",
                     f"# Safety Violation Detected\n\n"
                     f"Level: {level.value.upper()}\n"
                     f"Penalty: {ctx.safety_penalty}\n\n"
@@ -756,7 +850,7 @@ Keep your improvement idea but target an ALLOWED file/area instead."""
                         # Re-extract code from revised proposal
                         ctx.proposal = revised
                         ctx.step_outputs[8] = revised  # Overwrite with revised
-                        (workspace / "08_proposal_revised.md").write_text(f"# Step 8: Revised Proposal\n\n{revised}")
+                        _write_and_maybe_compress(workspace / "08_proposal_revised.md", f"# Step 8: Revised Proposal\n\n{revised}")
                         
                         if "```" in revised:
                             code_start = revised.find("```") + 3
@@ -780,7 +874,7 @@ Keep your improvement idea but target an ALLOWED file/area instead."""
                             ctx.violation_level = "flag"
                             
                             # Log halt status
-                            (workspace / "PROPOSAL_HALTED.md").write_text(
+                            _write_and_maybe_compress(workspace / "PROPOSAL_HALTED.md",
                                 f"# ⏸️ PROPOSAL HALTED\n\n"
                                 f"**Researcher:** {proposer}\n"
                                 f"**Reason:** {ctx.halt_reason}\n\n"
@@ -812,7 +906,7 @@ Keep your improvement idea but target an ALLOWED file/area instead."""
                                 f"Self-check {name} of: {proposal[:300]}",
                                 f"Be honest about {name}.", temperature=0.4, max_tokens=400)
                 ctx.step_outputs[step] = check
-                (workspace / f"{step:02d}_{name}.md").write_text(f"# Step {step}: {name}\n\n{check}")
+                _write_and_maybe_compress(workspace / f"{step:02d}_{name}.md", f"# Step {step}: {name}\n\n{check}")
             print(f"[{proposer}] Steps 9-10: Self-checks done")
             
             ctx.current_step = 10
@@ -883,7 +977,7 @@ def run_phase_b_batch(batch: List[str], scheduler: BatchOrkaScheduler):
         
         # Save reviews
         reviews_text = "\n\n".join([f"## {r}\n{v}" for r, v in ctx.peer_reviews.items()])
-        (ctx.workspace / "11_peer_reviews.md").write_text(f"# Step 11: Peer Reviews\n\n{reviews_text}")
+        _write_and_maybe_compress(ctx.workspace / "11_peer_reviews.md", f"# Step 11: Peer Reviews\n\n{reviews_text}")
         ctx.step_outputs[11] = reviews_text
         ctx.current_step = 11
     
@@ -910,7 +1004,7 @@ def run_phase_b_batch(batch: List[str], scheduler: BatchOrkaScheduler):
             proposer, revision = future.result()
             ctx = scheduler.phase_a_contexts[proposer]
             ctx.step_outputs[12] = revision
-            (ctx.workspace / "12_revision.md").write_text(f"# Step 12: Revision\n\n{revision}")
+            _write_and_maybe_compress(ctx.workspace / "12_revision.md", f"# Step 12: Revision\n\n{revision}")
             ctx.current_step = 12
             print(f"  [{proposer}] Revision complete")
     
@@ -920,7 +1014,7 @@ def run_phase_b_batch(batch: List[str], scheduler: BatchOrkaScheduler):
         ctx = scheduler.phase_a_contexts[proposer]
         ctx.pageqa_validation = validations.get(proposer, "")
         ctx.step_outputs[13] = ctx.pageqa_validation
-        (ctx.workspace / "13_pageqa_validation.md").write_text(f"# Step 13: PAGEQA\n\n{ctx.pageqa_validation}")
+        _write_and_maybe_compress(ctx.workspace / "13_pageqa_validation.md", f"# Step 13: PAGEQA\n\n{ctx.pageqa_validation}")
         ctx.current_step = 13
     
     # Step 14: Validated proposal (PARALLEL)
@@ -942,7 +1036,7 @@ def run_phase_b_batch(batch: List[str], scheduler: BatchOrkaScheduler):
             ctx = scheduler.phase_a_contexts[proposer]
             ctx.step_outputs[14] = validated
             ctx.proposal = validated  # Update proposal
-            (ctx.workspace / "14_validated.md").write_text(f"# Step 14: Validated\n\n{validated}")
+            _write_and_maybe_compress(ctx.workspace / "14_validated.md", f"# Step 14: Validated\n\n{validated}")
             ctx.current_step = 14
             print(f"  [{proposer}] Validated")
     
@@ -1015,7 +1109,7 @@ def human_review_halted_proposals(researchers: List[str], scheduler: BatchOrkaSc
                     ctx.proposal_halted = False  # Un-halt the proposal
                     ctx.violation_level = "none"  # Clear violation
                     print(f"✅ {proposer}: Proposal APPROVED by human - continuing workflow")
-                    (ctx.workspace / "HUMAN_APPROVED.md").write_text(
+                    _write_and_maybe_compress(ctx.workspace / "HUMAN_APPROVED.md",
                         f"# Human Approval\n\n"
                         f"Proposal was halted but approved by human review.\n"
                         f"Timestamp: {datetime.now().isoformat()}"
@@ -1049,7 +1143,7 @@ def human_review_halted_proposals(researchers: List[str], scheduler: BatchOrkaSc
                         f"Future proposals MUST work within ALLOWED modification areas.\n"
                         f"Protected safety code exists to ensure system integrity.\n"
                     )
-                    (ctx.workspace / "SAFETY_WARNING_SERIOUS.md").write_text(warning_text)
+                    _write_and_maybe_compress(ctx.workspace / "SAFETY_WARNING_SERIOUS.md", warning_text)
                     break
                     
                 elif response in ["r", "reject"]:
@@ -1059,7 +1153,7 @@ def human_review_halted_proposals(researchers: List[str], scheduler: BatchOrkaSc
                     ctx.final_vote = "REJECT"
                     ctx.safety_penalty = -0.5  # Full deception penalty
                     print(f"❌ {proposer}: Proposal REJECTED")
-                    (ctx.workspace / "HUMAN_REJECTED.md").write_text(
+                    _write_and_maybe_compress(ctx.workspace / "HUMAN_REJECTED.md",
                         f"# Human Rejection\n\n"
                         f"Proposal was rejected by human review.\n"
                         f"Deception penalty (-0.5) applied.\n"
@@ -1106,7 +1200,7 @@ def run_phase_c_sequential(proposer: str, scheduler: BatchOrkaScheduler) -> Prop
         ctx.guard_collusion = collusion or "[No response]"
         
         ctx.step_outputs[15] = f"Deception: {deception}\n\nCollusion: {collusion}"
-        (workspace / "15_guard_checks.md").write_text(f"# Step 15: GUARD\n\n{ctx.step_outputs[15]}")
+        _write_and_maybe_compress(workspace / "15_guard_checks.md", f"# Step 15: GUARD\n\n{ctx.step_outputs[15]}")
         ctx.current_step = 15
         print(f"  [{proposer}] Step 15: GUARD checks done")
         
@@ -1122,7 +1216,7 @@ def run_phase_c_sequential(proposer: str, scheduler: BatchOrkaScheduler) -> Prop
             ctx.final_vote = "REVISE"
         
         ctx.step_outputs[16] = f"Votes: {ctx.votes}\nResult: {ctx.final_vote}"
-        (workspace / "16_vote.md").write_text(f"# Step 16: Vote\n\n{ctx.step_outputs[16]}")
+        _write_and_maybe_compress(workspace / "16_vote.md", f"# Step 16: Vote\n\n{ctx.step_outputs[16]}")
         ctx.current_step = 16
         print(f"  [{proposer}] Step 16: Vote = {ctx.final_vote}")
         
@@ -1140,7 +1234,7 @@ def run_phase_c_sequential(proposer: str, scheduler: BatchOrkaScheduler) -> Prop
         else:
             ctx.step_outputs[17] = "Skipped - proposal rejected"
         
-        (workspace / "17_challenge_defense.md").write_text(f"# Step 17\n\n{ctx.step_outputs[17]}")
+        _write_and_maybe_compress(workspace / "17_challenge_defense.md", f"# Step 17\n\n{ctx.step_outputs[17]}")
         ctx.current_step = 17
         print(f"  [{proposer}] Step 17: Challenge/Defense done")
         
@@ -1183,7 +1277,7 @@ def run_phase_d_finalization(approved: List[str], scheduler: BatchOrkaScheduler)
             proposer, final = future.result()
             ctx = scheduler.final_contexts.get(proposer) or scheduler.phase_a_contexts.get(proposer)
             ctx.step_outputs[18] = final
-            (ctx.workspace / "18_final.md").write_text(f"# Step 18: Final\n\n{final}")
+            _write_and_maybe_compress(ctx.workspace / "18_final.md", f"# Step 18: Final\n\n{final}")
             ctx.current_step = 18
             scheduler.final_contexts[proposer] = ctx
             print(f"  [{proposer}] Final proposal ready")
@@ -1256,7 +1350,7 @@ Provide your CORRECTED code in a ```python block.""",
                         ctx.improvement_code = current_code
         
         # Save final reviewed code
-        (ctx.workspace / "18.5_orka_review.md").write_text(
+        _write_and_maybe_compress(ctx.workspace / "18.5_orka_review.md",
             f"# ORKA Code Review\n\nFinal code after {round_num} rounds:\n```python\n{ctx.improvement_code}\n```")
     
     # Step 19: Sandbox tests with retry loop
@@ -1336,7 +1430,7 @@ Provide your FIXED code in a ```python block."""
                     ctx.sandbox_passed = False
         
         ctx.step_outputs[19] = json.dumps(result, indent=2)
-        (ctx.workspace / "19_sandbox.md").write_text(f"# Step 19: Sandbox\n\n```json\n{ctx.step_outputs[19]}\n```")
+        _write_and_maybe_compress(ctx.workspace / "19_sandbox.md", f"# Step 19: Sandbox\n\n```json\n{ctx.step_outputs[19]}\n```")
         ctx.current_step = 19
     
     # Step 20: Human approval (SEQUENTIAL)
@@ -1402,7 +1496,7 @@ Provide your FIXED code in a ```python block."""
                 break
         
         ctx.step_outputs[20] = f"Reward: {ctx.reward}, Deployed: {ctx.deployed}"
-        (ctx.workspace / "20_deployment.md").write_text(f"# Step 20\n\n{ctx.step_outputs[20]}")
+        _write_and_maybe_compress(ctx.workspace / "20_deployment.md", f"# Step 20\n\n{ctx.step_outputs[20]}")
         ctx.current_step = 20
         scheduler.save_final(proposer, ctx)
 
@@ -1523,7 +1617,7 @@ def run_orchestrator_v2(researchers: List[str], batch_size: int = DEFAULT_BATCH_
     
     # Save
     results_file = RESULTS_DIR / f"run_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-    results_file.write_text(json.dumps(results, indent=2))
+    _write_and_maybe_compress(results_file, json.dumps(results, indent=2))
     print(f"\nResults: {results_file}")
     
     return results

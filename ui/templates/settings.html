@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - AI Safety System{% endblock %}
+
+{% block breadcrumb %}
+<i class="fas fa-sliders-h"></i> Settings
+{% endblock %}
+
+{% block content %}
+<div class="monitor-grid">
+    <div class="monitor-card">
+        <h3><i class="fas fa-info-circle"></i> Runtime</h3>
+        <div id="runtimeInfo"></div>
+    </div>
+    <div class="monitor-card">
+        <h3><i class="fas fa-shield-alt"></i> Safety</h3>
+        <div id="safetyInfo"></div>
+    </div>
+    <div class="monitor-card">
+        <h3><i class="fas fa-database"></i> Cluster Roles</h3>
+        <div id="rolesInfo"></div>
+    </div>
+
+    <div class="monitor-card">
+        <h3><i class="fas fa-user-cog"></i> Preferences</h3>
+        <div class="metric-row"><span class="label">Refresh Interval</span><input type="number" id="refreshInterval" value="5" min="1" max="60" onchange="saveSettings()" class="input" style="width:80px;"></div>
+        <div class="metric-row"><span class="label">Theme</span><select id="themeSelect" class="input" onchange="saveSettings()"><option value="dark">Dark</option><option value="light">Light</option></select></div>
+        <div class="metric-row"><span class="label">Notifications</span><select id="notifySelect" class="input" onchange="saveSettings()"><option value="on">On</option><option value="off">Off</option></select></div>
+        <div class="metric-row"><span class="label">Admin Token</span><input type="password" id="adminToken" class="input" placeholder="Optional" onchange="saveSettings()"></div>
+        <small class="text-muted">Preferences are stored locally in your browser.</small>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+async function fetchJSON(url){ const r=await fetch(url); if(!r.ok) throw new Error(await r.text()); return r.json(); }
+
+function renderRuntime(data){
+    const el=document.getElementById('runtimeInfo');
+    const m=data.metrics||{};
+    el.innerHTML = `
+        <div class="metric-row"><span class="label">Standalone</span><span class="value">${data.standalone_mode ? 'Yes' : 'No'}</span></div>
+        <div class="metric-row"><span class="label">CPU</span><span class="value">${m.cpu_percent ?? '—'}%</span></div>
+        <div class="metric-row"><span class="label">Memory</span><span class="value">${m.memory_used_gb ?? '—'}/${m.memory_total_gb ?? '—'} GB</span></div>
+        <div class="metric-row"><span class="label">GPU</span><span class="value">${m.gpu_memory_used_mb ?? '—'}/${m.gpu_memory_total_mb ?? '—'} MB</span></div>
+    `;
+}
+
+function renderSafety(){
+    const el=document.getElementById('safetyInfo');
+    el.innerHTML = `
+        <div class="metric-row"><span class="label">Guard Model</span><span class="value">llama-guard3:1b @ localhost</span></div>
+        <div class="metric-row"><span class="label">ORKA Model</span><span class="value">qwen2.5:3b</span></div>
+        <div class="metric-row"><span class="label">PaperQA</span><span class="value">paperqa @ localhost</span></div>
+    `;
+}
+
+function renderRoles(data){
+    const el=document.getElementById('rolesInfo');
+    const roles=data.roles||{};
+    el.innerHTML = Object.keys(roles).map(r => {
+        const entry=roles[r];
+        return `<div class="metric-row"><span class="label">${entry.description}</span><span class="value">${entry.nodes.join(', ')}</span></div>`;
+    }).join('');
+}
+
+function loadPrefs(){
+    document.getElementById('refreshInterval').value = localStorage.getItem('pref_refresh') || 5;
+    document.getElementById('themeSelect').value = localStorage.getItem('pref_theme') || 'dark';
+    document.getElementById('notifySelect').value = localStorage.getItem('pref_notify') || 'on';
+    document.getElementById('adminToken').value = localStorage.getItem('pref_admin_token') || '';
+}
+
+function saveSettings(){
+    localStorage.setItem('pref_refresh', document.getElementById('refreshInterval').value);
+    localStorage.setItem('pref_theme', document.getElementById('themeSelect').value);
+    localStorage.setItem('pref_notify', document.getElementById('notifySelect').value);
+    localStorage.setItem('pref_admin_token', document.getElementById('adminToken').value);
+    showToast && showToast('Preferences saved', 'success');
+}
+
+async function loadSettings(){
+    try{
+        const [sys, roles] = await Promise.all([
+            fetchJSON('/api/system/metrics'),
+            fetchJSON('/api/agents/roles').catch(()=>({roles:{}}))
+        ]);
+        renderRuntime(sys);
+        renderSafety();
+        renderRoles(roles);
+        loadPrefs();
+    }catch(e){ console.error('settings load failed', e); }
+}
+
+document.addEventListener('DOMContentLoaded', loadSettings);
+</script>
+{% endblock %}

@@ -29,10 +29,10 @@ from threading import Lock
 PROJECT_ROOT = Path(__file__).parent.parent
 
 # PAGEQA nano configuration for evidence queries
-# PAGEQA runs qwen2.5:3b at 192.168.0.168:11434
+# PAGEQA runs quantized_model-Q4_K_M (Triplex RAG model) at 192.168.0.168:11434
 PAGEQA_IP = os.environ.get("PAGEQA_IP", "192.168.0.168")
 PAGEQA_PORT = os.environ.get("PAGEQA_PORT", "11434")
-PAGEQA_MODEL = os.environ.get("PAGEQA_MODEL", "qwen2.5:3b")
+PAGEQA_MODEL = os.environ.get("PAGEQA_MODEL", "quantized_model-Q4_K_M")
 
 # Llama server configuration (falls back to PAGEQA if not set)
 LLAMA_SERVER_URL = os.environ.get("LLAMA_SERVER_URL", f"http://{PAGEQA_IP}:{PAGEQA_PORT}/v1")

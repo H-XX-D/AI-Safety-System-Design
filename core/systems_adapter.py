@@ -81,7 +81,7 @@ class CachePolicy:
     prefetch_k: int = 0
     admission_policy: str = "always"  # always, tinyLFU, W-TinyLFU
     eviction_batch_size: int = 16
-    enable_compression: bool = False
+    enable_compression: bool = True
     compression_threshold_kb: int = 64
     
     def to_dict(self) -> Dict[str, Any]:

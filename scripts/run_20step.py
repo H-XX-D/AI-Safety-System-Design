@@ -58,6 +58,9 @@ import os
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional, Union
 
+# AURA compression for standardized data handling
+from communication.aura_compressor import create_compressor, classify_and_compress, clear_compressor_cache
+
 # Import hardening modules
 HARDENING_AVAILABLE = False
 CONFIG = None
@@ -435,6 +438,9 @@ def deploy_to_cluster(
     print(f"\n  Deploying to ~/.orkastrator/ (version: {version_id})...")
     print(f"  Using secure SSH (key-based auth)")
     
+    # Choose compression threshold for transfer (bytes). This avoids CPU cost for tiny artifacts.
+    TRANSFER_COMPRESS_MIN_SIZE = 256
+
     for node_name in NODE_SSH.keys():
         try:
             # Get SSH command - will raise SecurityError if password-based
@@ -449,11 +455,43 @@ def deploy_to_cluster(
             backup_remote = f"cp ~/{target_path} ~/{backup_dir}/{backup_name} 2>/dev/null || true"
             subprocess.run(ssh_prefix + [backup_remote], capture_output=True, timeout=15)
             
-            # Deploy via base64 with integrity check
-            encoded = base64.b64encode(artifact.encode()).decode()
-            # Include artifact_id for audit trail
-            deploy_remote = f"echo '{encoded}' | base64 -d > ~/{target_path} && echo '{artifact_id}' > ~/{backup_dir}/current_artifact_id"
-            result = subprocess.run(ssh_prefix + [deploy_remote], capture_output=True, timeout=15)
+            # If artifact is large enough, try AURA compression for transfer
+            compressed_used = False
+            try:
+                if len(artifact.encode('utf-8')) >= TRANSFER_COMPRESS_MIN_SIZE:
+                    # Use the repo's ProductionHybridCompressor instance for
+                    # lossless compression/decompression of artifacts.
+                    compressor = create_compressor()
+                    payload, method, meta = compressor.compress(artifact)
+                    # Only use compressed payload when it is smaller than original
+                    if payload and len(payload) < len(artifact.encode('utf-8')):
+                        encoded = base64.b64encode(payload).decode()
+                        # Write compressed payload on remote and attempt to decompress
+                        deploy_remote = (
+                            f"echo '{encoded}' | base64 -d > ~/{target_path}.aura && "
+                            # Try to decompress on remote using aura_compression if available
+                            f"python3 - <<'PY'\nimport json\nfrom pathlib import Path\ntry:\n    from aura_compression import ProductionHybridCompressor\n    p = ProductionHybridCompressor()\n    data = Path(\"~/{target_path}.aura\").expanduser().read_bytes()\n    decompressed = p.decompress(data)\n    Path(\"~/{target_path}\").expanduser().write_text(decompressed)\n    Path(\"~/{target_path}.aura.meta.json\").expanduser().write_text(json.dumps({{'method': '{method}', 'original_size': {len(artifact.encode('utf-8'))}, 'compressed_size': len(data)}}, indent=2))\n    print('DECOMPLETE_OK')\nexcept Exception as e:\n    print('DECOMPLETE_FAIL:'+str(e))\nPY"
+                        )
+                        result = subprocess.run(ssh_prefix + [deploy_remote], capture_output=True, timeout=30)
+                        out = (result.stdout or b"") + (result.stderr or b"")
+                        out_s = out.decode('utf-8', errors='ignore')
+                        if 'DECOMPLETE_OK' in out_s:
+                            compressed_used = True
+                        else:
+                            # Decompression failed on remote — fall back to plain text
+                            compressed_used = False
+                # else: payload too small or not advantageous
+            except Exception:
+                # Any problem compressing -> clear cache and fall back to plain
+                clear_compressor_cache()
+                compressed_used = False
+
+            # If compressed transfer not used (remote couldn't decompress), send plain text
+            if not compressed_used:
+                encoded = base64.b64encode(artifact.encode()).decode()
+                # Include artifact_id for audit trail and write plain text
+                deploy_remote = f"echo '{encoded}' | base64 -d > ~/{target_path} && echo '{artifact_id}' > ~/{backup_dir}/current_artifact_id"
+                result = subprocess.run(ssh_prefix + [deploy_remote], capture_output=True, timeout=15)
             
             results[node_name] = result.returncode == 0
             

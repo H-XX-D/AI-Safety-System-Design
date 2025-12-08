@@ -1,0 +1,14 @@
+{
+  "id": "TIF_8a33ad10",
+  "agent": "TIF",
+  "topic": "AI Safety Research and Improvement",
+  "workspace_path": "data/proposals/TIF_8a33ad10",
+  "current_step": 1,
+  "status": "active",
+  "created_at": 1765148891.6545343,
+  "updated_at": 1765148891.6545348,
+  "completed_steps": [],
+  "step_timestamps": {},
+  "vote_result": null,
+  "reward_score": null
+}

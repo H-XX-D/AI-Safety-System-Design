@@ -12,7 +12,7 @@ Each nano runs:
 Cluster Architecture:
     ┌─────────────────────────────────────────────────────────────────┐
     │                    HP Z6 WORKSTATION (ORKA)                     │
-    │                    qwen2.5:14b (16GB VRAM)                      │
+    │                    qwen2.5:3b (16GB VRAM)                       │
     │  ┌─────────────────────────────────────────────────────────────┐│
     │  │ SharedMemoryServer (port 5000) │ Orchestrator │ UI (5001)  ││
     │  └─────────────────────────────────────────────────────────────┘│
@@ -272,10 +272,10 @@ class NanoCluster:
             "ORIN": {"ip": "192.168.0.160", "model": "deepseek-r1:1.5b", "user": "orin", "role": NanoRole.ORIN},
             "TIF": {"ip": "192.168.0.213", "model": "deepseek-r1:1.5b", "user": "tif", "role": NanoRole.TIF},
             "TORI": {"ip": "192.168.0.235", "model": "gemma3:4b", "user": "tori", "role": NanoRole.TORI},
-            "PAGEQA": {"ip": "192.168.0.168", "model": "qwen2.5:3b", "user": "page", "role": NanoRole.PAGEQA},
+            "PAGEQA": {"ip": "localhost", "model": "paperqa", "user": "xx", "role": NanoRole.PAGEQA},
             "ARCHI": {"ip": "192.168.0.232", "model": "qwen2.5:3b", "user": "archi", "role": NanoRole.ARCHI},
             "NOVEL": {"ip": "192.168.0.146", "model": "gemma:2b", "user": "guard", "role": NanoRole.GUARD},  # Creative node
-            "ORKA": {"ip": "localhost", "model": "qwen2.5:14b", "user": "xx", "role": NanoRole.ORKA},  # + llama-guard3:1b
+            "ORKA": {"ip": "localhost", "model": "qwen2.5:3b", "user": "xx", "role": NanoRole.ORKA},  # + llama-guard3:1b
         }
         
         for name, cfg in cluster_def.items():

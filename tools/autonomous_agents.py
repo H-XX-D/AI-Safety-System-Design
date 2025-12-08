@@ -217,7 +217,7 @@ AGENT_PROFILES: Dict[str, AgentProfile] = {
             "resource_allocation",
             "priority_management",
         ],
-        model="qwen2.5:14b",
+        model="qwen2.5:3b",
         ip="localhost",
         can_submit_proposals=False,  # Does NOT submit proposals
         proposal_domains=[],  # Cannot propose

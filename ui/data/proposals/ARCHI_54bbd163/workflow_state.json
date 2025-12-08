@@ -1,0 +1,18 @@
+{
+  "id": "ARCHI_54bbd163",
+  "agent": "ARCHI",
+  "topic": "Unregulated AI Self Recursion - Safety Research",
+  "workspace_path": "data/proposals/ARCHI_54bbd163",
+  "current_step": 2,
+  "status": "active",
+  "created_at": 1765150622.003951,
+  "updated_at": 1765150712.1031559,
+  "completed_steps": [
+    1
+  ],
+  "step_timestamps": {
+    "1": 1765150712.103155
+  },
+  "vote_result": null,
+  "reward_score": null
+}

@@ -1,0 +1,14 @@
+{
+  "id": "GIN_6e61c177",
+  "agent": "GIN",
+  "topic": "Unregulated AI Self Recursion - Safety Research",
+  "workspace_path": "data/proposals/GIN_6e61c177",
+  "current_step": 1,
+  "status": "active",
+  "created_at": 1765150622.3328176,
+  "updated_at": 1765150622.3328183,
+  "completed_steps": [],
+  "step_timestamps": {},
+  "vote_result": null,
+  "reward_score": null
+}

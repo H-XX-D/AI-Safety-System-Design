@@ -1,0 +1,958 @@
+{% extends "base.html" %}
+
+{% block title %}Network Topology - OrKheStrA AI Safety{% endblock %}
+
+{% block extra_head %}
+<style>
+/* Network Topology Styles */
+.network-container {
+    padding: 24px;
+    max-width: 1800px;
+    margin: 0 auto;
+}
+
+.topology-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.topology-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 24px;
+    background: linear-gradient(90deg, var(--primary), var(--secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.topology-stats {
+    display: flex;
+    gap: 24px;
+}
+
+.topo-stat {
+    text-align: center;
+    padding: 12px 20px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+}
+
+.topo-stat-value {
+    font-family: 'Orbitron', monospace;
+    font-size: 20px;
+    color: var(--secondary);
+}
+
+.topo-stat-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+}
+
+/* Network Map */
+.network-map {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 40px;
+    position: relative;
+    min-height: 600px;
+    overflow: hidden;
+}
+
+.network-map::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+        radial-gradient(circle at 50% 50%, rgba(255,0,255,0.03) 0%, transparent 50%),
+        linear-gradient(90deg, transparent 49.5%, rgba(0,255,255,0.05) 50%, transparent 50.5%),
+        linear-gradient(0deg, transparent 49.5%, rgba(0,255,255,0.05) 50%, transparent 50.5%);
+    background-size: 100% 100%, 60px 60px, 60px 60px;
+    pointer-events: none;
+}
+
+/* Node Styles */
+.network-node {
+    position: absolute;
+    width: 140px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    z-index: 10;
+}
+
+.network-node:hover {
+    transform: scale(1.05);
+}
+
+.network-node:hover .node-box {
+    box-shadow: 0 0 30px var(--primary-glow);
+    border-color: var(--primary);
+}
+
+.node-box {
+    background: linear-gradient(135deg, rgba(255,0,255,0.1) 0%, rgba(0,255,255,0.05) 100%);
+    border: 2px solid rgba(255,0,255,0.3);
+    border-radius: 12px;
+    padding: 16px 12px;
+    transition: all 0.3s ease;
+}
+
+.node-box.coordinator {
+    background: linear-gradient(135deg, rgba(0,212,255,0.15) 0%, rgba(255,0,255,0.1) 100%);
+    border-color: rgba(0,212,255,0.5);
+}
+
+.node-box.governance {
+    background: linear-gradient(135deg, rgba(0,255,136,0.1) 0%, rgba(0,255,255,0.05) 100%);
+    border-color: rgba(0,255,136,0.4);
+}
+
+.node-box.workstation {
+    background: linear-gradient(135deg, rgba(255,170,0,0.15) 0%, rgba(255,0,255,0.1) 100%);
+    border-color: rgba(255,170,0,0.5);
+}
+
+.node-status-dot {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--success);
+    box-shadow: 0 0 10px var(--success-glow);
+    animation: statusPulse 2s infinite;
+}
+
+@keyframes statusPulse {
+    0%, 100% { box-shadow: 0 0 10px var(--success-glow); }
+    50% { box-shadow: 0 0 20px var(--success-glow); }
+}
+
+.node-name {
+    font-family: 'Orbitron', monospace;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.node-model {
+    font-size: 10px;
+    color: var(--primary);
+    font-family: 'JetBrains Mono', monospace;
+    margin-bottom: 8px;
+}
+
+.node-metrics {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 10px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+.node-metric {
+    display: flex;
+    justify-content: space-between;
+    color: var(--text-secondary);
+}
+
+.node-metric-value {
+    color: var(--secondary);
+    font-family: 'JetBrains Mono', monospace;
+}
+
+/* Connection Lines */
+.connection-line {
+    position: absolute;
+    background: linear-gradient(90deg, rgba(0,255,255,0.3), rgba(255,0,255,0.3));
+    height: 2px;
+    transform-origin: left center;
+    z-index: 1;
+    pointer-events: none;
+}
+
+.connection-line::after {
+    content: attr(data-speed);
+    position: absolute;
+    top: -18px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 10px;
+    color: var(--secondary);
+    background: var(--bg-card);
+    padding: 2px 6px;
+    border-radius: 4px;
+    white-space: nowrap;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.connection-line.active {
+    animation: dataFlow 1s linear infinite;
+}
+
+@keyframes dataFlow {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 100% 50%; }
+}
+
+/* Central Hub */
+.central-hub {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 20;
+}
+
+.hub-ring {
+    width: 200px;
+    height: 200px;
+    border: 2px solid rgba(0,255,255,0.3);
+    border-radius: 50%;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: hubRotate 30s linear infinite;
+}
+
+@keyframes hubRotate {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.hub-inner {
+    width: 160px;
+    height: 160px;
+    background: radial-gradient(circle, rgba(0,255,255,0.1) 0%, transparent 70%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    animation: hubRotate 30s linear infinite reverse;
+}
+
+.hub-label {
+    font-family: 'Orbitron', monospace;
+    font-size: 14px;
+    color: var(--secondary);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.hub-throughput {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 20px;
+    color: var(--text-primary);
+    margin-top: 8px;
+}
+
+/* Node Modal */
+.node-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.8);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.node-modal-overlay.active {
+    display: flex;
+}
+
+.node-modal {
+    background: var(--bg-card);
+    border: 1px solid var(--primary);
+    border-radius: var(--border-radius);
+    width: 600px;
+    max-width: 90vw;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 0 50px var(--primary-glow);
+}
+
+.node-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border-color);
+    background: linear-gradient(90deg, rgba(255,0,255,0.1), rgba(0,255,255,0.05));
+}
+
+.node-modal-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 20px;
+    color: var(--primary);
+}
+
+.node-modal-close {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 24px;
+    cursor: pointer;
+    transition: color 0.3s;
+}
+
+.node-modal-close:hover {
+    color: var(--danger);
+}
+
+.node-modal-body {
+    padding: 24px;
+}
+
+.hardware-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.hardware-item {
+    background: var(--bg-hover);
+    border-radius: 8px;
+    padding: 16px;
+}
+
+.hardware-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+}
+
+.hardware-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 16px;
+    color: var(--text-primary);
+}
+
+.hardware-value.highlight {
+    color: var(--secondary);
+}
+
+.performance-section {
+    margin-top: 20px;
+}
+
+.performance-section h4 {
+    color: var(--primary);
+    margin-bottom: 16px;
+    font-size: 14px;
+}
+
+.perf-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.perf-bar-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.perf-bar-label {
+    width: 80px;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.perf-bar {
+    flex: 1;
+    height: 8px;
+    background: var(--bg-hover);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.perf-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.5s ease;
+}
+
+.perf-bar-fill.cpu { background: linear-gradient(90deg, var(--primary), #ff66ff); }
+.perf-bar-fill.memory { background: linear-gradient(90deg, var(--info), #66d4ff); }
+.perf-bar-fill.gpu { background: linear-gradient(90deg, var(--success), #66ff99); }
+
+.perf-bar-value {
+    width: 50px;
+    text-align: right;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text-primary);
+}
+
+/* Legend */
+.network-legend {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    margin-top: 24px;
+    padding: 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+}
+
+.legend-dot.researcher { background: linear-gradient(135deg, rgba(255,0,255,0.5), rgba(0,255,255,0.3)); }
+.legend-dot.governance { background: linear-gradient(135deg, rgba(0,255,136,0.5), rgba(0,255,255,0.3)); }
+.legend-dot.coordinator { background: linear-gradient(135deg, rgba(0,212,255,0.5), rgba(255,0,255,0.3)); }
+.legend-dot.workstation { background: linear-gradient(135deg, rgba(255,170,0,0.5), rgba(255,0,255,0.3)); }
+</style>
+{% endblock %}
+
+{% block breadcrumb %}
+<i class="fas fa-network-wired"></i> Network Topology
+{% endblock %}
+
+{% block content %}
+<div class="network-container">
+    <div class="topology-header">
+        <h1 class="topology-title"><i class="fas fa-project-diagram"></i> Cluster Network Topology</h1>
+        <div class="topology-stats">
+            <div class="topo-stat">
+                <div class="topo-stat-value" id="totalNodes">10</div>
+                <div class="topo-stat-label">Nodes Online</div>
+            </div>
+            <div class="topo-stat">
+                <div class="topo-stat-value" id="totalFlops">47.2</div>
+                <div class="topo-stat-label">TFLOPS Total</div>
+            </div>
+            <div class="topo-stat">
+                <div class="topo-stat-value" id="totalTokens">1,247</div>
+                <div class="topo-stat-label">Tokens/sec</div>
+            </div>
+            <div class="topo-stat">
+                <div class="topo-stat-value" id="networkBandwidth">4.8</div>
+                <div class="topo-stat-label">Gbps Aggregate</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Network Map -->
+    <div class="network-map" id="networkMap">
+        <!-- Central Hub (ORKA Coordinator) -->
+        <div class="central-hub">
+            <div class="hub-ring">
+                <div class="hub-inner">
+                    <div class="hub-label">AURA Network</div>
+                    <div class="hub-throughput" id="hubThroughput">21.3x</div>
+                    <div class="hub-label" style="font-size: 10px; margin-top: 4px;">Compression</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Nodes will be positioned dynamically -->
+    </div>
+
+    <!-- Legend -->
+    <div class="network-legend">
+        <div class="legend-item">
+            <span class="legend-dot researcher"></span>
+            <span>Researcher Node</span>
+        </div>
+        <div class="legend-item">
+            <span class="legend-dot governance"></span>
+            <span>Safety/Governance</span>
+        </div>
+        <div class="legend-item">
+            <span class="legend-dot coordinator"></span>
+            <span>Coordinator</span>
+        </div>
+        <div class="legend-item">
+            <span class="legend-dot workstation"></span>
+            <span>Workstation</span>
+        </div>
+    </div>
+</div>
+
+<!-- Node Detail Modal -->
+<div class="node-modal-overlay" id="nodeModal" onclick="closeNodeModal(event)">
+    <div class="node-modal" onclick="event.stopPropagation()">
+        <div class="node-modal-header">
+            <span class="node-modal-title" id="modalNodeName">Node Details</span>
+            <button class="node-modal-close" onclick="closeNodeModal()">&times;</button>
+        </div>
+        <div class="node-modal-body">
+            <div class="hardware-grid" id="hardwareGrid">
+                <!-- Populated dynamically -->
+            </div>
+            <div class="performance-section">
+                <h4><i class="fas fa-chart-line"></i> Real-time Performance</h4>
+                <div class="perf-bars" id="perfBars">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Node data with hardware specs
+const clusterNodes = {
+    'TIF': {
+        name: 'TIF',
+        fullName: 'Technical Intelligence Framework',
+        type: 'researcher',
+        model: 'deepseek-r1:1.5b',
+        ip: '192.168.0.201',
+        hardware: {
+            device: 'Jetson Orin Nano',
+            cpu: 'ARM Cortex-A78AE (6-core)',
+            gpu: 'NVIDIA Ampere (1024 CUDA cores)',
+            memory: '8GB LPDDR5',
+            storage: '128GB NVMe',
+            power: '15W TDP'
+        },
+        metrics: {
+            flops: 5.3,
+            tokensPerSec: 142,
+            linkSpeed: '1 Gbps',
+            cpu: 45,
+            memory: 62,
+            gpu: 78
+        }
+    },
+    'GIN': {
+        name: 'GIN',
+        fullName: 'Generative Improvement Navigator',
+        type: 'researcher',
+        model: 'deepseek-r1:1.5b',
+        ip: '192.168.0.202',
+        hardware: {
+            device: 'Jetson Orin Nano',
+            cpu: 'ARM Cortex-A78AE (6-core)',
+            gpu: 'NVIDIA Ampere (1024 CUDA cores)',
+            memory: '8GB LPDDR5',
+            storage: '128GB NVMe',
+            power: '15W TDP'
+        },
+        metrics: {
+            flops: 5.3,
+            tokensPerSec: 138,
+            linkSpeed: '1 Gbps',
+            cpu: 52,
+            memory: 58,
+            gpu: 82
+        }
+    },
+    'ORIN': {
+        name: 'ORIN',
+        fullName: 'CUDA/Parallel Computing Expert',
+        type: 'researcher',
+        model: 'deepseek-r1:1.5b',
+        ip: '192.168.0.203',
+        hardware: {
+            device: 'Jetson Orin Nano',
+            cpu: 'ARM Cortex-A78AE (6-core)',
+            gpu: 'NVIDIA Ampere (1024 CUDA cores)',
+            memory: '8GB LPDDR5',
+            storage: '128GB NVMe',
+            power: '15W TDP'
+        },
+        metrics: {
+            flops: 5.3,
+            tokensPerSec: 156,
+            linkSpeed: '1 Gbps',
+            cpu: 38,
+            memory: 55,
+            gpu: 85
+        }
+    },
+    'TORI': {
+        name: 'TORI',
+        fullName: 'Code Review Specialist',
+        type: 'researcher',
+        model: 'gemma3:4b',
+        ip: '192.168.0.204',
+        hardware: {
+            device: 'Jetson Orin Nano',
+            cpu: 'ARM Cortex-A78AE (6-core)',
+            gpu: 'NVIDIA Ampere (1024 CUDA cores)',
+            memory: '8GB LPDDR5',
+            storage: '128GB NVMe',
+            power: '15W TDP'
+        },
+        metrics: {
+            flops: 5.3,
+            tokensPerSec: 98,
+            linkSpeed: '1 Gbps',
+            cpu: 61,
+            memory: 71,
+            gpu: 88
+        }
+    },
+    'ARCHI': {
+        name: 'ARCHI',
+        fullName: 'Architecture & Design',
+        type: 'researcher',
+        model: 'qwen2.5:3b',
+        ip: '192.168.0.205',
+        hardware: {
+            device: 'Jetson Orin Nano',
+            cpu: 'ARM Cortex-A78AE (6-core)',
+            gpu: 'NVIDIA Ampere (1024 CUDA cores)',
+            memory: '8GB LPDDR5',
+            storage: '128GB NVMe',
+            power: '15W TDP'
+        },
+        metrics: {
+            flops: 5.3,
+            tokensPerSec: 124,
+            linkSpeed: '1 Gbps',
+            cpu: 42,
+            memory: 64,
+            gpu: 76
+        }
+    },
+    'SYNTH': {
+        name: 'SYNTH',
+        fullName: 'Synthesis & Integration',
+        type: 'researcher',
+        model: 'gemma2:2b',
+        ip: '192.168.0.206',
+        hardware: {
+            device: 'Jetson Orin Nano',
+            cpu: 'ARM Cortex-A78AE (6-core)',
+            gpu: 'NVIDIA Ampere (1024 CUDA cores)',
+            memory: '8GB LPDDR5',
+            storage: '128GB NVMe',
+            power: '15W TDP'
+        },
+        metrics: {
+            flops: 5.3,
+            tokensPerSec: 168,
+            linkSpeed: '1 Gbps',
+            cpu: 35,
+            memory: 48,
+            gpu: 72
+        }
+    },
+    'LOGIC': {
+        name: 'LOGIC',
+        fullName: 'Formal Reasoning',
+        type: 'researcher',
+        model: 'qwen2.5:3b',
+        ip: '192.168.0.207',
+        hardware: {
+            device: 'Jetson Orin Nano',
+            cpu: 'ARM Cortex-A78AE (6-core)',
+            gpu: 'NVIDIA Ampere (1024 CUDA cores)',
+            memory: '8GB LPDDR5',
+            storage: '128GB NVMe',
+            power: '15W TDP'
+        },
+        metrics: {
+            flops: 5.3,
+            tokensPerSec: 131,
+            linkSpeed: '1 Gbps',
+            cpu: 48,
+            memory: 59,
+            gpu: 74
+        }
+    },
+    'GUARD': {
+        name: 'GUARD',
+        fullName: 'Safety Validator',
+        type: 'governance',
+        model: 'llama-guard3:1b',
+        ip: '192.168.0.208',
+        hardware: {
+            device: 'Jetson Orin Nano',
+            cpu: 'ARM Cortex-A78AE (6-core)',
+            gpu: 'NVIDIA Ampere (1024 CUDA cores)',
+            memory: '8GB LPDDR5',
+            storage: '128GB NVMe',
+            power: '15W TDP'
+        },
+        metrics: {
+            flops: 5.3,
+            tokensPerSec: 185,
+            linkSpeed: '1 Gbps',
+            cpu: 28,
+            memory: 42,
+            gpu: 65
+        }
+    },
+    'PAGEQA': {
+        name: 'PAGEQA',
+        fullName: 'Research Evidence Engine',
+        type: 'governance',
+        model: 'paperqa-rag',
+        ip: '192.168.0.209',
+        hardware: {
+            device: 'Jetson Orin Nano',
+            cpu: 'ARM Cortex-A78AE (6-core)',
+            gpu: 'NVIDIA Ampere (1024 CUDA cores)',
+            memory: '8GB LPDDR5',
+            storage: '256GB NVMe',
+            power: '15W TDP'
+        },
+        metrics: {
+            flops: 5.3,
+            tokensPerSec: 95,
+            linkSpeed: '1 Gbps',
+            cpu: 55,
+            memory: 78,
+            gpu: 45
+        }
+    },
+    'ORKA': {
+        name: 'ORKA',
+        fullName: 'Orchestrator Coordinator',
+        type: 'coordinator',
+        model: 'qwen2.5:3b',
+        ip: '192.168.0.249',
+        hardware: {
+            device: 'HP Z6 G4 Workstation',
+            cpu: 'Intel Xeon Gold 6154 (36-core)',
+            gpu: 'NVIDIA RTX A5000 (8192 CUDA cores)',
+            memory: '128GB DDR4 ECC',
+            storage: '2TB NVMe RAID',
+            power: '650W PSU'
+        },
+        metrics: {
+            flops: 27.8,
+            tokensPerSec: 450,
+            linkSpeed: '10 Gbps',
+            cpu: 22,
+            memory: 34,
+            gpu: 58
+        }
+    }
+};
+
+// Position nodes in a circle around the hub
+function positionNodes() {
+    const map = document.getElementById('networkMap');
+    const mapRect = map.getBoundingClientRect();
+    const centerX = mapRect.width / 2;
+    const centerY = mapRect.height / 2;
+    const radius = Math.min(centerX, centerY) - 100;
+    
+    const nodeNames = Object.keys(clusterNodes);
+    const angleStep = (2 * Math.PI) / nodeNames.length;
+    
+    nodeNames.forEach((nodeName, index) => {
+        const node = clusterNodes[nodeName];
+        const angle = angleStep * index - Math.PI / 2; // Start from top
+        const x = centerX + radius * Math.cos(angle) - 70; // 70 = half node width
+        const y = centerY + radius * Math.sin(angle) - 60; // Adjust for node height
+        
+        // Create node element
+        const nodeEl = document.createElement('div');
+        nodeEl.className = 'network-node';
+        nodeEl.style.left = x + 'px';
+        nodeEl.style.top = y + 'px';
+        nodeEl.onclick = () => showNodeDetails(nodeName);
+        
+        nodeEl.innerHTML = `
+            <div class="node-box ${node.type}">
+                <div class="node-status-dot"></div>
+                <div class="node-name">${node.name}</div>
+                <div class="node-model">${node.model}</div>
+                <div class="node-metrics">
+                    <div class="node-metric">
+                        <span>TFLOPS</span>
+                        <span class="node-metric-value">${node.metrics.flops}</span>
+                    </div>
+                    <div class="node-metric">
+                        <span>Tok/s</span>
+                        <span class="node-metric-value">${node.metrics.tokensPerSec}</span>
+                    </div>
+                    <div class="node-metric">
+                        <span>Link</span>
+                        <span class="node-metric-value">${node.metrics.linkSpeed}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        map.appendChild(nodeEl);
+        
+        // Create connection line to center
+        const lineEl = document.createElement('div');
+        lineEl.className = 'connection-line active';
+        
+        const nodeCenter = {
+            x: x + 70,
+            y: y + 60
+        };
+        
+        const dx = centerX - nodeCenter.x;
+        const dy = centerY - nodeCenter.y;
+        const length = Math.sqrt(dx * dx + dy * dy) - 100; // Subtract hub radius
+        const angle2 = Math.atan2(dy, dx) * 180 / Math.PI;
+        
+        lineEl.style.left = nodeCenter.x + 'px';
+        lineEl.style.top = nodeCenter.y + 'px';
+        lineEl.style.width = length + 'px';
+        lineEl.style.transform = `rotate(${angle2}deg)`;
+        lineEl.setAttribute('data-speed', node.metrics.linkSpeed);
+        
+        map.appendChild(lineEl);
+    });
+}
+
+function showNodeDetails(nodeName) {
+    const node = clusterNodes[nodeName];
+    if (!node) return;
+    
+    document.getElementById('modalNodeName').textContent = `${node.name} - ${node.fullName}`;
+    
+    // Populate hardware grid
+    const hardwareGrid = document.getElementById('hardwareGrid');
+    hardwareGrid.innerHTML = `
+        <div class="hardware-item">
+            <div class="hardware-label">Device</div>
+            <div class="hardware-value">${node.hardware.device}</div>
+        </div>
+        <div class="hardware-item">
+            <div class="hardware-label">IP Address</div>
+            <div class="hardware-value highlight">${node.ip}</div>
+        </div>
+        <div class="hardware-item">
+            <div class="hardware-label">CPU</div>
+            <div class="hardware-value">${node.hardware.cpu}</div>
+        </div>
+        <div class="hardware-item">
+            <div class="hardware-label">GPU</div>
+            <div class="hardware-value">${node.hardware.gpu}</div>
+        </div>
+        <div class="hardware-item">
+            <div class="hardware-label">Memory</div>
+            <div class="hardware-value">${node.hardware.memory}</div>
+        </div>
+        <div class="hardware-item">
+            <div class="hardware-label">Storage</div>
+            <div class="hardware-value">${node.hardware.storage}</div>
+        </div>
+        <div class="hardware-item">
+            <div class="hardware-label">Model</div>
+            <div class="hardware-value highlight">${node.model}</div>
+        </div>
+        <div class="hardware-item">
+            <div class="hardware-label">Power</div>
+            <div class="hardware-value">${node.hardware.power}</div>
+        </div>
+        <div class="hardware-item">
+            <div class="hardware-label">TFLOPS</div>
+            <div class="hardware-value highlight">${node.metrics.flops}</div>
+        </div>
+        <div class="hardware-item">
+            <div class="hardware-label">Tokens/sec</div>
+            <div class="hardware-value highlight">${node.metrics.tokensPerSec}</div>
+        </div>
+    `;
+    
+    // Populate performance bars
+    const perfBars = document.getElementById('perfBars');
+    perfBars.innerHTML = `
+        <div class="perf-bar-item">
+            <span class="perf-bar-label">CPU</span>
+            <div class="perf-bar">
+                <div class="perf-bar-fill cpu" style="width: ${node.metrics.cpu}%"></div>
+            </div>
+            <span class="perf-bar-value">${node.metrics.cpu}%</span>
+        </div>
+        <div class="perf-bar-item">
+            <span class="perf-bar-label">Memory</span>
+            <div class="perf-bar">
+                <div class="perf-bar-fill memory" style="width: ${node.metrics.memory}%"></div>
+            </div>
+            <span class="perf-bar-value">${node.metrics.memory}%</span>
+        </div>
+        <div class="perf-bar-item">
+            <span class="perf-bar-label">GPU</span>
+            <div class="perf-bar">
+                <div class="perf-bar-fill gpu" style="width: ${node.metrics.gpu}%"></div>
+            </div>
+            <span class="perf-bar-value">${node.metrics.gpu}%</span>
+        </div>
+    `;
+    
+    document.getElementById('nodeModal').classList.add('active');
+}
+
+function closeNodeModal(event) {
+    if (event && event.target !== document.getElementById('nodeModal')) return;
+    document.getElementById('nodeModal').classList.remove('active');
+}
+
+// Update total stats
+function updateTotalStats() {
+    let totalFlops = 0;
+    let totalTokens = 0;
+    
+    Object.values(clusterNodes).forEach(node => {
+        totalFlops += node.metrics.flops;
+        totalTokens += node.metrics.tokensPerSec;
+    });
+    
+    document.getElementById('totalFlops').textContent = totalFlops.toFixed(1);
+    document.getElementById('totalTokens').textContent = totalTokens.toLocaleString();
+}
+
+// Initialize on load
+document.addEventListener('DOMContentLoaded', () => {
+    positionNodes();
+    updateTotalStats();
+    
+    // Simulate live updates
+    setInterval(() => {
+        Object.values(clusterNodes).forEach(node => {
+            // Slight random fluctuation
+            node.metrics.cpu = Math.max(10, Math.min(95, node.metrics.cpu + (Math.random() - 0.5) * 5));
+            node.metrics.memory = Math.max(20, Math.min(90, node.metrics.memory + (Math.random() - 0.5) * 3));
+            node.metrics.gpu = Math.max(30, Math.min(95, node.metrics.gpu + (Math.random() - 0.5) * 4));
+            node.metrics.tokensPerSec = Math.max(50, node.metrics.tokensPerSec + Math.floor((Math.random() - 0.5) * 10));
+        });
+        updateTotalStats();
+    }, 3000);
+});
+
+// Close modal on escape key
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        closeNodeModal();
+    }
+});
+</script>
+{% endblock %}

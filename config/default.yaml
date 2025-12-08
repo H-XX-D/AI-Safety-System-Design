@@ -107,38 +107,46 @@ orchestra:
 cluster:
   # Agent endpoints (Ollama API at port 11434)
   agents:
-    GIN:  # DeepSeek R1 - Generative Improvement Navigator  
+    GIN:  # Gemma2 2B - Generative Improvement Navigator  
       host: "192.168.0.242"  # gin@engineer
       port: 11434
-      model: "deepseek-r1:1.5b"
-    ORIN:  # DeepSeek R1 - Orchestration & Research Intelligence Node
+      model: "gemma2:2b"
+    ORIN:  # Qwen 2.5 3B - Orchestration & Research Intelligence Node
       host: "192.168.0.160"  # orin@nvidia
       port: 11434
-      model: "deepseek-r1:1.5b"
-    TORI:  # Gemma3 - Technical Optimization Review Intelligence
+      model: "qwen2.5:3b"
+    TORI:  # Llama 3.2 3B - Technical Optimization Review Intelligence
       host: "192.168.0.235"  # tori@historian
       port: 11434
-      model: "gemma3:4b"
-    TIF:  # DeepSeek R1 - Technical Improvement Finder
+      model: "llama3.2:3b"
+    TIF:  # Phi3 3.8B - Technical Improvement Finder
       host: "192.168.0.213"  # tif@scientific
       port: 11434
-      model: "deepseek-r1:1.5b"
-    PAGEQA:  # Qwen 2.5 3B - Paper/Document Q&A Specialist
-      host: "192.168.0.168"  # page@pageqa
-      port: 11434
-      model: "qwen2.5:3b"
-    ARCHI:  # Qwen 2.5 3B - Architecture & Design Specialist
+      model: "phi3:mini"
+    ARCHI:  # CodeGemma 2B - Architecture & Design Specialist
       host: "192.168.0.232"  # archi@architect
       port: 11434
       model: "qwen2.5:3b"
-    GUARD:  # Llama Guard - Safety Guardian
-      host: "192.168.0.146"  # guard@security
+    NOVEL:  # Novel Ideas Generator
+      host: "192.168.0.146"  # novel@novel
       port: 11434
-      model: "llama-guard3:1b"
-    ORKA:  # Qwen 2.5 14B - Orchestration & Knowledge Aggregator
+      model: "qwen2.5:3b"
+    THEO:  # Theoretical Edge - Bleeding edge tech specialist (old PAGE nano)
+      host: "192.168.0.168"
+      port: 11434
+      model: "qwen2.5:3b"
+    PAGEQA:  # Paper/Document Q&A - runs on ORKA system
+      host: "localhost"
+      port: 11434
+      model: "paperqa"
+    ORKA:  # Qwen 2.5 3B - Orchestration & Knowledge Aggregator
       host: "localhost"  # HP Z6 Workstation (16GB VRAM)
       port: 11434
-      model: "qwen2.5:14b"
+      model: "qwen2.5:3b"
+    GUARD:  # Safety Validator (llama-guard on ORKA)
+      host: "localhost"
+      port: 11434
+      model: "llama-guard3:1b"
   
   # Rate limiting for shared resources
   pageqa_queue:
@@ -153,7 +161,7 @@ cache:
   prefetch_k: 0  # Number of items to prefetch (0 = disabled)
   admission_policy: always  # always, tinyLFU, W-TinyLFU
   eviction_batch_size: 16
-  enable_compression: false
+  enable_compression: true
   compression_threshold_kb: 64
 
 routing:
@@ -261,11 +269,20 @@ sandbox:
 
   control_hooks:
     type: system          # system | production | dry_run
-    dry_run: true         # log-only by default
+    dry_run: false        # allow real actions for integrated hooks
     process_timeout_sec: 5
     network_interfaces: []
     researcher_systems: []
-    power_nodes: []
+    power_nodes:
+      - GIN
+      - ORIN
+      - TIF
+      - TORI
+      - ARCHI
+      - NOVEL
+      - THEO
+      - PAGEQA
+    power_command: "python utilities/pdu_control.py --action off --nodes {nodes_csv}"
     snapshot_root: ./forensics_snapshots
     snapshot_seconds: 2
     use_docker_client: true

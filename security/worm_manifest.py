@@ -20,7 +20,7 @@ from .attestation import verify as verify_attestation
 
 logger = logging.getLogger(__name__)
 
-_manifest_cache: Optional[dict[str, str]] = None
+_manifest_cache: Optional[dict] = None
 _manifest_signature_verified: bool = False
 _software_equivalence_state: Dict[str, Any] = {
     'enabled': False,
@@ -62,7 +62,7 @@ def _signature_required() -> bool:
     return os.getenv('WORM_ALLOW_UNSIGNED_MANIFEST', '0') != '1'
 
 
-def _load_mock_manifest() -> Optional[dict[str, str]]:
+def _load_mock_manifest() -> Optional[dict]:
     global _manifest_signature_verified
     _manifest_signature_verified = False
     path = os.getenv('WORM_MOCK_MANIFEST')
@@ -98,7 +98,7 @@ def _load_mock_manifest() -> Optional[dict[str, str]]:
         logger.warning("Unsigned WORM manifest accepted due to override (WORM_ALLOW_UNSIGNED_MANIFEST).")
         _manifest_signature_verified = False
 
-    return cast(dict[str, str], data)
+    return cast(dict, data)
 
 
 def _ensure_manifest_loaded() -> bool:
@@ -173,7 +173,7 @@ def is_worm_verified() -> bool:
     return bool(get_expected_core_values_hash())
 
 
-def describe_dev_state() -> dict[str, object]:
+def describe_dev_state() -> dict:
     using_env_fallback = (
         _manifest_cache is None
         and os.getenv('CORE_VALUES_KNOWN_HASH') is not None

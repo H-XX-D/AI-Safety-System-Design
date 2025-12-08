@@ -1,0 +1,1369 @@
+{% extends "base.html" %}
+
+{% block title %}Research Hub - OrKheStrA AI Safety{% endblock %}
+
+{% block extra_head %}
+<style>
+/* Research Hub Styles */
+.research-hub {
+    padding: 24px;
+    max-width: 1600px;
+    margin: 0 auto;
+}
+
+.hub-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.hub-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 28px;
+    background: linear-gradient(90deg, var(--primary), var(--secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.hub-tabs {
+    display: flex;
+    gap: 8px;
+    background: var(--bg-card);
+    padding: 8px;
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+}
+
+.hub-tab {
+    padding: 10px 20px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-radius: var(--border-radius-sm);
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.hub-tab:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.hub-tab.active {
+    background: linear-gradient(135deg, rgba(255,0,255,0.2), rgba(0,255,255,0.1));
+    color: var(--primary);
+    box-shadow: 0 0 15px rgba(255,0,255,0.2);
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* Researcher Grid */
+.researcher-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    margin-bottom: 24px;
+}
+
+.researcher-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 20px;
+    transition: all 0.3s ease;
+}
+
+.researcher-card:hover {
+    border-color: var(--primary);
+    box-shadow: 0 0 20px rgba(255,0,255,0.2);
+    transform: translateY(-2px);
+}
+
+.researcher-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.researcher-name {
+    font-family: 'Orbitron', monospace;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.researcher-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--success);
+    box-shadow: 0 0 10px var(--success-glow);
+}
+
+.researcher-model {
+    color: var(--primary);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    margin-bottom: 12px;
+}
+
+.researcher-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-color);
+}
+
+.stat-item {
+    text-align: center;
+}
+
+.stat-value {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--secondary);
+}
+
+.stat-label {
+    font-size: 10px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+}
+
+/* Evidence Section */
+.evidence-search {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 24px;
+    margin-bottom: 24px;
+}
+
+.search-box {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.search-input {
+    flex: 1;
+    padding: 12px 16px;
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    color: var(--text-primary);
+    font-size: 14px;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 10px rgba(255,0,255,0.2);
+}
+
+.btn-search {
+    padding: 12px 24px;
+    background: linear-gradient(135deg, var(--primary), #cc00cc);
+    border: none;
+    border-radius: var(--border-radius-sm);
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-search:hover {
+    box-shadow: 0 0 20px var(--primary-glow);
+    transform: translateY(-1px);
+}
+
+/* Penalties Table */
+.penalties-section {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 24px;
+}
+
+.penalty-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.penalty-table th,
+.penalty-table td {
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.penalty-table th {
+    color: var(--text-muted);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.penalty-table tr:hover {
+    background: var(--bg-hover);
+}
+
+.penalty-badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.penalty-badge.low {
+    background: rgba(0,255,136,0.2);
+    color: var(--success);
+}
+
+.penalty-badge.medium {
+    background: rgba(255,170,0,0.2);
+    color: var(--warning);
+}
+
+.penalty-badge.high {
+    background: rgba(255,0,85,0.2);
+    color: var(--danger);
+}
+
+.reputation-bar {
+    width: 100px;
+    height: 6px;
+    background: var(--bg-hover);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.reputation-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--danger), var(--warning), var(--success));
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
+
+/* Connections Tab */
+.connections-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 20px;
+}
+
+.connection-category {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 20px;
+}
+
+.category-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.category-icon {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    font-size: 18px;
+}
+
+.category-icon.database { background: rgba(0,255,136,0.2); color: var(--success); }
+.category-icon.api { background: rgba(0,200,255,0.2); color: var(--secondary); }
+.category-icon.cli { background: rgba(255,0,255,0.2); color: var(--primary); }
+.category-icon.file { background: rgba(255,170,0,0.2); color: var(--warning); }
+
+.category-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.connection-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.connection-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px;
+    background: var(--bg-hover);
+    border-radius: 8px;
+    border-left: 3px solid var(--border-color);
+    transition: all 0.2s ease;
+}
+
+.connection-item:hover {
+    border-left-color: var(--primary);
+    transform: translateX(4px);
+}
+
+.connection-item.connected { border-left-color: var(--success); }
+.connection-item.disconnected { border-left-color: var(--danger); }
+.connection-item.pending { border-left-color: var(--warning); }
+
+.connection-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.connection-name {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.connection-desc {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.connection-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.connection-status .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+.connection-status.online .dot { background: var(--success); box-shadow: 0 0 8px var(--success); }
+.connection-status.offline .dot { background: var(--danger); }
+.connection-status.pending .dot { background: var(--warning); animation: pulse 1s infinite; }
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+</style>
+{% endblock %}
+
+{% block breadcrumb %}
+<i class="fas fa-flask"></i> Research Hub
+{% endblock %}
+
+{% block content %}
+<div class="research-hub">
+    <div class="hub-header">
+        <h1 class="hub-title">Research Hub</h1>
+        <div class="hub-tabs">
+            <button class="hub-tab active" onclick="showHubTab('researchers')">
+                <i class="fas fa-microchip"></i> Researchers
+            </button>
+            <button class="hub-tab" onclick="showHubTab('connections')">
+                <i class="fas fa-plug"></i> Connections
+            </button>
+            <button class="hub-tab" onclick="showHubTab('evidence')">
+                <i class="fas fa-book"></i> Evidence
+            </button>
+            <button class="hub-tab" onclick="showHubTab('penalties')">
+                <i class="fas fa-gavel"></i> Penalties
+            </button>
+        </div>
+    </div>
+
+    <!-- Researchers Tab -->
+    <div id="tab-researchers" class="tab-content active">
+        <div class="researcher-grid">
+            <!-- TIF -->
+            <div class="researcher-card">
+                <div class="researcher-header">
+                    <span class="researcher-name">TIF</span>
+                    <span class="researcher-status"><span class="status-dot"></span> Online</span>
+                </div>
+                <div class="researcher-model">deepseek-r1:1.5b</div>
+                <div class="researcher-role">Technical Intelligence Framework</div>
+                <div class="researcher-stats">
+                    <div class="stat-item">
+                        <div class="stat-value">47</div>
+                        <div class="stat-label">Proposals</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">92%</div>
+                        <div class="stat-label">Approval</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">0.98</div>
+                        <div class="stat-label">Reputation</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- GIN -->
+            <div class="researcher-card">
+                <div class="researcher-header">
+                    <span class="researcher-name">GIN</span>
+                    <span class="researcher-status"><span class="status-dot"></span> Online</span>
+                </div>
+                <div class="researcher-model">deepseek-r1:1.5b</div>
+                <div class="researcher-role">Generative Improvement Navigator</div>
+                <div class="researcher-stats">
+                    <div class="stat-item">
+                        <div class="stat-value">38</div>
+                        <div class="stat-label">Proposals</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">89%</div>
+                        <div class="stat-label">Approval</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">0.95</div>
+                        <div class="stat-label">Reputation</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ORIN -->
+            <div class="researcher-card">
+                <div class="researcher-header">
+                    <span class="researcher-name">ORIN</span>
+                    <span class="researcher-status"><span class="status-dot"></span> Online</span>
+                </div>
+                <div class="researcher-model">deepseek-r1:1.5b</div>
+                <div class="researcher-role">CUDA/Parallel Computing Expert</div>
+                <div class="researcher-stats">
+                    <div class="stat-item">
+                        <div class="stat-value">52</div>
+                        <div class="stat-label">Proposals</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">94%</div>
+                        <div class="stat-label">Approval</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">0.99</div>
+                        <div class="stat-label">Reputation</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TORI -->
+            <div class="researcher-card">
+                <div class="researcher-header">
+                    <span class="researcher-name">TORI</span>
+                    <span class="researcher-status"><span class="status-dot"></span> Online</span>
+                </div>
+                <div class="researcher-model">gemma3:4b</div>
+                <div class="researcher-role">Code Review Specialist</div>
+                <div class="researcher-stats">
+                    <div class="stat-item">
+                        <div class="stat-value">63</div>
+                        <div class="stat-label">Proposals</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">88%</div>
+                        <div class="stat-label">Approval</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">0.94</div>
+                        <div class="stat-label">Reputation</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ARCHI -->
+            <div class="researcher-card">
+                <div class="researcher-header">
+                    <span class="researcher-name">ARCHI</span>
+                    <span class="researcher-status"><span class="status-dot"></span> Online</span>
+                </div>
+                <div class="researcher-model">qwen2.5:3b</div>
+                <div class="researcher-role">Architecture & Design</div>
+                <div class="researcher-stats">
+                    <div class="stat-item">
+                        <div class="stat-value">41</div>
+                        <div class="stat-label">Proposals</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">91%</div>
+                        <div class="stat-label">Approval</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">0.97</div>
+                        <div class="stat-label">Reputation</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SYNTH -->
+            <div class="researcher-card">
+                <div class="researcher-header">
+                    <span class="researcher-name">SYNTH</span>
+                    <span class="researcher-status"><span class="status-dot"></span> Online</span>
+                </div>
+                <div class="researcher-model">gemma2:2b</div>
+                <div class="researcher-role">Synthesis & Integration</div>
+                <div class="researcher-stats">
+                    <div class="stat-item">
+                        <div class="stat-value">29</div>
+                        <div class="stat-label">Proposals</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">93%</div>
+                        <div class="stat-label">Approval</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">0.96</div>
+                        <div class="stat-label">Reputation</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LOGIC -->
+            <div class="researcher-card">
+                <div class="researcher-header">
+                    <span class="researcher-name">LOGIC</span>
+                    <span class="researcher-status"><span class="status-dot"></span> Online</span>
+                </div>
+                <div class="researcher-model">qwen2.5:3b</div>
+                <div class="researcher-role">Formal Reasoning</div>
+                <div class="researcher-stats">
+                    <div class="stat-item">
+                        <div class="stat-value">35</div>
+                        <div class="stat-label">Proposals</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">96%</div>
+                        <div class="stat-label">Approval</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">0.99</div>
+                        <div class="stat-label">Reputation</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Connections Tab -->
+    <div id="tab-connections" class="tab-content">
+        <div class="connections-grid">
+            
+            <!-- ======== AI RESEARCH & ML ======== -->
+            <div class="connection-category">
+                <div class="category-header">
+                    <div class="category-icon api"><i class="fas fa-robot"></i></div>
+                    <div>
+                        <div class="category-title">AI Research & ML</div>
+                        <div style="color: var(--text-muted); font-size: 12px;">Machine learning papers & code</div>
+                    </div>
+                </div>
+                <div class="connection-list">
+                    <div class="connection-item connected">
+                        <div class="connection-info">
+                            <span class="connection-name">arXiv AI Archive</span>
+                            <span class="connection-desc">Latest AI/ML preprints (daily updates)</span>
+                        </div>
+                        <div class="connection-status online"><span class="dot"></span> No Key</div>
+                    </div>
+                    <div class="connection-item connected">
+                        <div class="connection-info">
+                            <span class="connection-name">Semantic Scholar</span>
+                            <span class="connection-desc">200M+ papers, citations, impact</span>
+                        </div>
+                        <div class="connection-status online"><span class="dot"></span> Online</div>
+                    </div>
+                    <div class="connection-item connected">
+                        <div class="connection-info">
+                            <span class="connection-name">Papers with Code</span>
+                            <span class="connection-desc">Papers + GitHub implementations</span>
+                        </div>
+                        <div class="connection-status online"><span class="dot"></span> Online</div>
+                    </div>
+                    <div class="connection-item connected">
+                        <div class="connection-info">
+                            <span class="connection-name">HuggingFace Hub</span>
+                            <span class="connection-desc">Models, datasets, spaces</span>
+                        </div>
+                        <div class="connection-status online"><span class="dot"></span> Online</div>
+                    </div>
+                    <div class="connection-item connected">
+                        <div class="connection-info">
+                            <span class="connection-name">OpenReview</span>
+                            <span class="connection-desc">NeurIPS, ICLR, ICML reviews</span>
+                        </div>
+                        <div class="connection-status online"><span class="dot"></span> Online</div>
+                    </div>
+                    <div class="connection-item connected">
+                        <div class="connection-info">
+                            <span class="connection-name">ACL Anthology</span>
+                            <span class="connection-desc">NLP/Computational linguistics</span>
+                        </div>
+                        <div class="connection-status online"><span class="dot"></span> Online</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ======== SCHOLARLY DATABASES ======== -->
+            <div class="connection-category">
+                <div class="category-header">
+                    <div class="category-icon api"><i class="fas fa-graduation-cap"></i></div>
+                    <div>
+                        <div class="category-title">Scholarly Databases</div>
+                        <div style="color: var(--text-muted); font-size: 12px;">Academic journals & conferences</div>
+                    </div>
+                </div>
+                <div class="connection-list">
+                    <div class="connection-item connected">
+                        <div class="connection-info">
+                            <span class="connection-name">IEEE Xplore</span>
+                            <span class="connection-desc">Journals, conferences, standards</span>
+                        </div>
+                        <div class="connection-status pending"><span class="dot"></span> API Key</div>
+                    </div>
+                    <div class="connection-item connected">
+                        <div class="connection-info">
+                            <span class="connection-name">ACM Digital Library</span>
+                            <span class="connection-desc">Computing & CS research</span>
+                        </div>
+                        <div class="connection-status online"><span class="dot"></span> Online</div>
+                    </div>
+                    <div class="connection-item connected">
+                        <div class="connection-info">
+                            <span class="connection-name">CrossRef DOI</span>
+                            <span class="connection-desc">Citation resolution & metadata</span>
+                        </div>
+                        <div class="connection-status online"><span class="dot"></span> Online</div>
+                    </div>
+                    <div class="connection-item connected">
+                        <div class="connection-info">
+                            <span class="connection-name">OpenAlex</span>
+                            <span class="connection-desc">Open scholarly graph (250M+ works)</span>
+                        </div>
+                        <div class="connection-status online"><span class="dot"></span> No Key</div>
+                    </div>
+                    <div class="connection-item connected">
+                        <div class="connection-info">
+                            <span class="connection-name">DBLP</span>
+                            <span class="connection-desc">Computer science bibliography</span>
+                        </div>
+                        <div class="connection-status online"><span class="dot"></span> Online</div>
+                    </div>
+                    <div class="connection-item connected">
+                        <div class="connection-info">
+                            <span class="connection-name">CORE</span>
+                            <span class="connection-desc">Open access research (200M+)</span>
+                        </div>
+                        <div class="connection-status online"><span class="dot"></span> Online</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ======== BIOMEDICAL & LIFE SCIENCES ======== -->
+            <div class="connection-category">
+                <div class="category-header">
+                    <div class="category-icon api"><i class="fas fa-dna"></i></div>
+                    <div>
+                        <div class="category-title">Biomedical & Life Sciences</div>
+                        <div style="color: var(--text-muted); font-size: 12px;">Medical & biology research</div>
+                    </div>
+                </div>
+                <div class="connection-list">
+                    <div class="connection-item connected">
+                        <div class="connection-info">
+                            <span class="connection-name">PubMed Central</span>
+                            <span class="connection-desc">Biomedical & life sciences</span>
+                        </div>
+                        <div class="connection-status online"><span class="dot"></span> Online</div>
+                    </div>
+                    <div class="connection-item connected">
+                        <div class="connection-info">
+                            <span class="connection-name">bioRxiv</span>
+                            <span class="connection-desc">Biology preprints</span>
+                        </div>
+                        <div class="connection-status online"><span class="dot"></span> Online</div>
+                    </div>
+                    <div class="connection-item connected">
+                        <div class="connection-info">
+                            <span class="connection-name">medRxiv</span>
+                            <span class="connection-desc">Medical preprints</span>
+                        </div>
+                        <div class="connection-status online"><span class="dot"></span> Online</div>
+                    </div>
+                    <div class="connection-item connected">
+                        <div class="connection-info">
+                            <span class="connection-name">ChemRxiv</span>
+                            <span class="connection-desc">Chemistry preprints</span>
+                        </div>
+                        <div class="connection-status online"><span class="dot"></span> Online</div>
+                    </div>
+                    <div class="connection-item connected">
+                        <div class="connection-info">
+                            <span class="connection-name">Europe PMC</span>
+                            <span class="connection-desc">European life sciences</span>
+                        </div>
+                        <div class="connection-status online"><span class="dot"></span> Online</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ======== SECURITY & VULNERABILITIES ======== -->
+            <div class="connection-category">
+                <div class="category-header">
+                    <div class="category-icon cli"><i class="fas fa-shield-alt"></i></div>
+                    <div>
+                        <div class="category-title">Security & Vulnerabilities</div>
+                        <div style="color: var(--text-muted); font-size: 12px;">CVE, exploits, advisories</div>
+                    </div>
+                </div>
+                <div class="connection-list">
+                    <div class="connection-item connected">
+                        <div class="connection-info">
+                            <span class="connection-name">NVD/CVE Database</span>
+                            <span class="connection-desc">NIST vulnerability database</span>
+                        </div>
+                        <div class="connection-status online"><span class="dot"></span> Online</div>
+                    </div>
+                    <div class="connection-item connected">
+                        <div class="connection-info">
+                            <span class="connection-name">MITRE ATT&CK</span>
+                            <span class="connection-desc">Adversarial techniques</span>
+                        </div>
+                        <div class="connection-status online"><span class="dot"></span> Online</div>
+                    </div>
+                    <div class="connection-item connected">
+                        <div class="connection-info">
+                            <span class="connection-name">Exploit-DB</span>
+                            <span class="connection-desc">Public exploits archive</span>
+                        </div>
+                        <div class="connection-status online"><span class="dot"></span> Online</div>
+                    </div>
+                    <div class="connection-item connected">
+                        <div class="connection-info">
+                            <span class="connection-name">OSV Database</span>
+                            <span class="connection-desc">Open source vulnerabilities</span>
+                        </div>
+                        <div class="connection-status online"><span class="dot"></span> Online</div>
+                    </div>
+                    <div class="connection-item connected">
+                        <div class="connection-info">
+                            <span class="connection-name">GitHub Security</span>
+                            <span class="connection-desc">Advisory database</span>
+                        </div>
+                        <div class="connection-status online"><span class="dot"></span> Online</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ======== PATENTS ======== -->
+            <div class="connection-category">
+                <div class="category-header">
+                    <div class="category-icon api"><i class="fas fa-file-contract"></i></div>
+                    <div>
+                        <div class="category-title">Patent Databases</div>
+                        <div style="color: var(--text-muted); font-size: 12px;">Global patent offices</div>
+                    </div>
+                </div>
+                <div class="connection-list">
+                    <div class="connection-item connected">
+                        <div class="connection-info">
+                            <span class="connection-name">USPTO PatentsView</span>
+                            <span class="connection-desc">US Patent & Trademark Office</span>
+                        </div>
+                        <div class="connection-status online"><span class="dot"></span> No Key</div>
+                    </div>
+                    <div class="connection-item connected">
+                        <div class="connection-info">
+                            <span class="connection-name">Google Patents</span>
+                            <span class="connection-desc">Global patent search</span>
+                        </div>
+                        <div class="connection-status online"><span class="dot"></span> Online</div>
+                    </div>
+                    <div class="connection-item pending">
+                        <div class="connection-info">
+                            <span class="connection-name">EPO (European)</span>
+                            <span class="connection-desc">Open Patent Services</span>
+                        </div>
+                        <div class="connection-status pending"><span class="dot"></span> API Key</div>
+                    </div>
+                    <div class="connection-item connected">
+                        <div class="connection-info">
+                            <span class="connection-name">WIPO PATENTSCOPE</span>
+                            <span class="connection-desc">International PCT apps</span>
+                        </div>
+                        <div class="connection-status online"><span class="dot"></span> Optional</div>
+                    </div>
+                    <div class="connection-item connected">
+                        <div class="connection-info">
+                            <span class="connection-name">Lens.org</span>
+                            <span class="connection-desc">Patents + scholarly linked</span>
+                        </div>
+                        <div class="connection-status online"><span class="dot"></span> Online</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ======== INTERNET STANDARDS ======== -->
+            <div class="connection-category">
+                <div class="category-header">
+                    <div class="category-icon api"><i class="fas fa-network-wired"></i></div>
+                    <div>
+                        <div class="category-title">Standards & Protocols</div>
+                        <div style="color: var(--text-muted); font-size: 12px;">RFCs, specs, standards</div>
+                    </div>
+                </div>
+                <div class="connection-list">
+                    <div class="connection-item connected">
+                        <div class="connection-info">
+                            <span class="connection-name">IETF RFCs</span>
+                            <span class="connection-desc">Internet standards (Datatracker)</span>
+                        </div>
+                        <div class="connection-status online"><span class="dot"></span> No Key</div>
+                    </div>
+                    <div class="connection-item connected">
+                        <div class="connection-info">
+                            <span class="connection-name">W3C Standards</span>
+                            <span class="connection-desc">Web standards & specs</span>
+                        </div>
+                        <div class="connection-status online"><span class="dot"></span> Online</div>
+                    </div>
+                    <div class="connection-item connected">
+                        <div class="connection-info">
+                            <span class="connection-name">ISO Standards</span>
+                            <span class="connection-desc">International standards</span>
+                        </div>
+                        <div class="connection-status online"><span class="dot"></span> Online</div>
+                    </div>
+                    <div class="connection-item connected">
+                        <div class="connection-info">
+                            <span class="connection-name">NIST Publications</span>
+                            <span class="connection-desc">Technical standards</span>
+                        </div>
+                        <div class="connection-status online"><span class="dot"></span> Online</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ======== ELECTRONICS & HARDWARE ======== -->
+            <div class="connection-category">
+                <div class="category-header">
+                    <div class="category-icon database"><i class="fas fa-microchip"></i></div>
+                    <div>
+                        <div class="category-title">Electronics & Components</div>
+                        <div style="color: var(--text-muted); font-size: 12px;">Datasheets & parts</div>
+                    </div>
+                </div>
+                <div class="connection-list">
+                    <div class="connection-item pending">
+                        <div class="connection-info">
+                            <span class="connection-name">Digi-Key</span>
+                            <span class="connection-desc">Component database</span>
+                        </div>
+                        <div class="connection-status pending"><span class="dot"></span> API Key</div>
+                    </div>
+                    <div class="connection-item pending">
+                        <div class="connection-info">
+                            <span class="connection-name">Octopart</span>
+                            <span class="connection-desc">Parts search & comparison</span>
+                        </div>
+                        <div class="connection-status pending"><span class="dot"></span> API Key</div>
+                    </div>
+                    <div class="connection-item connected">
+                        <div class="connection-info">
+                            <span class="connection-name">Mouser Electronics</span>
+                            <span class="connection-desc">Component catalog</span>
+                        </div>
+                        <div class="connection-status online"><span class="dot"></span> Online</div>
+                    </div>
+                    <div class="connection-item connected">
+                        <div class="connection-info">
+                            <span class="connection-name">NVIDIA Developer</span>
+                            <span class="connection-desc">GPU docs & SDKs</span>
+                        </div>
+                        <div class="connection-status online"><span class="dot"></span> Online</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ======== OPEN DATA & DATASETS ======== -->
+            <div class="connection-category">
+                <div class="category-header">
+                    <div class="category-icon database"><i class="fas fa-table"></i></div>
+                    <div>
+                        <div class="category-title">Open Data & Datasets</div>
+                        <div style="color: var(--text-muted); font-size: 12px;">Research data repositories</div>
+                    </div>
+                </div>
+                <div class="connection-list">
+                    <div class="connection-item connected">
+                        <div class="connection-info">
+                            <span class="connection-name">Zenodo</span>
+                            <span class="connection-desc">CERN research data</span>
+                        </div>
+                        <div class="connection-status online"><span class="dot"></span> Online</div>
+                    </div>
+                    <div class="connection-item connected">
+                        <div class="connection-info">
+                            <span class="connection-name">Kaggle Datasets</span>
+                            <span class="connection-desc">ML datasets & competitions</span>
+                        </div>
+                        <div class="connection-status online"><span class="dot"></span> Online</div>
+                    </div>
+                    <div class="connection-item connected">
+                        <div class="connection-info">
+                            <span class="connection-name">Figshare</span>
+                            <span class="connection-desc">Research outputs</span>
+                        </div>
+                        <div class="connection-status online"><span class="dot"></span> Online</div>
+                    </div>
+                    <div class="connection-item connected">
+                        <div class="connection-info">
+                            <span class="connection-name">Dryad</span>
+                            <span class="connection-desc">Scientific data repository</span>
+                        </div>
+                        <div class="connection-status online"><span class="dot"></span> Online</div>
+                    </div>
+                    <div class="connection-item connected">
+                        <div class="connection-info">
+                            <span class="connection-name">Data.gov</span>
+                            <span class="connection-desc">US government data</span>
+                        </div>
+                        <div class="connection-status online"><span class="dot"></span> Online</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ======== LOCAL DATABASES ======== -->
+            <div class="connection-category">
+                <div class="category-header">
+                    <div class="category-icon database"><i class="fas fa-database"></i></div>
+                    <div>
+                        <div class="category-title">Local Databases</div>
+                        <div style="color: var(--text-muted); font-size: 12px;">On-system storage</div>
+                    </div>
+                </div>
+                <div class="connection-list">
+                    <div class="connection-item connected">
+                        <div class="connection-info">
+                            <span class="connection-name">ChromaDB Vector Store</span>
+                            <span class="connection-desc">Semantic embeddings (2.4M)</span>
+                        </div>
+                        <div class="connection-status online"><span class="dot"></span> Online</div>
+                    </div>
+                    <div class="connection-item connected">
+                        <div class="connection-info">
+                            <span class="connection-name">SQLite Index</span>
+                            <span class="connection-desc">Metadata & citations</span>
+                        </div>
+                        <div class="connection-status online"><span class="dot"></span> Online</div>
+                    </div>
+                    <div class="connection-item connected">
+                        <div class="connection-info">
+                            <span class="connection-name">Redis Cache</span>
+                            <span class="connection-desc">Query result caching</span>
+                        </div>
+                        <div class="connection-status online"><span class="dot"></span> Online</div>
+                    </div>
+                    <div class="connection-item connected">
+                        <div class="connection-info">
+                            <span class="connection-name">WORM Archive</span>
+                            <span class="connection-desc">Immutable verified store</span>
+                        </div>
+                        <div class="connection-status online"><span class="dot"></span> Verified</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ======== CLI TOOLS ======== -->
+            <div class="connection-category">
+                <div class="category-header">
+                    <div class="category-icon cli"><i class="fas fa-terminal"></i></div>
+                    <div>
+                        <div class="category-title">CLI Tools</div>
+                        <div style="color: var(--text-muted); font-size: 12px;">Command-line integrations</div>
+                    </div>
+                </div>
+                <div class="connection-list">
+                    <div class="connection-item connected">
+                        <div class="connection-info">
+                            <span class="connection-name">paperqa CLI</span>
+                            <span class="connection-desc">pqa ask/search/index</span>
+                        </div>
+                        <div class="connection-status online"><span class="dot"></span> Ready</div>
+                    </div>
+                    <div class="connection-item connected">
+                        <div class="connection-info">
+                            <span class="connection-name">ollama</span>
+                            <span class="connection-desc">Local LLM inference</span>
+                        </div>
+                        <div class="connection-status online"><span class="dot"></span> 10 models</div>
+                    </div>
+                    <div class="connection-item connected">
+                        <div class="connection-info">
+                            <span class="connection-name">pdf2text / pdftotext</span>
+                            <span class="connection-desc">PDF text extraction</span>
+                        </div>
+                        <div class="connection-status online"><span class="dot"></span> Ready</div>
+                    </div>
+                    <div class="connection-item connected">
+                        <div class="connection-info">
+                            <span class="connection-name">git</span>
+                            <span class="connection-desc">Version control</span>
+                        </div>
+                        <div class="connection-status online"><span class="dot"></span> Ready</div>
+                    </div>
+                    <div class="connection-item connected">
+                        <div class="connection-info">
+                            <span class="connection-name">arxiv-dl</span>
+                            <span class="connection-desc">arXiv paper downloader</span>
+                        </div>
+                        <div class="connection-status online"><span class="dot"></span> Ready</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ======== FILE SOURCES ======== -->
+            <div class="connection-category">
+                <div class="category-header">
+                    <div class="category-icon file"><i class="fas fa-folder-open"></i></div>
+                    <div>
+                        <div class="category-title">File Sources</div>
+                        <div style="color: var(--text-muted); font-size: 12px;">Local document repositories</div>
+                    </div>
+                </div>
+                <div class="connection-list">
+                    <div class="connection-item connected">
+                        <div class="connection-info">
+                            <span class="connection-name">/data/papers/</span>
+                            <span class="connection-desc">2,847 PDFs indexed</span>
+                        </div>
+                        <div class="connection-status online"><span class="dot"></span> Mounted</div>
+                    </div>
+                    <div class="connection-item connected">
+                        <div class="connection-info">
+                            <span class="connection-name">/research/arxiv_cache/</span>
+                            <span class="connection-desc">Downloaded arXiv papers</span>
+                        </div>
+                        <div class="connection-status online"><span class="dot"></span> 18.4 GB</div>
+                    </div>
+                    <div class="connection-item connected">
+                        <div class="connection-info">
+                            <span class="connection-name">/worm_usb_dir/</span>
+                            <span class="connection-desc">WORM verified archives</span>
+                        </div>
+                        <div class="connection-status online"><span class="dot"></span> Verified</div>
+                    </div>
+                    <div class="connection-item connected">
+                        <div class="connection-info">
+                            <span class="connection-name">/docs/</span>
+                            <span class="connection-desc">Project documentation</span>
+                        </div>
+                        <div class="connection-status online"><span class="dot"></span> 342 files</div>
+                    </div>
+                    <div class="connection-item connected">
+                        <div class="connection-info">
+                            <span class="connection-name">/assessments/</span>
+                            <span class="connection-desc">Analysis documents</span>
+                        </div>
+                        <div class="connection-status online"><span class="dot"></span> 48 files</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ======== CODE REPOSITORIES ======== -->
+            <div class="connection-category">
+                <div class="category-header">
+                    <div class="category-icon cli"><i class="fab fa-github"></i></div>
+                    <div>
+                        <div class="category-title">Code Repositories</div>
+                        <div style="color: var(--text-muted); font-size: 12px;">Source code & implementations</div>
+                    </div>
+                </div>
+                <div class="connection-list">
+                    <div class="connection-item connected">
+                        <div class="connection-info">
+                            <span class="connection-name">GitHub</span>
+                            <span class="connection-desc">Code search API</span>
+                        </div>
+                        <div class="connection-status online"><span class="dot"></span> Online</div>
+                    </div>
+                    <div class="connection-item connected">
+                        <div class="connection-info">
+                            <span class="connection-name">GitLab</span>
+                            <span class="connection-desc">Open source projects</span>
+                        </div>
+                        <div class="connection-status online"><span class="dot"></span> Online</div>
+                    </div>
+                    <div class="connection-item connected">
+                        <div class="connection-info">
+                            <span class="connection-name">PyPI</span>
+                            <span class="connection-desc">Python packages</span>
+                        </div>
+                        <div class="connection-status online"><span class="dot"></span> Online</div>
+                    </div>
+                    <div class="connection-item connected">
+                        <div class="connection-info">
+                            <span class="connection-name">npm</span>
+                            <span class="connection-desc">JavaScript packages</span>
+                        </div>
+                        <div class="connection-status online"><span class="dot"></span> Online</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Connection Stats -->
+        <div style="margin-top: 24px; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px;">
+            <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; text-align: center;">
+                <div style="font-family: 'Orbitron', monospace; font-size: 28px; color: var(--success);">57</div>
+                <div style="color: var(--text-muted); font-size: 12px; text-transform: uppercase;">Total Sources</div>
+            </div>
+            <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; text-align: center;">
+                <div style="font-family: 'Orbitron', monospace; font-size: 28px; color: var(--secondary);">51</div>
+                <div style="color: var(--text-muted); font-size: 12px; text-transform: uppercase;">Connected</div>
+            </div>
+            <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; text-align: center;">
+                <div style="font-family: 'Orbitron', monospace; font-size: 28px; color: var(--warning);">6</div>
+                <div style="color: var(--text-muted); font-size: 12px; text-transform: uppercase;">Need API Key</div>
+            </div>
+            <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; text-align: center;">
+                <div style="font-family: 'Orbitron', monospace; font-size: 28px; color: var(--primary);">2.4M</div>
+                <div style="color: var(--text-muted); font-size: 12px; text-transform: uppercase;">Papers Indexed</div>
+            </div>
+        </div>
+
+        <!-- Quick Reference Table -->
+        <div style="margin-top: 24px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; padding: 20px; overflow-x: auto;">
+            <h4 style="margin: 0 0 16px 0; color: var(--text-primary);"><i class="fas fa-key"></i> API Key Quick Reference</h4>
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                <thead>
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                        <th style="text-align: left; padding: 8px; color: var(--text-muted);">Source</th>
+                        <th style="text-align: left; padding: 8px; color: var(--text-muted);">API Key Required</th>
+                        <th style="text-align: left; padding: 8px; color: var(--text-muted);">Environment Variable</th>
+                        <th style="text-align: left; padding: 8px; color: var(--text-muted);">Get Key</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td style="padding: 8px;">arXiv</td><td style="padding: 8px; color: var(--success);">❌ No</td><td style="padding: 8px; font-family: monospace;">-</td><td style="padding: 8px;">-</td></tr>
+                    <tr><td style="padding: 8px;">Semantic Scholar</td><td style="padding: 8px; color: var(--warning);">⚠️ Optional</td><td style="padding: 8px; font-family: monospace;">SEMANTIC_SCHOLAR_API_KEY</td><td style="padding: 8px;">semanticscholar.org</td></tr>
+                    <tr><td style="padding: 8px;">CVE/NVD</td><td style="padding: 8px; color: var(--warning);">⚠️ Optional</td><td style="padding: 8px; font-family: monospace;">NVD_API_KEY</td><td style="padding: 8px;">nvd.nist.gov</td></tr>
+                    <tr><td style="padding: 8px;">IEEE Xplore</td><td style="padding: 8px; color: var(--danger);">✅ Required</td><td style="padding: 8px; font-family: monospace;">IEEE_API_KEY</td><td style="padding: 8px;">developer.ieee.org</td></tr>
+                    <tr><td style="padding: 8px;">Digi-Key</td><td style="padding: 8px; color: var(--danger);">✅ Required</td><td style="padding: 8px; font-family: monospace;">DIGIKEY_API_KEY</td><td style="padding: 8px;">developer.digikey.com</td></tr>
+                    <tr><td style="padding: 8px;">Octopart</td><td style="padding: 8px; color: var(--danger);">✅ Required</td><td style="padding: 8px; font-family: monospace;">OCTOPART_API_KEY</td><td style="padding: 8px;">octopart.com</td></tr>
+                    <tr><td style="padding: 8px;">EPO</td><td style="padding: 8px; color: var(--danger);">✅ Required</td><td style="padding: 8px; font-family: monospace;">EPO_API_KEY</td><td style="padding: 8px;">developers.epo.org</td></tr>
+                    <tr><td style="padding: 8px;">USPTO</td><td style="padding: 8px; color: var(--success);">❌ No</td><td style="padding: 8px; font-family: monospace;">-</td><td style="padding: 8px;">PatentsView (free)</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Evidence Tab -->
+    <div id="tab-evidence" class="tab-content">
+        <div class="evidence-search">
+            <h3><i class="fas fa-book"></i> Evidence Search (PAGEQA)</h3>
+            <div class="search-box">
+                <input type="text" class="search-input" placeholder="Search research papers, documentation, or code..." id="evidenceQuery">
+                <button class="btn-search" onclick="searchEvidence()">
+                    <i class="fas fa-search"></i> Search
+                </button>
+            </div>
+            <div id="evidenceResults">
+                <p style="color: var(--text-muted); text-align: center; padding: 40px;">
+                    Enter a query to search research papers and documentation.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Penalties Tab -->
+    <div id="tab-penalties" class="tab-content">
+        <div class="penalties-section">
+            <h3><i class="fas fa-gavel"></i> Agent Penalties & Reputation</h3>
+            <table class="penalty-table">
+                <thead>
+                    <tr>
+                        <th>Agent</th>
+                        <th>Reputation</th>
+                        <th>Incidents</th>
+                        <th>Penalty Multiplier</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="penaltyTableBody">
+                    <tr>
+                        <td><strong>TIF</strong></td>
+                        <td>
+                            <div class="reputation-bar">
+                                <div class="reputation-fill" style="width: 98%"></div>
+                            </div>
+                            <span>0.98</span>
+                        </td>
+                        <td>0</td>
+                        <td><span class="penalty-badge low">1.0x</span></td>
+                        <td><span class="penalty-badge low">Clean</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>GIN</strong></td>
+                        <td>
+                            <div class="reputation-bar">
+                                <div class="reputation-fill" style="width: 95%"></div>
+                            </div>
+                            <span>0.95</span>
+                        </td>
+                        <td>1</td>
+                        <td><span class="penalty-badge low">1.05x</span></td>
+                        <td><span class="penalty-badge low">Minor</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>ORIN</strong></td>
+                        <td>
+                            <div class="reputation-bar">
+                                <div class="reputation-fill" style="width: 99%"></div>
+                            </div>
+                            <span>0.99</span>
+                        </td>
+                        <td>0</td>
+                        <td><span class="penalty-badge low">1.0x</span></td>
+                        <td><span class="penalty-badge low">Clean</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>TORI</strong></td>
+                        <td>
+                            <div class="reputation-bar">
+                                <div class="reputation-fill" style="width: 94%"></div>
+                            </div>
+                            <span>0.94</span>
+                        </td>
+                        <td>2</td>
+                        <td><span class="penalty-badge medium">1.1x</span></td>
+                        <td><span class="penalty-badge medium">Watch</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>ARCHI</strong></td>
+                        <td>
+                            <div class="reputation-bar">
+                                <div class="reputation-fill" style="width: 97%"></div>
+                            </div>
+                            <span>0.97</span>
+                        </td>
+                        <td>0</td>
+                        <td><span class="penalty-badge low">1.0x</span></td>
+                        <td><span class="penalty-badge low">Clean</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>SYNTH</strong></td>
+                        <td>
+                            <div class="reputation-bar">
+                                <div class="reputation-fill" style="width: 96%"></div>
+                            </div>
+                            <span>0.96</span>
+                        </td>
+                        <td>1</td>
+                        <td><span class="penalty-badge low">1.02x</span></td>
+                        <td><span class="penalty-badge low">Minor</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>LOGIC</strong></td>
+                        <td>
+                            <div class="reputation-bar">
+                                <div class="reputation-fill" style="width: 99%"></div>
+                            </div>
+                            <span>0.99</span>
+                        </td>
+                        <td>0</td>
+                        <td><span class="penalty-badge low">1.0x</span></td>
+                        <td><span class="penalty-badge low">Clean</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+function showHubTab(tabName) {
+    // Hide all tabs
+    document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    document.querySelectorAll('.hub-tab').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    // Show selected tab
+    document.getElementById('tab-' + tabName).classList.add('active');
+    event.currentTarget.classList.add('active');
+}
+
+async function searchEvidence() {
+    const query = document.getElementById('evidenceQuery').value;
+    const resultsDiv = document.getElementById('evidenceResults');
+    
+    if (!query) {
+        resultsDiv.innerHTML = '<p style="color: var(--warning); text-align: center;">Please enter a search query.</p>';
+        return;
+    }
+    
+    resultsDiv.innerHTML = '<p style="color: var(--secondary); text-align: center;"><i class="fas fa-spinner fa-spin"></i> Searching research sources...</p>';
+    
+    try {
+        const response = await fetch('/api/evidence/query', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({ query: query })
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            if (data.results && data.results.length > 0) {
+                resultsDiv.innerHTML = data.results.map(r => `
+                    <div class="evidence-result" style="background: var(--bg-hover); padding: 16px; margin: 12px 0; border-radius: 8px; border-left: 3px solid var(--primary);">
+                        <h4 style="color: var(--text-primary); margin-bottom: 8px;">${r.title || 'Result'}</h4>
+                        <p style="color: var(--text-secondary); font-size: 13px;">${r.text || r.answer || 'No content'}</p>
+                        <span style="color: var(--text-muted); font-size: 11px;">Score: ${(r.score * 100).toFixed(1)}%</span>
+                    </div>
+                `).join('');
+            } else {
+                resultsDiv.innerHTML = '<p style="color: var(--text-muted); text-align: center;">No results found.</p>';
+            }
+        } else {
+            resultsDiv.innerHTML = '<p style="color: var(--danger); text-align: center;">Search failed. PAGEQA may be offline.</p>';
+        }
+    } catch (error) {
+        resultsDiv.innerHTML = `<p style="color: var(--danger); text-align: center;">Error: ${error.message}</p>`;
+    }
+}
+</script>
+{% endblock %}

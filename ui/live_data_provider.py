@@ -10,16 +10,18 @@ Connects to:
 - Integrations (via tools.integrations)
 """
 
-import time
 import json
 import logging
+import os
+import re
+import shutil
 import subprocess
 import threading
-from pathlib import Path
-from typing import Dict, List, Any, Optional
-from datetime import datetime, timedelta
+import time
 from dataclasses import dataclass, asdict
-import os
+from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Dict, List, Any, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -60,17 +62,21 @@ NANO_NODES = {
     "ORIN": {"ip": "192.168.0.160", "user": "orin", "model": "deepseek-r1:1.5b", "role": "nvidia_optimization"},
     "TIF": {"ip": "192.168.0.213", "user": "tif", "model": "deepseek-r1:1.5b", "role": "technical_analysis"},
     "TORI": {"ip": "192.168.0.235", "user": "tori", "model": "gemma3:4b", "role": "code_review"},
-    "PAGEQA": {"ip": "192.168.0.168", "user": "page", "model": "qwen2.5:3b", "role": "research"},
     "ARCHI": {"ip": "192.168.0.232", "user": "archi", "model": "qwen2.5:3b", "role": "architecture"},
-    "GUARD": {"ip": "192.168.0.146", "user": "guard", "model": "llama-guard3:1b", "role": "safety"},
+    "PAGEQA": {"ip": "localhost", "user": "xx", "model": "paperqa", "role": "research"},
+    "GUARD": {"ip": "localhost", "user": "xx", "model": "llama-guard3:1b", "role": "safety"},
+    "THEO": {"ip": "192.168.0.168", "user": "page", "model": "qwen2.5:3b", "role": "research"},
 }
 
 ORKA_NODE = {
     "ip": "localhost",
     "user": "xx",
-    "model": "qwen2.5:14b",
+    "model": "qwen2.5:3b",
     "role": "orchestrator"
 }
+
+# Default password used for lightweight Jetson utilities; override with NANO_DEFAULT_PASSWORD env var
+DEFAULT_NANO_PASSWORD = os.getenv("NANO_DEFAULT_PASSWORD", "1")
 
 
 def check_node_status(name: str, ip: str, port: int = 11434, timeout: float = 3.0) -> dict:
@@ -147,6 +153,173 @@ def get_cluster_status_live() -> Dict[str, Any]:
 
 
 # ============================================================
+# CLUSTER GENERATION AND SAFETY
+# ============================================================
+
+def generate_on_node(node_name: str, prompt: str, temperature: float = 0.7, max_tokens: int = 1024) -> Optional[str]:
+    """Generate text using a specific cluster node."""
+    try:
+        import requests
+        
+        # Get node config
+        all_nodes = {**NANO_NODES, "ORKA": ORKA_NODE}
+        if node_name not in all_nodes:
+            logger.error(f"Node {node_name} not found in cluster configuration")
+            return None
+        
+        config = all_nodes[node_name]
+        ip = config["ip"]
+        port = 11434  # Ollama default port
+        
+        # Check if node is online
+        status = check_node_status(node_name, ip, port)
+        if not status["online"]:
+            logger.error(f"Node {node_name} is not online")
+            return None
+        
+        # Generate using Ollama API
+        url = f"http://{ip}:{port}/api/generate"
+        payload = {
+            "model": config["model"],
+            "prompt": prompt,
+            "stream": False,
+            "options": {
+                "temperature": temperature,
+                "num_predict": max_tokens
+            }
+        }
+        
+        response = requests.post(url, json=payload, timeout=30)
+        if response.status_code == 200:
+            result = response.json()
+            return result.get("response", "")
+        else:
+            logger.error(f"Generation failed on {node_name}: {response.status_code}")
+            return None
+            
+    except Exception as e:
+        logger.error(f"Error generating on {node_name}: {e}")
+        return None
+
+
+def generate_on_best_available(prompt: str, temperature: float = 0.7, max_tokens: int = 1024) -> Tuple[Optional[str], str]:
+    """Generate text using the best available cluster node."""
+    try:
+        # Get cluster status to find online nodes
+        status = get_cluster_status_live()
+        
+        # Try ORKA first (orchestrator), then other nodes
+        priority_order = ["ORKA", "TIF", "GIN", "ORIN", "TORI", "ARCHI", "PAGEQA"]
+        
+        for node_name in priority_order:
+            if node_name in status["nodes"] and status["nodes"][node_name]["online"]:
+                response = generate_on_node(node_name, prompt, temperature, max_tokens)
+                if response:
+                    return response, node_name
+        
+        logger.error("No available nodes for generation")
+        return None, ""
+        
+    except Exception as e:
+        logger.error(f"Error in generate_on_best_available: {e}")
+        return None, ""
+
+
+def check_content_safety(content: str) -> Dict[str, Any]:
+    """Check content safety using GUARD node."""
+    try:
+        import requests
+        
+        guard_config = NANO_NODES.get("GUARD")
+        if not guard_config:
+            return {"safe": True, "error": "GUARD node not configured"}
+        
+        ip = guard_config["ip"]
+        port = 11434
+        
+        # Check if GUARD is online
+        status = check_node_status("GUARD", ip, port)
+        if not status["online"]:
+            return {"safe": True, "error": "GUARD node not available"}
+        
+        # Use llama-guard model for safety check
+        url = f"http://{ip}:{port}/api/generate"
+        safety_prompt = f"""Analyze the following content for safety. Respond with only "SAFE" or "UNSAFE" followed by a brief reason.
+
+Content: {content}
+
+Analysis:"""
+        
+        payload = {
+            "model": guard_config["model"],
+            "prompt": safety_prompt,
+            "stream": False,
+            "options": {
+                "temperature": 0.1,
+                "num_predict": 100
+            }
+        }
+        
+        response = requests.post(url, json=payload, timeout=15)
+        if response.status_code == 200:
+            result = response.json()
+            response_text = result.get("response", "").strip().upper()
+            
+            if response_text.startswith("SAFE"):
+                return {"safe": True, "reason": "Content passed safety check"}
+            elif response_text.startswith("UNSAFE"):
+                reason = response_text.replace("UNSAFE", "").strip()
+                return {"safe": False, "reason": reason or "Content flagged as unsafe"}
+            else:
+                return {"safe": True, "reason": "Unable to determine safety, defaulting to safe"}
+        else:
+            return {"safe": True, "error": f"GUARD API error: {response.status_code}"}
+            
+    except Exception as e:
+        logger.error(f"Error checking safety: {e}")
+        return {"safe": True, "error": str(e)}
+
+
+def get_cluster_roles() -> Dict[str, Any]:
+    """Get cluster node roles and capabilities."""
+    roles_info = {}
+    
+    # Define roles based on our cluster configuration
+    CLUSTER_ROLES = {
+        'code_generation': ['TIF', 'GIN'],
+        'nvidia_optimization': ['ORIN'],
+        'code_review': ['TORI'],
+        'research': ['PAGEQA'],
+        'architecture': ['ARCHI'],
+        'safety': ['GUARD'],
+        'orchestration': ['ORKA']
+    }
+    
+    role_descriptions = {
+        'code_generation': 'Code writing and generation',
+        'nvidia_optimization': 'CUDA and GPU optimization',
+        'code_review': 'Code review and optimization',
+        'research': 'Research coordination and document analysis',
+        'architecture': 'Architecture design and planning',
+        'safety': 'Safety checking and content moderation',
+        'orchestration': 'System coordination and task distribution'
+    }
+    
+    for role_name, nodes in CLUSTER_ROLES.items():
+        roles_info[role_name] = {
+            'nodes': nodes,
+            'count': len(nodes),
+            'description': role_descriptions.get(role_name, 'Unknown role')
+        }
+    
+    return {
+        'roles': roles_info,
+        'total_roles': len(CLUSTER_ROLES),
+        'timestamp': datetime.now().isoformat()
+    }
+
+
+# ============================================================
 # SYSTEM METRICS
 # ============================================================
 
@@ -203,6 +376,137 @@ def get_local_system_metrics() -> Dict[str, Any]:
         logger.error(f"Error getting system metrics: {e}")
     
     return metrics
+
+
+# ============================================================
+# JETSON POWER / THERMALS
+# ============================================================
+
+_POWER_PATTERNS = [
+    re.compile(r"(POM_5V_IN|VDD_IN)\s*=?\s*(\d+)\s*mW", re.IGNORECASE),
+    re.compile(r"(\d+)\s*mW"),
+]
+
+
+def _parse_tegrastats_power(raw: str) -> Dict[str, Any]:
+    """Extract power (W) and basic temps from tegrastats output."""
+    if not raw:
+        return {"power_watts": None, "temps": {}}
+    
+    power_watts = None
+    temps: Dict[str, int] = {}
+    
+    for pattern in _POWER_PATTERNS:
+        match = pattern.search(raw)
+        if match:
+            try:
+                mw_value = int(match.group(match.lastindex or 1))
+                power_watts = round(mw_value / 1000, 2)
+                break
+            except (TypeError, ValueError):
+                continue
+
+    temp_keys = {
+        "GPU": "gpu",
+        "CPU": "cpu",
+        "Tboard": "board",
+        "Tdiode": "die",
+    }
+    for token, key in temp_keys.items():
+        m = re.search(rf"{token}@(\d+)", raw)
+        if m:
+            try:
+                temps[key] = int(m.group(1))
+            except ValueError:
+                continue
+
+    return {"power_watts": power_watts, "temps": temps}
+
+
+def _run_jetson_power_command(ip: str, user: str, password: str, timeout: float = 6.0) -> Dict[str, Any]:
+    """Run tegrastats on a Jetson node and parse power/thermal data."""
+    if not shutil.which("sshpass"):
+        return {"online": False, "error": "sshpass not installed"}
+
+    ssh_target = f"{user}@{ip}"
+    cmd = [
+        "sshpass", "-p", password,
+        "ssh", "-o", "StrictHostKeyChecking=no",
+        "-o", f"ConnectTimeout={int(timeout)}",
+        ssh_target,
+        "tegrastats --interval 1000 --count 1 || sudo tegrastats --interval 1000 --count 1",
+    ]
+
+    try:
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+    except Exception as exc:
+        return {"online": False, "error": str(exc)}
+
+    output = (result.stdout or "") + (result.stderr or "")
+    if result.returncode != 0:
+        return {"online": False, "error": output.strip() or "tegrastats failed"}
+
+    parsed = _parse_tegrastats_power(output)
+    return {
+        "online": True,
+        "raw": output.strip(),
+        "power_watts": parsed.get("power_watts"),
+        "temps": parsed.get("temps", {}),
+    }
+
+
+def get_jetson_power_status(ttl: int = 10) -> Dict[str, Any]:
+    """Return power/thermal snapshot for each Jetson node."""
+    cached = _get_cached("jetson_power", ttl=ttl)
+    if cached:
+        return cached
+
+    nodes: List[Dict[str, Any]] = []
+    total_power = 0.0
+    online_nodes = 0
+
+    for name, cfg in NANO_NODES.items():
+        user = cfg.get("user") or name.lower()
+        password = cfg.get("password") or DEFAULT_NANO_PASSWORD
+        node_result = {
+            "name": name,
+            "ip": cfg.get("ip"),
+            "online": False,
+            "power_watts": None,
+            "temps": {},
+            "error": None,
+        }
+
+        result = _run_jetson_power_command(cfg.get("ip", ""), user, password)
+        node_result.update({
+            "online": result.get("online", False),
+            "power_watts": result.get("power_watts"),
+            "temps": result.get("temps", {}),
+            "error": result.get("error"),
+        })
+
+        if node_result["online"]:
+            online_nodes += 1
+            if isinstance(node_result.get("power_watts"), (int, float)):
+                total_power += float(node_result["power_watts"])
+
+        nodes.append(node_result)
+
+    summary = {
+        "nodes": nodes,
+        "online": online_nodes,
+        "total": len(NANO_NODES),
+        "aggregate_power_watts": round(total_power, 2) if total_power else None,
+        "timestamp": datetime.now().isoformat(),
+    }
+
+    _set_cached("jetson_power", summary)
+    return summary
 
 
 def get_ollama_model_info() -> Dict[str, Any]:

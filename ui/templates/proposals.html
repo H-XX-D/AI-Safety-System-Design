@@ -9,8 +9,8 @@
 {% block content %}
 <div class="page-header">
     <div class="page-title">
-        <h1><i class="fas fa-file-alt"></i> Proposal Management</h1>
-        <p>Monitor, review, and manage AI research proposals</p>
+        <h1><i class="fas fa-file-alt"></i> Proposal Lab</h1>
+        <p>Watch researchers think, tune context, and review proposal history.</p>
     </div>
     <div class="page-actions">
         <button class="btn btn-secondary" onclick="refreshProposals()">
@@ -67,7 +67,7 @@
     </div>
 </div>
 
-<!-- Summary Stats -->
+<!-- Summary & Live Panels -->
 <div class="stats-grid">
     <div class="stat-card success clickable" onclick="filterByStatus('approved')" title="Click to filter by Approved">
         <div class="stat-icon">
@@ -103,6 +103,43 @@
         <div class="stat-content">
             <div class="stat-label">Testing</div>
             <div class="stat-value" id="testingCount">0</div>
+        </div>
+    </div>
+</div>
+
+<div class="grid-two">
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-brain"></i> Live Researcher Thinking</h3>
+            <span class="badge" id="liveThoughtCount">0</span>
+        </div>
+        <div class="card-body">
+            <div id="liveThoughts" class="live-thoughts">
+                <div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Listening to agents...</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-pen"></i> Context Tuning</h3>
+        </div>
+        <div class="card-body">
+            <label for="contextAgent">Agent</label>
+            <select id="contextAgent" class="input" onchange="loadContext()">
+                <option value="THEO">THEO (Theoretical)</option>
+                <option value="TIF">TIF</option>
+                <option value="GIN">GIN</option>
+                <option value="TORI">TORI</option>
+                <option value="NOVEL">NOVEL</option>
+            </select>
+            <label for="contextText" style="margin-top:8px;">Working Context</label>
+            <textarea id="contextText" class="input" rows="8" placeholder="Add notes, constraints, or hints for this agent..."></textarea>
+            <div class="card-actions" style="margin-top:8px;">
+                <button class="btn btn-primary" onclick="saveContext()">Save Context (local)</button>
+                <button class="btn btn-secondary" onclick="clearContext()">Clear</button>
+            </div>
+            <p class="text-muted" style="margin-top:8px;">Stored locally in your browser to guide review sessions.</p>
         </div>
     </div>
 </div>
@@ -166,6 +203,7 @@
 
 <script>
 let allProposals = [];
+let liveThoughts = [];
 
 // Map agent short IDs to numeric IDs for linking
 const agentIdMap = {
@@ -176,7 +214,10 @@ const agentIdMap = {
 // Load proposals on page load
 document.addEventListener('DOMContentLoaded', function() {
     loadProposals();
+    loadLiveThoughts();
+    loadContext();
     setInterval(loadProposals, 5000); // Refresh every 5 seconds
+    setInterval(loadLiveThoughts, 4000);
 });
 
 async function loadProposals() {
@@ -190,6 +231,65 @@ async function loadProposals() {
         console.error('Error loading proposals:', error);
         showToast('Failed to load proposals', 'danger');
     }
+}
+
+async function loadLiveThoughts() {
+    try {
+        const res = await fetch('/api/proposals/recent');
+        const data = await res.json();
+        const proposals = data.proposals || [];
+        // Simulate "thinking" snippets from descriptions and status
+        liveThoughts = proposals.slice(0, 6).map(p => ({
+            agent: p.agent_id,
+            id: p.id,
+            text: p.description || 'Analyzing...',
+            status: p.status,
+            ts: p.timestamp
+        }));
+        renderLiveThoughts();
+    } catch (e) {
+        console.error('live thoughts load failed', e);
+    }
+}
+
+function renderLiveThoughts() {
+    const box = document.getElementById('liveThoughts');
+    if (!liveThoughts.length) {
+        box.innerHTML = '<div class="text-muted">No live thoughts yet.</div>';
+        document.getElementById('liveThoughtCount').textContent = 0;
+        return;
+    }
+    document.getElementById('liveThoughtCount').textContent = liveThoughts.length;
+    box.innerHTML = liveThoughts.map(t => `
+        <div class="thought-card">
+            <div class="thought-header">
+                <span class="agent-badge">${t.agent}</span>
+                <span class="status-badge ${t.status}">${formatStatus(t.status)}</span>
+            </div>
+            <div class="thought-body">${t.text}</div>
+            <div class="thought-meta">
+                <span>${formatTimestamp(t.ts)}</span>
+                <a href="#" onclick="showProposalDetail('${t.id}'); return false;">View</a>
+            </div>
+        </div>
+    `).join('');
+}
+
+function saveContext() {
+    const agent = document.getElementById('contextAgent').value;
+    const text = document.getElementById('contextText').value;
+    localStorage.setItem(`ctx_${agent}`, text);
+    showToast('Context saved locally', 'success');
+}
+
+function loadContext() {
+    const agent = document.getElementById('contextAgent').value;
+    const saved = localStorage.getItem(`ctx_${agent}`) || '';
+    document.getElementById('contextText').value = saved;
+}
+
+function clearContext() {
+    document.getElementById('contextText').value = '';
 }
 
 function updateStats() {
@@ -846,6 +946,38 @@ function exportProposals() {
     right: 8px;
     font-size: 12px;
     opacity: 0.7;
+}
+
+.grid-two {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 16px;
+    margin: 16px 0;
+}
+.thought-card {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 8px;
+    background: var(--card-bg);
+    box-shadow: var(--shadow);
+}
+.thought-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+.thought-body {
+    font-size: 14px;
+    color: #e2e8f0;
+    margin-bottom: 6px;
+}
+.thought-meta {
+    font-size: 12px;
+    color: #94a3b8;
+    display: flex;
+    justify-content: space-between;
 }
 </style>
 {% endblock %}

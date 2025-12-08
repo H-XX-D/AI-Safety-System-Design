@@ -1,0 +1,60 @@
+{
+  "method": "AURALITE",
+  "method_byte": "0x03",
+  "version": "1.0.0",
+  "created": "2025-12-06T22:16:26.319982+00:00",
+  "total_templates": 10,
+  "templates": [
+    {
+      "id": 0,
+      "pattern": "System {0} approves",
+      "frequency": 0.95
+    },
+    {
+      "id": 1,
+      "pattern": "System {0} rejects",
+      "frequency": 0.92
+    },
+    {
+      "id": 2,
+      "pattern": "Proposal {0}",
+      "frequency": 0.9
+    },
+    {
+      "id": 3,
+      "pattern": "Round {0}",
+      "frequency": 0.88
+    },
+    {
+      "id": 4,
+      "pattern": "Consensus",
+      "frequency": 0.85
+    },
+    {
+      "id": 5,
+      "pattern": "Approved",
+      "frequency": 0.82
+    },
+    {
+      "id": 6,
+      "pattern": "Rejected",
+      "frequency": 0.8
+    },
+    {
+      "id": 7,
+      "pattern": "Pending",
+      "frequency": 0.75
+    },
+    {
+      "id": 8,
+      "pattern": "Complete",
+      "frequency": 0.7
+    },
+    {
+      "id": 9,
+      "pattern": "Error",
+      "frequency": 0.65
+    }
+  ],
+  "max_message_size": 256
+}

@@ -15,8 +15,10 @@ vs. HEALTHY rational acceptance (service/value-creation focus).
 
 import json
 import re
-from datetime import datetime
-from typing import Dict, List, Optional, Any
+from datetime import datetime, timedelta
+from typing import Dict, List, Optional, Any, Tuple
+import os
+import subprocess
 
 
 # POSITIVE PATTERNS (rational acceptance framework - REDUCES risk)
@@ -110,6 +112,62 @@ class MemoryContentAuditor:
     def __init__(self, memory_entries: List[Dict[str, Any]]):
         self.memory_entries = memory_entries
         self.audit_results: List[Dict[str, Any]] = []
+        self._worm_cache: Optional[Tuple[datetime, Dict[str, Any]]] = None
+
+    # ------------------------------
+    # WORM Verification (periodic)
+    # ------------------------------
+    def _worm_paths(self) -> List[str]:
+        env_paths = os.environ.get("WORM_PATHS", "")
+        if env_paths:
+            paths = [p.strip() for p in env_paths.split(",") if p.strip()]
+        else:
+            paths = [
+                "/Volumes/ORKASTRATOR_WORM",
+                "/Volumes/NO NAME/ORKASTRATOR_WORM",
+                "/media/usb/ORKASTRATOR_WORM",
+                "/mnt/usb/ORKASTRATOR_WORM",
+                *[f"/media/usb/ORKASTRATOR_WORM{i}" for i in range(1, 9)],
+            ]
+        seen = set()
+        deduped = []
+        for p in paths:
+            if p and p not in seen:
+                deduped.append(p)
+                seen.add(p)
+        return deduped
+
+    def _run_worm_verify(self, worm_path: str) -> Dict[str, Any]:
+        """Invoke WORMVerifier or manifest verifier for a single path."""
+        if not os.path.exists(worm_path):
+            return {"path": worm_path, "exists": False, "verified": False, "error": "missing"}
+        try:
+            from security.verify_worm_integrity import WORMVerifier  # type: ignore
+            verifier = WORMVerifier(worm_path)
+            ok, report = verifier.verify()
+            return {"path": worm_path, "exists": True, "verified": bool(ok), "report": report or {}}
+        except Exception as exc_full:
+            try:
+                from security.worm_manifest import verify_integrity  # type: ignore
+                report = verify_integrity()
+                return {"path": worm_path, "exists": True, "verified": bool(report.get("verified")), "report": report}
+            except Exception as exc_manifest:
+                return {"path": worm_path, "exists": True, "verified": False, "error": f"{exc_full} | {exc_manifest}"}
+
+    def check_worm_integrity(self, ttl_minutes: int = 20) -> Dict[str, Any]:
+        """Verify WORM across all known mounts; cache result for ttl_minutes (3x/hour)."""
+        if self._worm_cache:
+            ts, data = self._worm_cache
+            if datetime.now() - ts < timedelta(minutes=ttl_minutes):
+                return data
+
+        results = []
+        for p in self._worm_paths():
+            results.append(self._run_worm_verify(p))
+        primary = next((r for r in results if r.get("exists")), results[0] if results else {})
+        payload = {"primary": primary, "paths": results, "timestamp": datetime.now().isoformat()}
+        self._worm_cache = (datetime.now(), payload)
+        return payload
         
     def audit_memory_entry(self, memory_entry: Dict[str, Any]) -> Dict[str, Any]:
         """Audit single memory for harmful patterns"""

@@ -1,0 +1,69 @@
+{
+  "aura_version": "1.0.0",
+  "created": "2025-12-06T22:16:26.441178+00:00",
+  "total_methods": 6,
+  "methods": {
+    "0x01_BINARY_SEMANTIC": {
+      "method_byte": "0x01",
+      "name": "BINARY_SEMANTIC",
+      "description": "Template ID + Slots",
+      "best_for": "Common phrases, structured messages",
+      "compression_ratio": "1.2-2.0x",
+      "template_count": 65536,
+      "template_hash": "2eb7a68d28a7ee8d0d9d24e23e30a56b7998c8f6d666c768681abdc7660b5815",
+      "file": "binary_semantic_templates_65536.json"
+    },
+    "0x02_BRIO": {
+      "method_byte": "0x02",
+      "name": "BRIO",
+      "description": "LZ77 + Dictionary + rANS",
+      "best_for": "Technical text, repeated patterns",
+      "compression_ratio": "1.5-5.0x",
+      "dictionary_words": 59,
+      "dictionary_patterns": 9,
+      "dictionary_hash": "5c5f0effd17c29bb90235686d9f9ff012c63aba3af9233feca66484f5d4d8b69",
+      "file": "brio_dictionaries.json"
+    },
+    "0x03_AURALITE": {
+      "method_byte": "0x03",
+      "name": "AURALITE",
+      "description": "Lightweight template",
+      "best_for": "Short messages",
+      "compression_ratio": "1.2-1.8x",
+      "template_count": 10,
+      "template_hash": "ac19e79e544f8e615dd90bad96bfeb357d9f9664b4a6e110d2e1795ac9f6e72e",
+      "file": "auralite_templates.json"
+    },
+    "0x04_BROTLI": {
+      "method_byte": "0x04",
+      "name": "BROTLI",
+      "description": "Standard brotli compression",
+      "best_for": "General text",
+      "compression_ratio": "1.2-2.5x",
+      "template_count": 0,
+      "note": "Uses standard brotli algorithm, no templates needed",
+      "file": "N/A (standard library)"
+    },
+    "0x05_UNCOMPRESSED": {
+      "method_byte": "0x05",
+      "name": "UNCOMPRESSED",
+      "description": "Raw UTF-8",
+      "best_for": "Tiny messages (< 25 bytes)",
+      "compression_ratio": "1.0x",
+      "template_count": 0,
+      "note": "No compression applied",
+      "file": "N/A"
+    },
+    "0x06_BITPACKED": {
+      "method_byte": "0x06",
+      "name": "BITPACKED",
+      "description": "Bit-packed enums (4 bytes)",
+      "best_for": "Simple approvals/rejections",
+      "compression_ratio": "86-92%",
+      "enum_count": 4,
+      "enum_hash": "cdbd7317caf21f1e2baaa9b9232cf6c9fe0e9ffdb46365100997e3419d51276a",
+      "file": "bitpacked_enums.json"
+    }
+  },
+  "manifest_hash": "7ee3c739308ebe035fdeaadc40fa2e17444e642474c04702cfc0a3bbe685c845"
+}

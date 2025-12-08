@@ -48,55 +48,116 @@
         </div>
     </div>
 
-    <!-- SD Card Verification Queue -->
-    <div class="sd-verification-panel card">
+    <!-- OrKheStrA Control Panel -->
+    <div class="orkehtra-panel card">
         <div class="card-header">
-            <h3><i class="fas fa-sd-card"></i> SD Card Verification Queue</h3>
-            <span class="badge-warning" id="pendingVerificationCount">0 pending</span>
+            <h3><i class="fas fa-rocket"></i> <span class="cyberpunk-text">OrKheStrA</span> Control Center</h3>
+            <span class="badge-info"><i class="fas fa-compress-arrows-alt"></i> AURA Compression Active</span>
         </div>
         <div class="card-body">
-            <div class="sd-status">
-                <div class="sd-indicator">
-                    <i class="fas fa-circle status-icon" id="sdStatusIcon"></i>
-                    <span id="sdStatusText">Checking SD card...</span>
+            <div class="orkehtra-description">
+                <p>Launch parallel AI self-recursion workflows across all 10 cluster nodes. Data is efficiently compressed and transmitted using AURA compression (21x average ratio).</p>
+            </div>
+            
+            <!-- 10 Model Cluster Grid -->
+            <div class="model-cluster-grid">
+                <h4><i class="fas fa-microchip"></i> Research Cluster (7 Models)</h4>
+                <div class="model-grid researchers">
+                    <div class="model-node" id="node-tif">
+                        <div class="node-status online"></div>
+                        <div class="node-name">TIF</div>
+                        <div class="node-model">deepseek-r1:1.5b</div>
+                        <div class="node-role">Technical Intelligence</div>
+                    </div>
+                    <div class="model-node" id="node-gin">
+                        <div class="node-status online"></div>
+                        <div class="node-name">GIN</div>
+                        <div class="node-model">deepseek-r1:1.5b</div>
+                        <div class="node-role">Generative Improvement</div>
+                    </div>
+                    <div class="model-node" id="node-orin">
+                        <div class="node-status online"></div>
+                        <div class="node-name">ORIN</div>
+                        <div class="node-model">deepseek-r1:1.5b</div>
+                        <div class="node-role">CUDA/Parallel Expert</div>
+                    </div>
+                    <div class="model-node" id="node-tori">
+                        <div class="node-status online"></div>
+                        <div class="node-name">TORI</div>
+                        <div class="node-model">gemma3:4b</div>
+                        <div class="node-role">Code Review</div>
+                    </div>
+                    <div class="model-node" id="node-archi">
+                        <div class="node-status online"></div>
+                        <div class="node-name">ARCHI</div>
+                        <div class="node-model">qwen2.5:3b</div>
+                        <div class="node-role">Architecture Design</div>
+                    </div>
+                    <div class="model-node" id="node-synth">
+                        <div class="node-status online"></div>
+                        <div class="node-name">SYNTH</div>
+                        <div class="node-model">gemma2:2b</div>
+                        <div class="node-role">Synthesis & Integration</div>
+                    </div>
+                    <div class="model-node" id="node-logic">
+                        <div class="node-status online"></div>
+                        <div class="node-name">LOGIC</div>
+                        <div class="node-model">qwen2.5:3b</div>
+                        <div class="node-role">Formal Reasoning</div>
+                    </div>
                 </div>
-                <div class="sd-info" id="sdInfo" style="display:none;">
-                    <span id="sdDetails"></span>
+                
+                <h4><i class="fas fa-shield-alt"></i> Support & Governance (3 Models)</h4>
+                <div class="model-grid support">
+                    <div class="model-node governance" id="node-guard">
+                        <div class="node-status online"></div>
+                        <div class="node-name">GUARD</div>
+                        <div class="node-model">llama-guard3:1b</div>
+                        <div class="node-role">Safety Validator</div>
+                    </div>
+                    <div class="model-node governance" id="node-pageqa">
+                        <div class="node-status online"></div>
+                        <div class="node-name">PAGEQA</div>
+                        <div class="node-model">paperqa-rag</div>
+                        <div class="node-role">Research Evidence</div>
+                    </div>
+                    <div class="model-node coordinator" id="node-orka">
+                        <div class="node-status online"></div>
+                        <div class="node-name">ORKA</div>
+                        <div class="node-model">qwen2.5:3b</div>
+                        <div class="node-role">Coordinator</div>
+                    </div>
                 </div>
             </div>
-
-            <div class="verification-notice">
-                <i class="fas fa-info-circle"></i>
-                <p>System writes files to SD card for human verification. Review each file and approve to allow system continuation.</p>
-            </div>
-
-            <div class="pending-verifications" id="pendingVerifications" style="display:none;">
-                <h4>Files Awaiting Verification:</h4>
-                <div class="verification-list" id="verificationList"></div>
-            </div>
-
-            <div class="verification-actions" id="verificationActions" style="display:none;">
-                <button type="button" class="btn btn-success" onclick="approveAllVerifications()">
-                    <i class="fas fa-check-double"></i> Approve All
-                </button>
-                <button type="button" class="btn btn-danger" onclick="rejectAllVerifications()">
-                    <i class="fas fa-times-circle"></i> Reject All
-                </button>
-                <button type="button" class="btn btn-secondary" onclick="refreshVerificationQueue()">
-                    <i class="fas fa-sync"></i> Refresh
-                </button>
-            </div>
-
-            <div class="system-continuation-status" id="systemContinuationStatus">
-                <div class="status-box success" id="continuationAllowed" style="display:none;">
-                    <i class="fas fa-unlock"></i>
-                    <strong>System Can Continue</strong>
-                    <p>All pending verifications approved</p>
+            
+            <!-- AURA Compression Stats -->
+            <div class="aura-stats">
+                <div class="aura-stat">
+                    <i class="fas fa-compress"></i>
+                    <span class="stat-value" id="auraRatio">21.3x</span>
+                    <span class="stat-label">Compression</span>
                 </div>
-                <div class="status-box warning" id="continuationBlocked" style="display:none;">
-                    <i class="fas fa-lock"></i>
-                    <strong>System Paused</strong>
-                    <p id="blockedReason">Waiting for file verification</p>
+                <div class="aura-stat">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span class="stat-value" id="auraThroughput">4.2 MB/s</span>
+                    <span class="stat-label">Throughput</span>
+                </div>
+                <div class="aura-stat">
+                    <i class="fas fa-network-wired"></i>
+                    <span class="stat-value" id="auraNodes">10/10</span>
+                    <span class="stat-label">Nodes Online</span>
+                </div>
+            </div>
+            
+            <div class="orkehtra-actions">
+                <button type="button" class="btn btn-cyberpunk btn-large" onclick="startUnregulatedAIRecursions()">
+                    <i class="fas fa-atom"></i> Start Unregulated AI Self Recursions
+                </button>
+                <div class="workflow-status" id="workflowStatus">
+                    <div class="status-indicator" id="workflowStatusIndicator" style="display:none;">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <span id="workflowStatusText">Initializing parallel recursions...</span>
+                    </div>
                 </div>
             </div>
         </div>

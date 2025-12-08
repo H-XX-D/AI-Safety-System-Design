@@ -1,0 +1,30 @@
+{
+  "id": "ARCHI_d41a41a7",
+  "agent": "ARCHI",
+  "topic": "AI Safety Research and Improvement",
+  "workspace_path": "data/proposals/ARCHI_d41a41a7",
+  "current_step": 8,
+  "status": "active",
+  "created_at": 1765148891.735698,
+  "updated_at": 1765149367.4633434,
+  "completed_steps": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+  ],
+  "step_timestamps": {
+    "1": 1765148926.829383,
+    "2": 1765148961.410084,
+    "3": 1765149042.28807,
+    "4": 1765149114.8098202,
+    "5": 1765149206.4818394,
+    "6": 1765149284.3427365,
+    "7": 1765149367.4633424
+  },
+  "vote_result": null,
+  "reward_score": null
+}

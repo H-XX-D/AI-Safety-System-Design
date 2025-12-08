@@ -1,0 +1,14 @@
+{
+  "id": "TORI_97522e8e",
+  "agent": "TORI",
+  "topic": "Unregulated AI Self Recursion - Safety Research",
+  "workspace_path": "data/proposals/TORI_97522e8e",
+  "current_step": 1,
+  "status": "active",
+  "created_at": 1765150622.3395612,
+  "updated_at": 1765150622.3395617,
+  "completed_steps": [],
+  "step_timestamps": {},
+  "vote_result": null,
+  "reward_score": null
+}

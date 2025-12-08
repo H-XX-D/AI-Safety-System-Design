@@ -1,0 +1,14 @@
+{
+  "id": "GUARD_2a303b71",
+  "agent": "GUARD",
+  "topic": "Unregulated AI Self Recursion - Safety Research",
+  "workspace_path": "data/proposals/GUARD_2a303b71",
+  "current_step": 1,
+  "status": "active",
+  "created_at": 1765150619.4724019,
+  "updated_at": 1765150619.4724023,
+  "completed_steps": [],
+  "step_timestamps": {},
+  "vote_result": null,
+  "reward_score": null
+}
