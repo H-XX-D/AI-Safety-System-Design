@@ -111,6 +111,62 @@ function emergencyHalt() {
     showModal('emergencyModal');
 }
 
+// ===== ORKA CARETAKER (20-step workflow shepherd) =====
+async function startOrkaCaretaker() {
+    try {
+        showToast('Starting ORKA caretaker workflow...', 'info', 2000);
+        const resp = await fetch('/api/workflow/start-parallel-recursions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({
+                topic: 'ORKA Caretaker - Guided 20-step workflow',
+                researchers_only: false,
+                async: true
+            })
+        });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+        if (data.job_id) {
+            showToast(`Caretaker running (job ${data.job_id})`, 'success', 3000);
+            pollCaretakerStatus(data.job_id);
+        } else {
+            showToast('Caretaker started (no job id)', 'success', 2000);
+        }
+    } catch (e) {
+        console.error('Caretaker start failed', e);
+        showToast(`Caretaker error: ${e.message}`, 'error', 4000);
+    }
+}
+
+function pollCaretakerStatus(jobId) {
+    let pollAttempts = 0;
+    const interval = setInterval(async () => {
+        try {
+            pollAttempts += 1;
+            const resp = await fetch(`/api/workflow/status/${jobId}`);
+            if (!resp.ok) return;
+            const data = await resp.json();
+            const step = data.current_step || 0;
+            const stepName = data.step_name || 'processing';
+            console.log(`[ORKA caretaker] step ${step}/20 - ${stepName}`);
+            if (data.status === 'completed' || step >= 20) {
+                clearInterval(interval);
+                showToast('ORKA caretaker complete', 'success', 3000);
+                console.log('[ORKA caretaker] complete', data);
+            }
+        } catch (err) {
+            console.warn('Caretaker poll error', err);
+            if (pollAttempts > 30) {
+                clearInterval(interval);
+                showToast('Caretaker stopped polling', 'warning', 3000);
+            }
+        }
+    }, 3000);
+}
+
 async function confirmEmergencyHalt() {
     try {
         showToast('Initiating emergency halt...', 'warning');
@@ -360,6 +416,13 @@ function setupSocketIO() {
         // Update workflow visualization if visible
         if (typeof updateWorkflowVisualization === 'function') {
             updateWorkflowVisualization(data.proposal_id, data.to_phase);
+        }
+    });
+
+    // Live thinking stream (recent proposal snippets per agent)
+    socket.on('thinking:update', (data) => {
+        if (typeof window.applyThinkingUpdate === 'function') {
+            window.applyThinkingUpdate(data);
         }
     });
     

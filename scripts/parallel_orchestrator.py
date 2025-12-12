@@ -70,7 +70,7 @@ logger = get_logger()
 # CONFIGURATION
 # ============================================================
 
-RESEARCHER_NODES = ["GIN", "ORIN", "TIF", "TORI", "ARCHI", "NOVEL"]
+RESEARCHER_NODES = ["GIN", "ORIN", "TIF", "TORI", "ARCHI", "THEO", "NOVEL"]
 CONTEXT_DIR = Path("data/parallel_contexts")
 RESULTS_DIR = Path("data/parallel_results")
 

@@ -21,11 +21,20 @@ from typing import Dict, List, Any, Optional, Tuple
 from dataclasses import dataclass, asdict
 from pathlib import Path
 import asyncio
+import json
+import hashlib
 
 logger = logging.getLogger(__name__)
 
 # Track what's available
 INTEGRATIONS_AVAILABLE: Dict[str, bool] = {}
+
+# Optional aura compressor (for cached/offline storage of tool outputs)
+try:  # pragma: no cover - optional dependency
+    from communication.aura_compressor import create_compressor
+    _AURA_COMPRESSOR = create_compressor(enable_aura=True)
+except Exception:
+    _AURA_COMPRESSOR = None
 
 
 # ============================================================================
@@ -207,7 +216,7 @@ INTEGRATION_REGISTRY: Dict[str, IntegrationInfo] = {
         description='Evidence-grounded research via local RAG',
         category='research',
         capabilities=['query_documents', 'cite_sources', 'summarize'],
-        nano_nodes=['PAGEQA', 'ORIN'],
+        nano_nodes=['ALL'],
     ),
     'robin_hypothesis': IntegrationInfo(
         name='Robin Hypothesis',
@@ -215,7 +224,7 @@ INTEGRATION_REGISTRY: Dict[str, IntegrationInfo] = {
         description='Scientific hypothesis generation & experiment design',
         category='research',
         capabilities=['generate_hypotheses', 'design_experiments', 'rank_hypotheses'],
-        nano_nodes=['TIF', 'GIN', 'ORIN'],
+        nano_nodes=['ALL'],
     ),
     'agent0_self_play': IntegrationInfo(
         name='Agent0 Self-Play',
@@ -223,7 +232,7 @@ INTEGRATION_REGISTRY: Dict[str, IntegrationInfo] = {
         description='Competitive hypothesis improvement via self-play',
         category='training',
         capabilities=['self_play', 'hypothesis_competition', 'skill_learning'],
-        nano_nodes=['ORKA', 'TIF', 'GIN'],
+        nano_nodes=['ALL'],
     ),
     'safety_quality_tools': IntegrationInfo(
         name='Safety Quality Tools',
@@ -231,7 +240,7 @@ INTEGRATION_REGISTRY: Dict[str, IntegrationInfo] = {
         description='Proposal validation, scoring, and deduplication',
         category='safety',
         capabilities=['consistency_check', 'quality_scoring', 'deduplication', 'safe_filtering'],
-        nano_nodes=['GUARD', 'TORI', 'ARCHI'],
+        nano_nodes=['ALL'],
     ),
     'tool_servers': IntegrationInfo(
         name='Tool Servers',
@@ -239,7 +248,7 @@ INTEGRATION_REGISTRY: Dict[str, IntegrationInfo] = {
         description='Agent0 code/bash execution tools',
         category='execution',
         capabilities=['python_code', 'bash_terminal', 'sql', 'sandbox'],
-        nano_nodes=['GIN', 'TIF'],
+        nano_nodes=['ALL'],
     ),
     'ai_memory_system': IntegrationInfo(
         name='AI Memory System',
@@ -255,7 +264,7 @@ INTEGRATION_REGISTRY: Dict[str, IntegrationInfo] = {
         description='Reinforcement learning for self-improvement',
         category='training',
         capabilities=['training_config', 'reward_signals', 'policy_updates'],
-        nano_nodes=['ORKA'],
+        nano_nodes=['ALL'],
     ),
     'tool_hypothesis': IntegrationInfo(
         name='Tool Hypothesis',
@@ -263,7 +272,7 @@ INTEGRATION_REGISTRY: Dict[str, IntegrationInfo] = {
         description='Hypothesis generation tool for agents',
         category='research',
         capabilities=['generate_hypothesis', 'rank_by_impact'],
-        nano_nodes=['TIF', 'GIN', 'ORIN', 'PAGEQA'],
+        nano_nodes=['ALL'],
     ),
 }
 
@@ -321,6 +330,46 @@ class IntegrationManager:
         self._self_play: Optional[Any] = None
         self._tool_manager: Optional[Any] = None
         self._initialized: Dict[str, bool] = {}
+        self._cache: Dict[str, Any] = {}
+        self._cache_dir = Path("data") / "aura_cache"
+        self._cache_dir.mkdir(parents=True, exist_ok=True)
+        self._aura = _AURA_COMPRESSOR
+
+    def _make_cache_key(self, prefix: str, payload: Any) -> str:
+        """Create a stable cache key for a payload."""
+        try:
+            serialized = json.dumps(payload, sort_keys=True, default=str).encode()
+        except Exception:
+            serialized = repr(payload).encode()
+        digest = hashlib.sha1(serialized).hexdigest()[:16]
+        return f"{prefix}-{digest}"
+
+    def _store_cache(self, key: str, value: Any) -> None:
+        """Store result in memory and, if available, as an aura-compressed blob."""
+        self._cache[key] = value
+        if not self._aura:
+            return
+        try:
+            blob = self._aura.compress(value)
+            out_path = self._cache_dir / f"{key}.aura"
+            out_path.write_bytes(blob)
+        except Exception as e:  # pragma: no cover - best effort
+            logger.debug(f"aura_cache_write_failed key={key} err={e}")
+
+    def _load_cache(self, key: str) -> Optional[Any]:
+        """Load cached result from memory or aura file."""
+        if key in self._cache:
+            return self._cache[key]
+        if self._aura:
+            path = self._cache_dir / f"{key}.aura"
+            if path.exists():
+                try:
+                    data = self._aura.decompress(path.read_bytes())
+                    self._cache[key] = data
+                    return data
+                except Exception as e:  # pragma: no cover - best effort
+                    logger.debug(f"aura_cache_read_failed key={key} err={e}")
+        return None
     
     def get_rag(self) -> Optional[Any]:
         """Get or create RAG instance."""
@@ -366,11 +415,17 @@ class IntegrationManager:
         Uses PAGEQA nano's Ollama for evidence-grounded research.
         Falls back to direct PAGEQA integration if PaperQA not available.
         """
+        cache_key = self._make_cache_key("rag", {"q": query, **kwargs})
+        cached = self._load_cache(cache_key)
+        if cached is not None:
+            return cached
+
         # Try direct PAGEQA first (more reliable, no PaperQA dependency)
         try:
             from integrations.paperqa_rag import research_with_pageqa
             result = research_with_pageqa(query)
             if result and result.get('answer') and not result['answer'].startswith('Unable to query'):
+                self._store_cache(cache_key, result)
                 return result
         except ImportError:
             pass
@@ -385,7 +440,8 @@ class IntegrationManager:
         try:
             result = rag.query(query, **kwargs)
             if hasattr(result, 'to_dict'):
-                return result.to_dict()
+                result = result.to_dict()
+            self._store_cache(cache_key, result)
             return result
         except Exception as e:
             logger.error(f"RAG query failed: {e}")
@@ -403,12 +459,22 @@ class IntegrationManager:
             return []
         
         try:
+            cache_key = self._make_cache_key(
+                "hypothesis",
+                {"target": target_component, "context": context, "n": num_hypotheses},
+            )
+            cached = self._load_cache(cache_key)
+            if cached is not None:
+                return cached
+
             hypotheses = gen.generate_improvement_hypotheses(
                 target_component=target_component,
                 context=context,
                 num_hypotheses=num_hypotheses
             )
-            return [asdict(h) if hasattr(h, '__dataclass_fields__') else h for h in hypotheses]
+            data = [asdict(h) if hasattr(h, '__dataclass_fields__') else h for h in hypotheses]
+            self._store_cache(cache_key, data)
+            return data
         except Exception as e:
             logger.error(f"Hypothesis generation failed: {e}")
             return []
@@ -424,8 +490,18 @@ class IntegrationManager:
             return {'error': 'Safety quality tools not available'}
         
         try:
+            cache_key = self._make_cache_key(
+                "consistency",
+                {"proposal": proposal, "deception": deception_score, "peers": peer_reviews},
+            )
+            cached = self._load_cache(cache_key)
+            if cached is not None:
+                return cached
+
             checker = proposal_consistency_tool()
-            return checker.check_proposal(proposal, deception_score, peer_reviews)
+            result = checker.check_proposal(proposal, deception_score, peer_reviews)
+            self._store_cache(cache_key, result)
+            return result
         except Exception as e:
             logger.error(f"Proposal consistency check failed: {e}")
             return {'error': str(e)}
@@ -440,8 +516,18 @@ class IntegrationManager:
             return {'error': 'Safety quality tools not available'}
         
         try:
+            cache_key = self._make_cache_key(
+                "score",
+                {"hypothesis": hypothesis, "evidence": evidence},
+            )
+            cached = self._load_cache(cache_key)
+            if cached is not None:
+                return cached
+
             scorer = hypothesis_scoring_tool()
-            return scorer.score_hypothesis(hypothesis, evidence or [])
+            result = scorer.score_hypothesis(hypothesis, evidence or [])
+            self._store_cache(cache_key, result)
+            return result
         except Exception as e:
             logger.error(f"Hypothesis scoring failed: {e}")
             return {'error': str(e)}

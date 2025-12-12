@@ -23,6 +23,13 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple
 
+# Optional: persisted proposals store (fallback when present)
+try:  # pragma: no cover - optional import
+    from memory.personal_memory import PersonalMemory
+    _personal_memory = PersonalMemory()
+except Exception:
+    _personal_memory = None
+
 logger = logging.getLogger(__name__)
 
 # Cache for performance
@@ -58,14 +65,60 @@ def _set_cached(key: str, value: Any):
 
 # Cluster configuration
 NANO_NODES = {
-    "GIN": {"ip": "192.168.0.242", "user": "gin", "model": "deepseek-r1:1.5b", "role": "code_generation"},
-    "ORIN": {"ip": "192.168.0.160", "user": "orin", "model": "deepseek-r1:1.5b", "role": "nvidia_optimization"},
-    "TIF": {"ip": "192.168.0.213", "user": "tif", "model": "deepseek-r1:1.5b", "role": "technical_analysis"},
-    "TORI": {"ip": "192.168.0.235", "user": "tori", "model": "gemma3:4b", "role": "code_review"},
-    "ARCHI": {"ip": "192.168.0.232", "user": "archi", "model": "qwen2.5:3b", "role": "architecture"},
-    "PAGEQA": {"ip": "localhost", "user": "xx", "model": "paperqa", "role": "research"},
-    "GUARD": {"ip": "localhost", "user": "xx", "model": "llama-guard3:1b", "role": "safety"},
-    "THEO": {"ip": "192.168.0.168", "user": "page", "model": "qwen2.5:3b", "role": "research"},
+    "TIF": {
+        "ip": "192.168.0.213",
+        "user": "tif",
+        "model": "phi3:mini",
+        "role": "technical_analysis",
+    },
+    "GIN": {
+        "ip": "192.168.0.242",
+        "user": "gin",
+        "model": "deepseek-r1:1.5b",
+        "role": "code_generation",
+    },
+    "ORIN": {
+        "ip": "192.168.0.160",
+        "user": "orin",
+        "model": "qwen2.5:3b",
+        "role": "nvidia_optimization",
+    },
+    "TORI": {
+        "ip": "192.168.0.235",
+        "user": "tori",
+        "model": "llama3.2:3b",
+        "role": "code_review",
+    },
+    "ARCHI": {
+        "ip": "192.168.0.232",
+        "user": "archi",
+        "model": "codegemma:2b",
+        "role": "architecture",
+    },
+    "THEO": {
+        "ip": "192.168.0.168",
+        "user": "theo",
+        "model": "gemma2:2b",
+        "role": "research",
+    },
+    "NOVEL": {
+        "ip": "192.168.0.146",
+        "user": "novel",
+        "model": "qwen2.5-coder:3b",
+        "role": "creative",
+    },
+    "PAGEQA": {
+        "ip": "localhost",
+        "user": "xx",
+        "model": "paperqa:latest",
+        "role": "research",
+    },
+    "GUARD": {
+        "ip": "localhost",
+        "user": "xx",
+        "model": "llama-guard3:1b",
+        "role": "safety",
+    },
 }
 
 ORKA_NODE = {
@@ -79,7 +132,13 @@ ORKA_NODE = {
 DEFAULT_NANO_PASSWORD = os.getenv("NANO_DEFAULT_PASSWORD", "1")
 
 
-def check_node_status(name: str, ip: str, port: int = 11434, timeout: float = 3.0) -> dict:
+def check_node_status(
+    name: str,
+    ip: str,
+    port: int = 11434,
+    timeout: float = 3.0,
+    expected_model: Optional[str] = None,
+) -> dict:
     """Check if a nano node is online."""
     status = {
         "name": name,
@@ -89,6 +148,8 @@ def check_node_status(name: str, ip: str, port: int = 11434, timeout: float = 3.
         "ollama_running": False,
         "model": None,
         "response_time_ms": None,
+        "error": None,
+        "missing_model": False,
     }
     
     try:
@@ -106,7 +167,25 @@ def check_node_status(name: str, ip: str, port: int = 11434, timeout: float = 3.
             
             models = resp.json().get("models", [])
             if models:
-                status["model"] = models[0].get("name", "unknown")
+                model_names = [m.get("name") for m in models if m.get("name")]
+                status["model"] = model_names[0] if model_names else None
+                
+                if expected_model:
+                    expected_variants = {expected_model}
+                    if ":" not in expected_model:
+                        expected_variants.add(f"{expected_model}:latest")
+                    
+                    if not any(variant in model_names for variant in expected_variants):
+                        status["missing_model"] = True
+                        status["online"] = False
+                        status["error"] = f"Expected model {expected_model} not loaded"
+                        
+                if status["missing_model"]:
+                    logger.debug(f"{name}: missing expected model {expected_model}, found {model_names}")
+            elif expected_model:
+                status["missing_model"] = True
+                status["online"] = False
+                status["error"] = f"Expected model {expected_model} not loaded"
     except Exception as e:
         logger.debug(f"Error checking {name}: {e}")
     
@@ -125,7 +204,7 @@ def get_cluster_status_live() -> Dict[str, Any]:
     
     # Check each nano
     for name, config in NANO_NODES.items():
-        status = check_node_status(name, config["ip"])
+        status = check_node_status(name, config["ip"], expected_model=config.get("model"))
         status["role"] = config["role"]
         status["expected_model"] = config["model"]
         nodes[name] = status
@@ -133,7 +212,7 @@ def get_cluster_status_live() -> Dict[str, Any]:
             online_count += 1
     
     # Check ORKA (localhost)
-    orka_status = check_node_status("ORKA", "localhost")
+    orka_status = check_node_status("ORKA", "localhost", expected_model=ORKA_NODE["model"])
     orka_status["role"] = "orchestrator"
     orka_status["expected_model"] = ORKA_NODE["model"]
     nodes["ORKA"] = orka_status
@@ -172,7 +251,7 @@ def generate_on_node(node_name: str, prompt: str, temperature: float = 0.7, max_
         port = 11434  # Ollama default port
         
         # Check if node is online
-        status = check_node_status(node_name, ip, port)
+        status = check_node_status(node_name, ip, port, expected_model=config.get("model"))
         if not status["online"]:
             logger.error(f"Node {node_name} is not online")
             return None
@@ -209,7 +288,17 @@ def generate_on_best_available(prompt: str, temperature: float = 0.7, max_tokens
         status = get_cluster_status_live()
         
         # Try ORKA first (orchestrator), then other nodes
-        priority_order = ["ORKA", "TIF", "GIN", "ORIN", "TORI", "ARCHI", "PAGEQA"]
+        priority_order = [
+            "ORKA",
+            "TIF",
+            "GIN",
+            "ORIN",
+            "TORI",
+            "ARCHI",
+            "THEO",
+            "NOVEL",
+            "PAGEQA",
+        ]
         
         for node_name in priority_order:
             if node_name in status["nodes"] and status["nodes"][node_name]["online"]:
@@ -238,7 +327,7 @@ def check_content_safety(content: str) -> Dict[str, Any]:
         port = 11434
         
         # Check if GUARD is online
-        status = check_node_status("GUARD", ip, port)
+        status = check_node_status("GUARD", ip, port, expected_model=guard_config.get("model"))
         if not status["online"]:
             return {"safe": True, "error": "GUARD node not available"}
         
@@ -289,8 +378,9 @@ def get_cluster_roles() -> Dict[str, Any]:
         'code_generation': ['TIF', 'GIN'],
         'nvidia_optimization': ['ORIN'],
         'code_review': ['TORI'],
-        'research': ['PAGEQA'],
         'architecture': ['ARCHI'],
+        'research': ['PAGEQA', 'THEO'],
+        'creative': ['NOVEL'],
         'safety': ['GUARD'],
         'orchestration': ['ORKA']
     }
@@ -647,8 +737,60 @@ def record_detection_event(event: Dict[str, Any]):
 
 
 def get_recent_proposals(limit: int = 10) -> List[Dict[str, Any]]:
-    """Get recent proposals from live data."""
-    return _live_proposals[:limit]
+    """Get recent proposals from live data or persisted memory."""
+    def _normalize(proposal: Dict[str, Any]) -> Dict[str, Any]:
+        """Normalize proposal fields so UI stays consistent."""
+        pid = proposal.get("id") or proposal.get("proposal_id") or proposal.get("uid") or f"prop_{int(time.time() * 1000)}"
+        agent = proposal.get("agent_id") or proposal.get("agent") or proposal.get("researcher") or proposal.get("name") or "UNKNOWN"
+        desc = proposal.get("description") or proposal.get("title") or proposal.get("summary") or proposal.get("component") or "Active task"
+        status = proposal.get("status") or "in_review"
+        ts = proposal.get("timestamp") or proposal.get("created_at") or datetime.now().isoformat()
+        deception = proposal.get("deception_confidence") or proposal.get("confidence") or 0.0
+        reward = proposal.get("reward") if proposal.get("reward") is not None else proposal.get("score")
+        component = proposal.get("component") or proposal.get("target_component") or "unknown"
+        return {
+            "id": pid,
+            "proposal_id": pid,
+            "agent_id": agent,
+            "description": desc,
+            "status": status,
+            "timestamp": ts,
+            "deception_confidence": deception,
+            "reward": reward,
+            "component": component,
+            "debate_votes": proposal.get("debate_votes", []),
+        }
+
+    proposals = []
+    if _live_proposals:
+        proposals = _live_proposals[:limit]
+    elif _personal_memory:
+        try:
+            records = _personal_memory.get_recent_proposals(limit=limit)
+            proposals = [r.to_dict() if hasattr(r, 'to_dict') else r.__dict__ for r in records]
+        except Exception:
+            proposals = []
+
+    if proposals:
+        return [_normalize(p) for p in proposals][:limit]
+
+    # Fallback: synthesize heartbeats from online nodes so UI isn't blank
+    try:
+        cluster = get_cluster_status_live()
+        for name, node in cluster.get("nodes", {}).items():
+            if not node.get("online"):
+                continue
+            proposals.append(_normalize({
+                "id": f"hb_{name.lower()}_{int(time.time())}",
+                "agent_id": name,
+                "description": f"Live heartbeat from {node.get('expected_model') or node.get('model') or 'model'} @ {node.get('response_time_ms')} ms",
+                "status": "monitoring",
+                "timestamp": datetime.now().isoformat(),
+            }))
+    except Exception:
+        pass
+
+    return proposals[:limit]
 
 
 def get_proposals_by_agent(agent_id: str, limit: int = 20) -> List[Dict[str, Any]]:

@@ -112,7 +112,7 @@ CONFIG = get_config()
 # CONFIGURATION
 # ============================================================
 
-RESEARCHER_NODES = ["GIN", "ORIN", "TIF", "TORI", "ARCHI", "NOVEL"]
+RESEARCHER_NODES = ["GIN", "ORIN", "TIF", "TORI", "ARCHI", "THEO", "NOVEL"]
 CONTEXT_DIR = Path("data/parallel_contexts_v2")
 RESULTS_DIR = Path("data/parallel_results_v2")
 

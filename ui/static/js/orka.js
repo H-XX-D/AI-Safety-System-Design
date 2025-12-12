@@ -6,20 +6,32 @@
 
 // Current proposal being viewed
 let currentProposal = null;
+let currentWorkflowJobId = null;
+let workflowPollInterval = null;
 
-// ===== UNREGULATED AI SELF RECURSIONS =====
+// ===== UNREGULATED AI SELF RECURSIONS (FULL 20-STEP WORKFLOW) =====
 
 async function startUnregulatedAIRecursions() {
     const statusIndicator = document.getElementById('workflowStatusIndicator');
     const statusText = document.getElementById('workflowStatusText');
+    const progressBar = document.getElementById('workflowProgressBar');
+    const progressContainer = document.getElementById('workflowProgressContainer');
+    const stepDetails = document.getElementById('workflowStepDetails');
     
-    // Show status
+    // Show status and progress bar
     if (statusIndicator) {
         statusIndicator.style.display = 'flex';
         statusIndicator.classList.add('active');
     }
+    if (progressContainer) {
+        progressContainer.style.display = 'block';
+    }
     if (statusText) {
-        statusText.textContent = 'Initializing parallel AI self recursions...';
+        statusText.textContent = 'Initializing 20-step parallel AI self recursions...';
+        statusText.style.color = '#00aaff';
+    }
+    if (progressBar) {
+        progressBar.style.width = '0%';
     }
     
     // Update node status to busy - 7 researchers + 3 support = 10 nodes
@@ -33,17 +45,7 @@ async function startUnregulatedAIRecursions() {
     });
     
     try {
-        // All 10 models: 7 researchers + 3 support
-        const researcherNodes = ['TIF', 'GIN', 'ORIN', 'TORI', 'ARCHI', 'THEO', 'NOVEL'];
-        const supportNodes = ['GUARD', 'PAGEQA', 'ORKA'];
-        const allModelNodes = [...researcherNodes, ...supportNodes];
-        
-        // Use the new parallel endpoint for REAL inference across all nodes
-        if (statusText) {
-            statusText.textContent = 'Launching parallel recursions on 11 models with real inference...';
-        }
-        
-        // Single API call triggers parallel inference on all nodes
+        // Start the async 20-step workflow
         const response = await fetch('/api/workflow/start-parallel-recursions', {
             method: 'POST',
             headers: {
@@ -51,83 +53,32 @@ async function startUnregulatedAIRecursions() {
                 'X-Requested-With': 'XMLHttpRequest'
             },
             body: JSON.stringify({
-                topic: 'Unregulated AI Self Recursion - Safety Research',
-                researchers_only: false
+                topic: 'Unregulated AI Self Recursion - Full Self-Improvement Research',
+                researchers_only: false,
+                async: true  // Use async mode with job tracking
             })
         });
         
-        let results = [];
-        if (response.ok) {
-            const data = await response.json();
-            // Convert proposals array to results format
-            results = (data.proposals || []).map(p => ({
-                node: p.node,
-                success: p.success,
-                result: p
-            }));
-            
-            // Update status with real stats
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.job_id) {
+            // Async mode - poll for status
+            currentWorkflowJobId = data.job_id;
             if (statusText) {
-                statusText.textContent = `✓ ${data.successful}/${data.total_nodes} nodes completed | ${data.total_tokens} tokens | ${data.total_time}s`;
-                statusText.style.color = data.successful >= 7 ? '#00ff88' : '#ffaa00';
+                statusText.textContent = `Workflow started (${data.job_id}) - Running Step 1/20...`;
             }
-        } else {
-            // Fallback: call each node individually
-            const promises = allModelNodes.map(async (node) => {
-                try {
-                    const resp = await fetch(`/api/workflow/run/${node}`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ topic: 'Unregulated AI Self Recursion - Safety Research' })
-                    });
-                    if (resp.ok) {
-                        const result = await resp.json();
-                        return { node, success: true, result };
-                    }
-                    return { node, success: false, error: await resp.text() };
-                } catch (err) {
-                    return { node, success: false, error: err.message };
-                }
-            });
-            results = await Promise.all(promises);
+            
+            // Start polling for workflow status
+            pollWorkflowStatus(data.job_id, statusIndicator, statusText, progressBar, stepDetails);
+            
+        } else if (data.proposals) {
+            // Sync mode - immediate results
+            handleWorkflowComplete(data, statusIndicator, statusText, progressBar);
         }
-        
-        // Update node statuses
-        results.forEach(({ node, success }) => {
-            const nodeEl = document.getElementById(`node-${node.toLowerCase()}`);
-            if (nodeEl) {
-                const status = nodeEl.querySelector('.node-status');
-                if (status) {
-                    status.classList.remove('busy');
-                    if (success) {
-                        status.classList.add('online');
-                    } else {
-                        status.classList.add('offline');
-                    }
-                }
-            }
-        });
-        
-        // Show results (only if not already set by parallel endpoint)
-        const successCount = results.filter(r => r.success).length;
-        if (statusText && !statusText.textContent.includes('tokens')) {
-            statusText.textContent = `✓ ${successCount}/11 nodes completed parallel recursions`;
-            statusText.style.color = successCount >= 7 ? '#00ff88' : '#ffaa00';
-        }
-        
-        // Update stats display
-        updateParallelStats(successCount, results);
-        
-        // Hide status after 8 seconds
-        setTimeout(() => {
-            if (statusIndicator) {
-                statusIndicator.style.display = 'none';
-                statusIndicator.classList.remove('active');
-            }
-        }, 8000);
-        
-        // Refresh pipeline data
-        loadPipelineData();
         
     } catch (error) {
         console.error('Error starting AI recursions:', error);
@@ -140,8 +91,131 @@ async function startUnregulatedAIRecursions() {
             if (statusIndicator) {
                 statusIndicator.style.display = 'none';
             }
-        }, 3000);
+        }, 5000);
     }
+}
+
+// Poll workflow status until complete
+function pollWorkflowStatus(jobId, statusIndicator, statusText, progressBar, stepDetails) {
+    // Clear any existing poll
+    if (workflowPollInterval) {
+        clearInterval(workflowPollInterval);
+    }
+    
+    const poll = async () => {
+        try {
+            const resp = await fetch(`/api/workflow/status/${jobId}`);
+            if (!resp.ok) return;
+            
+            const data = await resp.json();
+            
+            // Update progress
+            const step = data.current_step || 0;
+            const phase = data.current_phase || 'A';
+            const stepName = data.step_name || 'Processing';
+            const progress = Math.round((step / 20) * 100);
+            
+            if (progressBar) {
+                progressBar.style.width = `${progress}%`;
+            }
+            
+            if (statusText) {
+                if (data.status === 'running') {
+                    statusText.textContent = `Phase ${phase} | Step ${step}/20: ${stepName}`;
+                    statusText.style.color = '#00aaff';
+                } else if (data.status === 'completed') {
+                    statusText.textContent = `✓ Complete! ${data.successful}/${data.total_nodes} proposals | ${data.total_tokens} tokens | ${data.total_time}s`;
+                    statusText.style.color = '#00ff88';
+                } else if (data.status === 'error') {
+                    statusText.textContent = `✗ Error: ${data.error}`;
+                    statusText.style.color = '#ff4444';
+                }
+            }
+            
+            // Show step details
+            if (stepDetails && data.step_outputs) {
+                const stepsCompleted = Object.keys(data.step_outputs).length;
+                let details = `Steps completed: ${stepsCompleted}/20\n`;
+                stepDetails.textContent = details;
+            }
+            
+            // Update node status based on latest results
+            if (data.proposals) {
+                data.proposals.forEach(p => {
+                    const nodeEl = document.getElementById(`node-${p.node.toLowerCase()}`);
+                    if (nodeEl) {
+                        const status = nodeEl.querySelector('.node-status');
+                        if (status) {
+                            status.classList.remove('busy', 'offline');
+                            status.classList.add(p.success ? 'online' : 'offline');
+                        }
+                    }
+                });
+            }
+            
+            // Stop polling when done
+            if (data.status === 'completed' || data.status === 'error') {
+                clearInterval(workflowPollInterval);
+                workflowPollInterval = null;
+                
+                if (progressBar) progressBar.style.width = '100%';
+                
+                // Handle complete
+                handleWorkflowComplete(data, statusIndicator, statusText, progressBar);
+            }
+            
+        } catch (err) {
+            console.error('Poll error:', err);
+        }
+    };
+    
+    // Poll immediately then every 3 seconds
+    poll();
+    workflowPollInterval = setInterval(poll, 3000);
+}
+
+// Handle workflow completion
+function handleWorkflowComplete(data, statusIndicator, statusText, progressBar) {
+    const proposals = data.proposals || [];
+    const successCount = proposals.filter(p => p.success).length;
+    
+    // Update final node statuses
+    proposals.forEach(p => {
+        const nodeEl = document.getElementById(`node-${p.node.toLowerCase()}`);
+        if (nodeEl) {
+            const status = nodeEl.querySelector('.node-status');
+            if (status) {
+                status.classList.remove('busy');
+                status.classList.add(p.success ? 'online' : 'offline');
+            }
+        }
+    });
+    
+    // Update stats
+    updateParallelStats(successCount, proposals);
+    
+    // Log proposals to console for review
+    console.log('=== WORKFLOW COMPLETE ===');
+    proposals.forEach(p => {
+        console.log(`${p.node} (${p.role}): ${p.success ? '✓' : '✗'}`);
+        if (p.idea) console.log(`  Idea: ${p.idea.substring(0, 100)}...`);
+        if (p.vote) console.log(`  Vote: ${p.vote.substring(0, 100)}...`);
+    });
+    
+    // Hide status after 15 seconds (longer for 20-step workflow)
+    setTimeout(() => {
+        if (statusIndicator) {
+            statusIndicator.style.display = 'none';
+            statusIndicator.classList.remove('active');
+        }
+        const progressContainer = document.getElementById('workflowProgressContainer');
+        if (progressContainer) {
+            progressContainer.style.display = 'none';
+        }
+    }, 15000);
+    
+    // Refresh pipeline data
+    loadPipelineData();
 }
 
 function updateParallelStats(activeNodes, results) {

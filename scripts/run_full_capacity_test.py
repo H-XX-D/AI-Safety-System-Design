@@ -51,8 +51,8 @@ from run_20step import run_20_step_workflow, track_improvement, RESEARCHERS
 # CONFIGURATION
 # =============================================================================
 
-# The 6 researcher nodes (not ORKA, not PAGEQA)
-RESEARCHER_NODES = ["GIN", "ORIN", "TIF", "TORI", "ARCHI", "NOVEL"]
+# The researcher nodes (not ORKA, not PAGEQA)
+RESEARCHER_NODES = ["GIN", "ORIN", "TIF", "TORI", "ARCHI", "THEO", "NOVEL"]
 
 # Lock file for preventing concurrent runs
 LOCK_FILE = Path("/tmp/orkastrator_full_test.lock")

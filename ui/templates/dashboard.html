@@ -963,5 +963,5 @@ function updateModelGrid(cluster) {
     }
 }
 </script>
-<script src="{{ url_for('static', filename='js/orka.js') }}"></script>
+<script src="{{ url_for('static', filename='js/orka.js') }}?v={{ range(100000) | random }}"></script>
 {% endblock %}

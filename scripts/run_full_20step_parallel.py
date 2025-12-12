@@ -55,6 +55,7 @@ def check_cluster_status():
         "TIF": "192.168.0.213",
         "TORI": "192.168.0.235",
         "ARCHI": "192.168.0.232",
+        "THEO": "192.168.0.110",
         "NOVEL": "192.168.0.146",
         "PAGEQA": "192.168.0.168",
         "ORKA": "localhost",
@@ -339,14 +340,14 @@ def main():
     
     # Check cluster status
     if not args.skip_status:
-        online, offline = check_cluster_status()
+        online, _ = check_cluster_status()
         
         if "ORKA" not in online:
             print("\n❌ ORKA (localhost) is required but offline!")
             sys.exit(1)
         
         # Filter researchers to only online ones
-        researcher_nodes = ["GIN", "ORIN", "TIF", "TORI", "ARCHI", "NOVEL"]
+        researcher_nodes = ["GIN", "ORIN", "TIF", "TORI", "ARCHI", "THEO", "NOVEL"]
         if args.researchers:
             researcher_nodes = [r for r in args.researchers if r in researcher_nodes]
         
@@ -357,7 +358,7 @@ def main():
         
         print(f"\n✓ Will run with: {', '.join(available)}")
     else:
-        available = args.researchers or ["GIN", "ORIN", "TIF", "TORI", "ARCHI", "NOVEL"]
+        available = args.researchers or ["GIN", "ORIN", "TIF", "TORI", "ARCHI", "THEO", "NOVEL"]
     
     # Confirm run
     if not args.dry_run and not args.yes:
@@ -368,7 +369,7 @@ def main():
         input("Press Enter to start (Ctrl+C to cancel)...")
     
     # Run!
-    results = run_parallel_orchestrator(
+    run_parallel_orchestrator(
         researchers=available,
         dry_run=args.dry_run
     )

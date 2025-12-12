@@ -112,6 +112,7 @@
         <div class="card-header">
             <h3><i class="fas fa-brain"></i> Live Researcher Thinking</h3>
             <span class="badge" id="liveThoughtCount">0</span>
+            <span class="refresh-pill" id="liveRefreshTimer">Updating…</span>
         </div>
         <div class="card-body">
             <div id="liveThoughts" class="live-thoughts">
@@ -122,38 +123,53 @@
 
     <div class="card">
         <div class="card-header">
-            <h3><i class="fas fa-pen"></i> Context Tuning</h3>
+            <h3><i class="fas fa-pen"></i> Context Injection</h3>
+            <span id="activeJobInfo" class="badge">No active workflow</span>
         </div>
         <div class="card-body">
-            <label for="contextAgent">Agent</label>
+            <label for="contextAgent">Agent to Guide</label>
             <select id="contextAgent" class="input" onchange="loadContext()">
-                <option value="THEO">THEO (Theoretical)</option>
-                <option value="TIF">TIF</option>
-                <option value="GIN">GIN</option>
-                <option value="TORI">TORI</option>
-                <option value="NOVEL">NOVEL</option>
+                <optgroup label="Researchers">
+                    <option value="TIF">TIF (Technical Analysis)</option>
+                    <option value="GIN">GIN (Code Generation)</option>
+                    <option value="ORIN">ORIN (NVIDIA Optimization)</option>
+                    <option value="TORI">TORI (Code Review)</option>
+                    <option value="ARCHI">ARCHI (Architecture)</option>
+                    <option value="THEO">THEO (Research)</option>
+                    <option value="NOVEL">NOVEL (Creative)</option>
+                </optgroup>
+                <optgroup label="Support">
+                    <option value="GUARD">GUARD (Safety)</option>
+                    <option value="PAGEQA">PAGEQA (Paper Research)</option>
+                    <option value="ORKA">ORKA (Orchestrator)</option>
+                </optgroup>
             </select>
-            <label for="contextText" style="margin-top:8px;">Working Context</label>
-            <textarea id="contextText" class="input" rows="8" placeholder="Add notes, constraints, or hints for this agent..."></textarea>
+            <label for="contextText" style="margin-top:8px;">Inject Context / Guidance</label>
+            <textarea id="contextText" class="input" rows="8" placeholder="Add guidance, constraints, focus areas, or corrections for this agent...
+
+Example: 'Focus on memory efficiency, avoid GPU-heavy solutions'"></textarea>
             <div class="card-actions" style="margin-top:8px;">
-                <button class="btn btn-primary" onclick="saveContext()">Save Context (local)</button>
+                <button class="btn btn-primary" onclick="saveContext()">
+                    <i class="fas fa-syringe"></i> Inject Context
+                </button>
                 <button class="btn btn-secondary" onclick="clearContext()">Clear</button>
             </div>
-            <p class="text-muted" style="margin-top:8px;">Stored locally in your browser to guide review sessions.</p>
+            <p class="text-muted" style="margin-top:8px;">Context is injected into the next step the agent runs. Updates take effect immediately.</p>
         </div>
     </div>
 </div>
 
 <!-- Proposals Table -->
-<div class="card">
-    <div class="card-header">
-        <h3><i class="fas fa-list"></i> All Proposals</h3>
-        <div class="card-actions">
-            <span id="proposalCount" class="badge">0 proposals</span>
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-list"></i> All Proposals</h3>
+            <div class="card-actions">
+                <span id="proposalCount" class="badge">0 proposals</span>
+                <span class="refresh-pill" id="tableRefreshTimer">Updating…</span>
+            </div>
         </div>
-    </div>
-    <div class="card-body">
-        <div class="table-container">
+        <div class="card-body">
+            <div class="table-container">
             <table class="proposals-table">
                 <thead>
                     <tr>
@@ -204,6 +220,10 @@
 <script>
 let allProposals = [];
 let liveThoughts = [];
+let lastLiveRefresh = 0;
+let lastTableRefresh = 0;
+const LIVE_INTERVAL = 4000;
+const TABLE_INTERVAL = 5000;
 
 // Map agent short IDs to numeric IDs for linking
 const agentIdMap = {
@@ -216,8 +236,9 @@ document.addEventListener('DOMContentLoaded', function() {
     loadProposals();
     loadLiveThoughts();
     loadContext();
-    setInterval(loadProposals, 5000); // Refresh every 5 seconds
-    setInterval(loadLiveThoughts, 4000);
+    setInterval(loadProposals, TABLE_INTERVAL); // Refresh proposals
+    setInterval(loadLiveThoughts, LIVE_INTERVAL); // Refresh thoughts
+    setInterval(updateRefreshTimers, 1000); // Update countdown badges
 });
 
 async function loadProposals() {
@@ -227,6 +248,8 @@ async function loadProposals() {
         allProposals = data.proposals || [];
         updateStats();
         renderProposals();
+        lastTableRefresh = Date.now();
+        updateRefreshTimers();
     } catch (error) {
         console.error('Error loading proposals:', error);
         showToast('Failed to load proposals', 'danger');
@@ -235,20 +258,66 @@ async function loadProposals() {
 
 async function loadLiveThoughts() {
     try {
-        const res = await fetch('/api/proposals/recent');
+        // First try the live workflow thoughts endpoint
+        const res = await fetch('/api/workflow/live-thoughts');
         const data = await res.json();
-        const proposals = data.proposals || [];
-        // Simulate "thinking" snippets from descriptions and status
-        liveThoughts = proposals.slice(0, 6).map(p => ({
-            agent: p.agent_id,
-            id: p.id,
-            text: p.description || 'Analyzing...',
-            status: p.status,
-            ts: p.timestamp
-        }));
+        
+        if (data.items && data.items.length > 0) {
+            // We have live workflow data
+            liveThoughts = data.items.slice(0, 8).map(p => ({
+                agent: p.agent,
+                id: p.id,
+                text: p.text || 'Processing...',
+                status: p.status,
+                step: p.step,
+                phase: p.phase,
+                ts: p.timestamp
+            }));
+            
+            // Show active job info
+            if (data.active_job) {
+                const jobInfo = document.getElementById('activeJobInfo');
+                if (jobInfo) {
+                    jobInfo.innerHTML = `<span class="badge badge-info">Phase ${data.active_job.phase} Step ${data.active_job.step}/20: ${data.active_job.step_name}</span>`;
+                }
+            }
+        } else {
+            // Fall back to recent proposals
+            const fallbackRes = await fetch('/api/proposals/recent');
+            const fallbackData = await fallbackRes.json();
+            const proposals = fallbackData.proposals || [];
+            liveThoughts = proposals.slice(0, 6).map(p => ({
+                agent: p.agent_id,
+                id: p.id,
+                text: p.description || 'Analyzing...',
+                status: p.status,
+                ts: p.timestamp
+            }));
+        }
+        
         renderLiveThoughts();
+        lastLiveRefresh = Date.now();
+        updateRefreshTimers();
     } catch (e) {
         console.error('live thoughts load failed', e);
+    }
+}
+
+function updateRefreshTimers() {
+    const now = Date.now();
+    const liveEl = document.getElementById('liveRefreshTimer');
+    const tableEl = document.getElementById('tableRefreshTimer');
+
+    if (liveEl) {
+        const since = lastLiveRefresh ? Math.max(0, Math.round((now - lastLiveRefresh) / 1000)) : '…';
+        const next = lastLiveRefresh ? Math.max(0, Math.ceil((LIVE_INTERVAL - (now - lastLiveRefresh)) / 1000)) : '…';
+        liveEl.textContent = `Updated ${since}s ago · Next ${next}s`;
+    }
+
+    if (tableEl) {
+        const since = lastTableRefresh ? Math.max(0, Math.round((now - lastTableRefresh) / 1000)) : '…';
+        const next = lastTableRefresh ? Math.max(0, Math.ceil((TABLE_INTERVAL - (now - lastTableRefresh)) / 1000)) : '…';
+        tableEl.textContent = `Updated ${since}s ago · Next ${next}s`;
     }
 }
 
@@ -275,21 +344,82 @@ function renderLiveThoughts() {
     `).join('');
 }
 
-function saveContext() {
+// Hook for live socket stream
+window.applyThinkingUpdate = function(data) {
+    if (!data || !data.items) return;
+    liveThoughts = data.items.map(item => ({
+        agent: item.agent || item.agent_id || 'UNK',
+        id: item.id,
+        text: item.text || 'Analyzing...',
+        status: item.status || 'in_review',
+        ts: item.timestamp || item.ts || new Date().toISOString()
+    }));
+    renderLiveThoughts();
+    lastLiveRefresh = Date.now();
+    updateRefreshTimers();
+};
+
+async function saveContext() {
     const agent = document.getElementById('contextAgent').value;
     const text = document.getElementById('contextText').value;
+    
+    // Save to local storage as backup
     localStorage.setItem(`ctx_${agent}`, text);
-    showToast('Context saved locally', 'success');
+    
+    // Also inject into the running workflow via API
+    try {
+        const res = await fetch('/api/workflow/inject-context', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({node: agent, context: text})
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast(`Context injected for ${agent} (${data.context_length} chars)`, 'success');
+        } else {
+            showToast('Context saved locally (API error)', 'warning');
+        }
+    } catch (e) {
+        showToast('Context saved locally only', 'info');
+    }
 }
 
-function loadContext() {
+async function loadContext() {
     const agent = document.getElementById('contextAgent').value;
+    
+    // First try to load from server
+    try {
+        const res = await fetch('/api/workflow/injected-context');
+        const data = await res.json();
+        if (data.contexts && data.contexts[agent]) {
+            document.getElementById('contextText').value = data.contexts[agent];
+            return;
+        }
+    } catch (e) {
+        // Fall through to local storage
+    }
+    
+    // Fall back to local storage
     const saved = localStorage.getItem(`ctx_${agent}`) || '';
     document.getElementById('contextText').value = saved;
 }
 
-function clearContext() {
+async function clearContext() {
+    const agent = document.getElementById('contextAgent').value;
     document.getElementById('contextText').value = '';
+    localStorage.removeItem(`ctx_${agent}`);
+    
+    // Clear from server too
+    try {
+        await fetch('/api/workflow/inject-context', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({node: agent, context: ''})
+        });
+        showToast(`Context cleared for ${agent}`, 'info');
+    } catch (e) {
+        // Ignore
+    }
 }
 
 function updateStats() {

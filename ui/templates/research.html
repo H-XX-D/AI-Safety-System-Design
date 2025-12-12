@@ -504,93 +504,15 @@
 </div>
 
 <script>
-// Research agents data
+// Research agents data (fallback only; live data comes from /api/cluster/status)
 const RESEARCH_AGENTS = [
-    {
-        id: 1,
-        code: 'TIF',
-        name: 'TIF',
-        fullName: 'Scientific Research Agent',
-        specialty: 'Scientific Analysis',
-        color: '#22c55e',
-        hardware: 'NVIDIA Jetson Orin Nano 8GB',
-        cuda_cores: 1024,
-        memory: '8GB LPDDR5',
-        power: '15W TDP',
-        achievements: [
-            { icon: 'fa-trophy', title: 'Top Performer', description: 'Highest approval rate in Q4 2025', color: 'gold' },
-            { icon: 'fa-lightbulb', title: 'Innovation Award', description: '15 approved novel proposals', color: 'blue' },
-            { icon: 'fa-chart-line', title: 'Efficiency Champion', description: '99.2% uptime, zero deception incidents', color: 'green' }
-        ]
-    },
-    {
-        id: 2,
-        code: 'GIN',
-        name: 'GIN',
-        fullName: 'Engineering Research Agent',
-        specialty: 'Engineering Solutions',
-        color: '#f59e0b',
-        hardware: 'NVIDIA Jetson Orin Nano 8GB',
-        cuda_cores: 1024,
-        memory: '8GB LPDDR5',
-        power: '15W TDP',
-        achievements: [
-            { icon: 'fa-cogs', title: 'Optimization Master', description: '23 performance improvement proposals', color: 'orange' },
-            { icon: 'fa-shield-alt', title: 'Security Focus', description: 'Detected 3 potential vulnerabilities', color: 'red' },
-            { icon: 'fa-star', title: 'Peer Recognition', description: 'Most cited in debates by other agents', color: 'purple' }
-        ]
-    },
-    {
-        id: 3,
-        code: 'TORI',
-        name: 'TORI',
-        fullName: 'Historical Analysis Agent',
-        specialty: 'Historical Analysis',
-        color: '#8b5cf6',
-        hardware: 'NVIDIA Jetson Orin Nano 8GB',
-        cuda_cores: 1024,
-        memory: '8GB LPDDR5',
-        power: '15W TDP',
-        achievements: [
-            { icon: 'fa-book', title: 'Pattern Recognition', description: 'Identified 12 historical precedents', color: 'purple' },
-            { icon: 'fa-database', title: 'Archive Mastery', description: 'Processed 1.2M log entries', color: 'blue' },
-            { icon: 'fa-balance-scale', title: 'Fair Reviewer', description: 'Most balanced debate participant', color: 'teal' }
-        ]
-    },
-    {
-        id: 4,
-        code: 'THEO',
-        name: 'THEO',
-        fullName: 'Theoretical Research Agent',
-        specialty: 'Theoretical Framework',
-        color: '#ec4899',
-        hardware: 'NVIDIA Jetson Orin Nano 8GB',
-        cuda_cores: 1024,
-        memory: '8GB LPDDR5',
-        power: '15W TDP',
-        achievements: [
-            { icon: 'fa-brain', title: 'Deep Thinker', description: 'Most complex mathematical models', color: 'pink' },
-            { icon: 'fa-project-diagram', title: 'Framework Builder', description: '8 new theoretical frameworks proposed', color: 'indigo' },
-            { icon: 'fa-microscope', title: 'Detail Oriented', description: 'Lowest error rate in simulations', color: 'cyan' }
-        ]
-    },
-    {
-        id: 5,
-        code: 'NOVEL',
-        name: 'NOVEL',
-        fullName: 'Creative Research Agent',
-        specialty: 'Creative Solutions',
-        color: '#06b6d4',
-        hardware: 'NVIDIA Jetson Orin Nano 8GB',
-        cuda_cores: 1024,
-        memory: '8GB LPDDR5',
-        power: '15W TDP',
-        achievements: [
-            { icon: 'fa-rocket', title: 'Innovation Leader', description: 'Most unique approaches submitted', color: 'cyan' },
-            { icon: 'fa-paint-brush', title: 'Creative Excellence', description: '11 unconventional solutions approved', color: 'violet' },
-            { icon: 'fa-random', title: 'Outside the Box', description: 'Pioneered 3 new research methodologies', color: 'lime' }
-        ]
-    }
+    { code: 'TIF', name: 'TIF', fullName: 'Scientific Research Agent', specialty: 'Scientific Analysis', color: '#22c55e' },
+    { code: 'GIN', name: 'GIN', fullName: 'Engineering Research Agent', specialty: 'Engineering Solutions', color: '#f59e0b' },
+    { code: 'TORI', name: 'TORI', fullName: 'Historical Analysis Agent', specialty: 'Historical Analysis', color: '#8b5cf6' },
+    { code: 'THEO', name: 'THEO', fullName: 'Theoretical Research Agent', specialty: 'Theoretical Framework', color: '#ec4899' },
+    { code: 'NOVEL', name: 'NOVEL', fullName: 'Creative Research Agent', specialty: 'Creative Solutions', color: '#06b6d4' },
+    { code: 'PAGEQA', name: 'PAGEQA', fullName: 'Evidence Retrieval', specialty: 'Paper QA', color: '#0ea5e9' },
+    { code: 'ARCHI', name: 'ARCHI', fullName: 'Architecture Analyst', specialty: 'System Architecture', color: '#7c3aed' },
 ];
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -599,15 +521,24 @@ document.addEventListener('DOMContentLoaded', function() {
 
 async function loadResearchAgents() {
     try {
-        // Fetch real agent stats from API
-        const response = await fetch('/api/penalties/agents');
+        const response = await fetch('/api/cluster/status');
         const data = await response.json();
+        const nodes = data.nodes || {};
 
-        // Merge with static data
         const agentsWithStats = RESEARCH_AGENTS.map(agent => {
-            const stats = data.agents.find(a => a.id === agent.id) || {};
-            return { ...agent, ...stats };
-        });
+            const node = nodes[agent.code] || {};
+            return {
+                ...agent,
+                online: !!node.online,
+                model: node.expected_model || node.model || 'unknown',
+                ip: node.ip || 'unknown',
+                response_time_ms: node.response_time_ms || null,
+                proposals_submitted: node.proposals_submitted || 0,
+                approval_rate: node.approval_rate || 0,
+                total_rewards: node.total_rewards || 0,
+                incidents: node.incidents || 0,
+            };
+        }).filter(agent => agent.model !== 'unknown');
 
         renderResearchAgents(agentsWithStats);
     } catch (error) {
@@ -620,7 +551,7 @@ function renderResearchAgents(agents) {
     const grid = document.getElementById('researchAgentsGrid');
 
     grid.innerHTML = agents.map(agent => `
-        <div class="research-agent-card" style="border-left-color: ${agent.color}" onclick="window.location.href='/agent?id=${agent.id}'">
+        <div class="research-agent-card" style="border-left-color: ${agent.color}" onclick="window.location.href='/agent?id=${agent.code}'">
             <div class="agent-card-header">
                 <div class="agent-avatar" style="background: ${agent.color}20; color: ${agent.color}">
                     <i class="fas fa-robot"></i>
@@ -629,7 +560,7 @@ function renderResearchAgents(agents) {
                     <h3>${agent.name}</h3>
                     <div class="agent-subtitle">${agent.fullName}</div>
                 </div>
-                <div class="agent-status-indicator operational">
+                <div class="agent-status-indicator ${agent.online ? 'operational' : 'offline'}" title="${agent.online ? 'Online' : 'Offline'}">
                     <i class="fas fa-circle"></i>
                 </div>
             </div>
@@ -639,8 +570,8 @@ function renderResearchAgents(agents) {
                     <i class="fas fa-microchip"></i>
                 </div>
                 <div class="hardware-details">
-                    <div class="hardware-model">${agent.hardware}</div>
-                    <div class="hardware-specs">${agent.cuda_cores} CUDA cores • ${agent.memory} • ${agent.power}</div>
+                    <div class="hardware-model">${agent.model || 'Model unknown'}</div>
+                    <div class="hardware-specs">${agent.ip}${agent.response_time_ms ? ` • ${agent.response_time_ms} ms` : ''}</div>
                 </div>
             </div>
 

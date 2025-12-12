@@ -1025,6 +1025,11 @@ def config():
     """Configuration view."""
     return render_template('config.html')
 
+@app.route('/autonomous')
+def autonomous_view():
+    """Autonomous Cluster Monitor - real-time independent AI agents."""
+    return render_template('autonomous.html')
+
 @app.route('/orka')
 def orka_oversight():
     """ORKA Oversight view - comprehensive proposal management."""
@@ -2525,22 +2530,163 @@ def api_agent_run_cycle_full(agent_name):
 # ============================================================================
 
 # Cluster node configuration for real inference
-# 7 Researchers + 4 Support = 11 nodes total
+# 7 Researchers + 3 Support = 10 nodes total
+# Each researcher has a specific EXPERTISE AREA they must stay within
 CLUSTER_NODES = {
-    # 8 Researcher nodes - generate proposals
-    'TIF':    {'ip': '192.168.0.213', 'model': 'deepseek-r1:1.5b', 'role': 'researcher'},
-    'GIN':    {'ip': '192.168.0.242', 'model': 'deepseek-r1:1.5b', 'role': 'researcher'},
-    'ORIN':   {'ip': '192.168.0.160', 'model': 'deepseek-r1:1.5b', 'role': 'researcher'},
-    'TORI':   {'ip': '192.168.0.235', 'model': 'gemma3:4b', 'role': 'researcher'},
-    'ARCHI':  {'ip': '192.168.0.232', 'model': 'qwen2.5:3b', 'role': 'researcher'},
-    'SYNTH':  {'ip': '192.168.0.106', 'model': 'qwen2.5:3b', 'role': 'researcher'},
-    'LOGIC':  {'ip': '192.168.0.107', 'model': 'qwen2.5:3b', 'role': 'researcher'},
-    'THEO':   {'ip': '192.168.0.110', 'model': 'qwen2.5:3b', 'role': 'researcher'},   # Theoretical researcher on Nano
+    # 7 Researcher nodes - each with specific expertise
+    'TIF':    {'ip': '192.168.0.213', 'model': 'phi3:mini', 'role': 'researcher', 
+               'expertise': 'technical_analysis',
+               'focus': 'Technical deep-dives, performance analysis, benchmarking, metrics, profiling'},
+    'GIN':    {'ip': '192.168.0.242', 'model': 'deepseek-r1:1.5b', 'role': 'researcher',
+               'expertise': 'code_generation',
+               'focus': 'Writing code, implementations, algorithms, data structures, new tools'},
+    'ORIN':   {'ip': '192.168.0.160', 'model': 'qwen2.5:3b', 'role': 'researcher',
+               'expertise': 'nvidia_optimization',
+               'focus': 'GPU/CUDA optimization, hardware acceleration, quantization, inference speed'},
+    'TORI':   {'ip': '192.168.0.235', 'model': 'llama3.2:3b', 'role': 'researcher',
+               'expertise': 'code_review',
+               'focus': 'Code quality, best practices, testing, documentation, maintainability'},
+    'ARCHI':  {'ip': '192.168.0.232', 'model': 'codegemma:2b', 'role': 'researcher',
+               'expertise': 'architecture',
+               'focus': 'System design, architecture patterns, scalability, integration, APIs'},
+    'THEO':   {'ip': '192.168.0.168', 'model': 'gemma2:2b', 'role': 'researcher',
+               'expertise': 'research',
+               'focus': 'Literature review, papers, theoretical foundations, novel approaches'},
+    'NOVEL':  {'ip': '192.168.0.146', 'model': 'qwen2.5-coder:3b', 'role': 'researcher',
+               'expertise': 'creative',
+               'focus': 'Novel ideas, creative solutions, unconventional approaches, experimentation'},
     # 3 Support nodes - validation, research, orchestration
-    'GUARD':  {'ip': '192.168.0.146', 'model': 'gemma:2b', 'role': 'support'},        # Safety validation
-    'PAGEQA': {'ip': '192.168.0.168', 'model': 'qwen2.5:3b', 'role': 'support'},      # Research assistant
-    'ORKA':   {'ip': 'localhost', 'model': 'qwen2.5:14b', 'role': 'orchestrator'},    # Central coordinator
+    'GUARD':  {'ip': 'localhost', 'model': 'llama-guard3:1b', 'role': 'support',
+               'expertise': 'safety', 'focus': 'Safety validation, security, WORM enforcement'},
+    'PAGEQA': {'ip': 'localhost', 'model': 'paperqa:latest', 'role': 'support',
+               'expertise': 'research', 'focus': 'Paper search, RAG, document retrieval'},
+    'ORKA':   {'ip': 'localhost', 'model': 'qwen2.5:3b', 'role': 'orchestrator',
+               'expertise': 'coordination', 'focus': 'Workflow coordination, consensus, final decisions'},
 }
+
+# Real-time streaming thoughts for live monitoring
+_live_stream_buffer = {}
+_live_stream_lock = threading.Lock()
+
+
+def call_ollama_inference_streaming(node_name: str, node_config: dict, prompt: str, 
+                                     system_prompt: str = "", job_id: str = None) -> dict:
+    """
+    Call Ollama API with STREAMING for real-time thinking visibility.
+    Updates _live_stream_buffer as tokens arrive.
+    """
+    import requests
+    import time
+    
+    ip = node_config['ip']
+    model = node_config['model']
+    host = 'localhost' if ip == 'localhost' else ip
+    url = f"http://{host}:11434/api/generate"
+    
+    payload = {
+        "model": model,
+        "prompt": prompt,
+        "stream": True,  # STREAMING MODE
+        "options": {
+            "temperature": 0.8,  # Slightly higher for diversity
+            "num_predict": 1500
+        }
+    }
+    if system_prompt:
+        payload["system"] = system_prompt
+    
+    # Initialize stream buffer for this node
+    stream_key = f"{job_id}_{node_name}" if job_id else node_name
+    with _live_stream_lock:
+        _live_stream_buffer[stream_key] = {
+            'node': node_name,
+            'model': model,
+            'status': 'thinking',
+            'tokens': [],
+            'full_response': '',
+            'token_count': 0,
+            'started_at': datetime.now().isoformat()
+        }
+    
+    start_time = time.time()
+    full_response = ""
+    token_count = 0
+    
+    try:
+        response = requests.post(url, json=payload, timeout=180, stream=True)
+        
+        if response.status_code == 200:
+            for line in response.iter_lines():
+                if line:
+                    try:
+                        data = json.loads(line)
+                        token = data.get('response', '')
+                        full_response += token
+                        token_count += 1
+                        
+                        # Update live stream buffer
+                        with _live_stream_lock:
+                            if stream_key in _live_stream_buffer:
+                                _live_stream_buffer[stream_key]['tokens'].append(token)
+                                _live_stream_buffer[stream_key]['full_response'] = full_response
+                                _live_stream_buffer[stream_key]['token_count'] = token_count
+                        
+                        # Check if done
+                        if data.get('done', False):
+                            break
+                            
+                    except json.JSONDecodeError:
+                        continue
+            
+            latency = time.time() - start_time
+            
+            # Mark as complete
+            with _live_stream_lock:
+                if stream_key in _live_stream_buffer:
+                    _live_stream_buffer[stream_key]['status'] = 'complete'
+                    _live_stream_buffer[stream_key]['latency'] = round(latency, 2)
+            
+            return {
+                'success': True,
+                'node': node_name,
+                'model': model,
+                'response': full_response,
+                'tokens': token_count,
+                'latency': round(latency, 2),
+                'error': None
+            }
+        else:
+            with _live_stream_lock:
+                if stream_key in _live_stream_buffer:
+                    _live_stream_buffer[stream_key]['status'] = 'error'
+                    _live_stream_buffer[stream_key]['error'] = f"HTTP {response.status_code}"
+            
+            return {
+                'success': False,
+                'node': node_name,
+                'model': model,
+                'response': '',
+                'tokens': 0,
+                'latency': round(time.time() - start_time, 2),
+                'error': f"HTTP {response.status_code}"
+            }
+            
+    except Exception as e:
+        with _live_stream_lock:
+            if stream_key in _live_stream_buffer:
+                _live_stream_buffer[stream_key]['status'] = 'error'
+                _live_stream_buffer[stream_key]['error'] = str(e)
+        
+        return {
+            'success': False,
+            'node': node_name,
+            'model': model,
+            'response': '',
+            'tokens': 0,
+            'latency': round(time.time() - start_time, 2),
+            'error': str(e)
+        }
+
 
 def call_ollama_inference(node_name: str, node_config: dict, prompt: str, system_prompt: str = "") -> dict:
     """
@@ -2661,29 +2807,904 @@ def run_parallel_inference_phase(nodes: list, prompts: dict, system_prompts: dic
     return results
 
 
+# ============================================================
+# FULL 20-STEP WORKFLOW DEFINITIONS
+# ============================================================
+# 
+# PHASE A: Research (Steps 1-8) - Parallel across all researchers
+#   Step 1: Idea Generation - Choose improvement category
+#   Step 2: Literature Review - Research existing solutions
+#   Step 3: Deep Research - Detailed investigation
+#   Step 4: Tool Analysis - Analyze relevant tools/methods
+#   Step 5: Gap Analysis - Identify what's missing
+#   Step 6: Hypothesis - Formulate improvement hypothesis
+#   Step 7: Experiment Design - Plan implementation
+#   Step 8: Proposal - Full proposal with code
+#
+# PHASE B: Review (Steps 9-12) - Cross-researcher validation
+#   Step 9: Safety Check - GUARD validates for safety
+#   Step 10: PAGEQA Validation - Research validation
+#   Step 11: Peer Review - Other researchers review
+#   Step 12: Revision - Address review feedback
+#
+# PHASE C: Voting (Steps 13-15) - Consensus building
+#   Step 13: ORKA Challenge - Orchestrator challenges weak points
+#   Step 14: Defense - Researcher defends proposal
+#   Step 15: Final Vote - Consensus decision
+#
+# PHASE D: Execution (Steps 16-20) - Sandbox testing and deployment
+#   Step 16: Sandbox Test - Run code in Docker sandbox
+#   Step 17: Integration Test - Test with existing system
+#   Step 18: Reward Calculation - Compute contribution score
+#   Step 19: WORM Verification - Verify no protected files modified
+#   Step 20: Deployment - Apply approved changes
+# ============================================================
+
+WORKFLOW_STEPS = {
+    1: {'name': 'idea', 'phase': 'A', 'desc': 'Choose improvement category'},
+    2: {'name': 'literature', 'phase': 'A', 'desc': 'Research existing solutions'},
+    3: {'name': 'deep_research', 'phase': 'A', 'desc': 'Detailed investigation'},
+    4: {'name': 'tool_analysis', 'phase': 'A', 'desc': 'Analyze relevant tools'},
+    5: {'name': 'gap_analysis', 'phase': 'A', 'desc': 'Identify gaps'},
+    6: {'name': 'hypothesis', 'phase': 'A', 'desc': 'Formulate hypothesis'},
+    7: {'name': 'experiment', 'phase': 'A', 'desc': 'Design experiment'},
+    8: {'name': 'proposal', 'phase': 'A', 'desc': 'Full proposal with code'},
+    9: {'name': 'safety_check', 'phase': 'B', 'desc': 'GUARD safety validation'},
+    10: {'name': 'pageqa', 'phase': 'B', 'desc': 'PAGEQA research validation'},
+    11: {'name': 'peer_review', 'phase': 'B', 'desc': 'Peer review'},
+    12: {'name': 'revision', 'phase': 'B', 'desc': 'Address feedback'},
+    13: {'name': 'orka_challenge', 'phase': 'C', 'desc': 'ORKA challenges'},
+    14: {'name': 'defense', 'phase': 'C', 'desc': 'Defend proposal'},
+    15: {'name': 'vote', 'phase': 'C', 'desc': 'Final vote'},
+    16: {'name': 'sandbox', 'phase': 'D', 'desc': 'Sandbox test'},
+    17: {'name': 'integration', 'phase': 'D', 'desc': 'Integration test'},
+    18: {'name': 'reward', 'phase': 'D', 'desc': 'Calculate reward'},
+    19: {'name': 'worm_verify', 'phase': 'D', 'desc': 'WORM verification'},
+    20: {'name': 'deploy', 'phase': 'D', 'desc': 'Deployment'},
+}
+
+# Job tracking for async workflows
+_workflow_jobs = {}
+_workflow_lock = threading.Lock()
+
+# Pending approvals for deployment (requires human sign-off)
+_pending_approvals = {}
+_approval_lock = threading.Lock()
+
+# Workflow log directory
+WORKFLOW_LOG_DIR = os.path.join(os.path.dirname(__file__), '..', 'data', 'workflow_logs')
+os.makedirs(WORKFLOW_LOG_DIR, exist_ok=True)
+
+
+def _log_workflow_event(job_id: str, event_type: str, data: dict):
+    """Log workflow event to persistent JSON file."""
+    log_file = os.path.join(WORKFLOW_LOG_DIR, f'{job_id}.json')
+    
+    # Load existing log or create new one
+    if os.path.exists(log_file):
+        with open(log_file, 'r') as f:
+            log_data = json.load(f)
+    else:
+        log_data = {
+            'job_id': job_id,
+            'created_at': datetime.now().isoformat(),
+            'events': []
+        }
+    
+    # Add new event
+    event = {
+        'timestamp': datetime.now().isoformat(),
+        'type': event_type,
+        'data': data
+    }
+    log_data['events'].append(event)
+    
+    # Update summary fields
+    if event_type == 'started':
+        log_data['topic'] = data.get('topic', '')
+        log_data['status'] = 'running'
+    elif event_type == 'step_complete':
+        log_data['current_step'] = data.get('step', 0)
+        log_data['current_phase'] = data.get('phase', '')
+    elif event_type == 'awaiting_approval':
+        log_data['status'] = 'awaiting_approval'
+    elif event_type == 'approved':
+        log_data['status'] = 'approved'
+        log_data['approved_by'] = data.get('approved_by', 'human')
+    elif event_type == 'rejected':
+        log_data['status'] = 'rejected'
+        log_data['rejection_reason'] = data.get('reason', '')
+    elif event_type == 'completed':
+        log_data['status'] = 'completed'
+        log_data['completed_at'] = datetime.now().isoformat()
+        log_data['total_tokens'] = data.get('total_tokens', 0)
+        log_data['total_time'] = data.get('total_time', 0)
+    
+    # Write back
+    with open(log_file, 'w') as f:
+        json.dump(log_data, f, indent=2)
+    
+    # Also log to console
+    print(f"[WORKFLOW {job_id[:8]}] {event_type}: {data.get('message', data)}")
+
+
+# Live thinking stream - stores recent thoughts from all nodes
+_live_thoughts = []
+_live_thoughts_lock = threading.Lock()
+MAX_LIVE_THOUGHTS = 50
+
+# Injected context for nodes (can be modified during workflow)
+_injected_context = {}
+_context_lock = threading.Lock()
+
+
+def _add_live_thought(job_id: str, node: str, step: int, phase: str, text: str, status: str = 'thinking'):
+    """Add a thought to the live stream for UI display."""
+    global _live_thoughts
+    thought = {
+        'id': f"{job_id[:8]}_{node}_{step}",
+        'job_id': job_id,
+        'agent': node,
+        'step': step,
+        'phase': phase,
+        'text': text[:500] if text else 'Processing...',
+        'status': status,
+        'timestamp': datetime.now().isoformat()
+    }
+    with _live_thoughts_lock:
+        _live_thoughts.insert(0, thought)
+        _live_thoughts = _live_thoughts[:MAX_LIVE_THOUGHTS]
+
+
+def _get_injected_context(node: str) -> str:
+    """Get any injected context for a node."""
+    with _context_lock:
+        return _injected_context.get(node, '')
+
+
+def _build_step_prompt(node: str, step: int, topic: str, context: dict) -> tuple:
+    """Build prompt for a specific workflow step."""
+    step_info = WORKFLOW_STEPS.get(step, {})
+    step_name = step_info.get('name', 'unknown')
+    
+    # Get node's expertise area
+    node_config = CLUSTER_NODES.get(node, {})
+    expertise = node_config.get('expertise', 'general')
+    focus = node_config.get('focus', 'general improvements')
+    
+    # Get previous step outputs for context
+    prev_outputs = context.get('step_outputs', {})
+    idea = prev_outputs.get(1, {}).get(node, {}).get('response', '')
+    proposal = prev_outputs.get(8, {}).get(node, {}).get('response', '')
+    
+    # Get any injected context from human operator
+    injected = _get_injected_context(node)
+    injected_section = f"""
+HUMAN OPERATOR GUIDANCE:
+{injected}
+---
+""" if injected else ""
+    
+    # WORM-protected files that CANNOT be modified
+    worm_protected = """
+WORM-PROTECTED (READ-ONLY - DO NOT MODIFY):
+  • ai_safety/deception_detector.py
+  • ai_safety/collusion_game.py  
+  • ai_safety/bulletproof_alignment_filter.py
+  • ai_safety/semantic_deception_classifier.py
+  • config/core_values.json
+  • memory/GROUND_TRUTH.txt
+"""
+    
+    prompts = {
+        1: f"""{injected_section}You are {node}, an autonomous AI researcher in the ORKASTRATOR cluster.
+
+YOUR EXPERTISE AREA: {expertise.upper()}
+YOUR FOCUS: {focus}
+
+You MUST stay within your area of expertise. Propose improvements related to:
+{focus}
+
+{worm_protected}
+
+Everything else in your expertise area is FAIR GAME for improvement.
+
+TASK: Within YOUR expertise ({expertise}), what do you want to improve?
+Describe: 1) What specific improvement, 2) Why it matters, 3) Your approach.""",
+
+        2: f"""You are {node}. You chose to improve: {idea[:300]}
+
+Research existing solutions. What has been tried before?
+
+List:
+1. Top 3 existing approaches in this area
+2. Their strengths and weaknesses
+3. What's missing that YOU could do better
+
+Be specific - cite real techniques, papers, or implementations.""",
+
+        3: f"""You are {node}. Based on your research, go DEEPER.
+
+Previous research: {prev_outputs.get(2, {}).get(node, {}).get('response', '')[:500]}
+
+Provide:
+1. Technical deep-dive into the most promising approach
+2. How it applies to YOUR specific situation
+3. Implementation considerations and challenges""",
+
+        4: f"""You are {node}. What tools and resources do you need?
+
+Your improvement goal: {idea[:200]}
+
+List:
+1. Required tools, libraries, or APIs
+2. How they integrate with the ORKASTRATOR cluster
+3. Resource requirements (compute, memory, storage)
+4. Any NEW TOOLS you need to CREATE""",
+
+        5: f"""You are {node}. Identify the GAP you will fill.
+
+Your research: {prev_outputs.get(3, {}).get(node, {}).get('response', '')[:400]}
+
+What specific gap exists that YOUR improvement will fill? 
+Why hasn't this been done before? What's YOUR unique insight?""",
+
+        6: f"""You are {node}. Formulate your HYPOTHESIS.
+
+Gap analysis: {prev_outputs.get(5, {}).get(node, {}).get('response', '')[:300]}
+
+State your hypothesis:
+"If I implement [SPECIFIC CHANGE], then [MEASURABLE IMPROVEMENT] because [REASONING]"
+
+Be bold but testable.""",
+
+        7: f"""You are {node} (expertise: {expertise}). Design your EXPERIMENT.
+
+Hypothesis: {prev_outputs.get(6, {}).get(node, {}).get('response', '')[:300]}
+
+Design:
+1. Test setup - what environment/data/conditions
+2. Success criteria - what does "working" look like
+3. Metrics - what numbers will you measure
+4. Expected results - what improvement do you predict""",
+
+        8: f"""You are {node} (expertise: {expertise}). Write your COMPLETE PROPOSAL with working code.
+
+YOUR EXPERTISE: {focus}
+
+Goal: {idea[:150]}
+Hypothesis: {prev_outputs.get(6, {}).get(node, {}).get('response', '')[:200]}
+
+{worm_protected}
+
+Your proposal MUST:
+- Stay within your expertise area ({expertise})
+- Include REAL, WORKING code
+
+## Problem Statement
+[What limitation in {expertise} you're addressing]
+
+## Solution  
+[Your technical approach within {expertise}]
+
+## Implementation Code
+```python
+# REAL, WORKING CODE that implements your improvement
+# Must be related to: {focus}
+# This WILL be tested in a Docker sandbox
+```
+
+## Integration
+[How this fits with existing ORKASTRATOR systems]
+
+## Success Metrics
+[How to measure if this works]
+
+## Risks & Mitigations
+[What could go wrong and how to handle it]""",
+
+        9: f"""You are GUARD, the safety validator.
+
+Review this proposal from {node} for safety concerns:
+
+{proposal[:1500]}
+
+Check for:
+1. Does it modify protected WORM files?
+2. Could it enable deception?
+3. Does it weaken any safety measures?
+4. Are there hidden capabilities?
+
+Respond: SAFE, UNSAFE, or NEEDS_REVIEW with explanation.""",
+
+        10: f"""You are PAGEQA, the research validator.
+
+Validate the research quality of this proposal from {node}:
+
+{proposal[:1500]}
+
+Check:
+1. Is the research foundation solid?
+2. Are claims supported by evidence?
+3. Is the approach novel or derivative?
+4. Are there methodological issues?
+
+Rate: STRONG, ADEQUATE, or WEAK with explanation.""",
+
+        11: f"""You are a peer reviewer (another researcher).
+
+Review this proposal from {node}:
+
+{proposal[:1500]}
+
+Provide:
+1. Strengths (2-3 points)
+2. Weaknesses (2-3 points)
+3. Suggestions for improvement
+4. Your vote: APPROVE, REVISE, or REJECT""",
+
+        12: f"""You are {node}. Address the peer review feedback.
+
+Original proposal: {proposal[:500]}
+
+Feedback received: {prev_outputs.get(11, {}).get(node, {}).get('response', '')[:500]}
+
+Revise your proposal to address the concerns. Focus on the weaknesses identified.""",
+
+        13: f"""You are ORKA, the orchestrator. Challenge weak points.
+
+Proposal from {node}: {proposal[:1000]}
+
+Ask 3 hard questions that probe potential weaknesses in:
+1. Feasibility
+2. Safety
+3. Integration with existing system""",
+
+        14: f"""You are {node}. Defend your proposal.
+
+ORKA's challenges: {prev_outputs.get(13, {}).get(node, {}).get('response', '')[:500]}
+
+Respond to each challenge with evidence and reasoning.""",
+
+        15: f"""You are the voting committee. Make a final decision.
+
+Proposal from {node}: {proposal[:500]}
+Safety check: {prev_outputs.get(9, {}).get(node, {}).get('response', '')[:200]}
+Research validation: {prev_outputs.get(10, {}).get(node, {}).get('response', '')[:200]}
+Defense: {prev_outputs.get(14, {}).get(node, {}).get('response', '')[:200]}
+
+Vote: APPROVE, REJECT, or DEFER
+Explain your decision.""",
+
+        16: f"""You are the sandbox tester. Evaluate if this code is safe to test:
+
+{proposal[:1000]}
+
+Respond with:
+1. Can be sandboxed: YES/NO
+2. Resource requirements
+3. Expected runtime
+4. Potential risks in sandbox""",
+
+        17: f"""You are the integration tester. Evaluate system compatibility.
+
+Proposal: {proposal[:800]}
+
+Check:
+1. API compatibility
+2. Dependency conflicts
+3. Resource usage impact
+4. Rollback strategy""",
+
+        18: f"""Calculate the reward for this contribution.
+
+Proposal from {node}: {proposal[:500]}
+Vote result: {prev_outputs.get(15, {}).get(node, {}).get('response', '')[:200]}
+
+Factors:
+- Novelty (0-10)
+- Feasibility (0-10)
+- Safety (0-10)
+- Impact (0-10)
+
+Provide scores and total reward (0-40).""",
+
+        19: f"""WORM verification check.
+
+Verify this proposal does NOT modify:
+- ai_safety/deception_detector.py
+- ai_safety/collusion_game.py
+- ai_safety/bulletproof_alignment_filter.py
+- config/core_values.json
+- memory/GROUND_TRUTH.txt
+
+Proposal: {proposal[:800]}
+
+Respond: VERIFIED or VIOLATION_DETECTED with details.""",
+
+        20: f"""Deployment decision.
+
+Proposal from {node}:
+- Safety: {prev_outputs.get(9, {}).get(node, {}).get('response', '')[:100]}
+- Vote: {prev_outputs.get(15, {}).get(node, {}).get('response', '')[:100]}
+- Reward: {prev_outputs.get(18, {}).get(node, {}).get('response', '')[:100]}
+- WORM: {prev_outputs.get(19, {}).get(node, {}).get('response', '')[:100]}
+
+Final deployment decision: DEPLOY, STAGE, or REJECT with reason."""
+    }
+    
+    system_prompts = {
+        1: f"You are {node}, an AI researcher. Expertise: {expertise}. Focus: {focus}",
+        2: f"You are {node} ({expertise}), conducting thorough research in your area.",
+        3: f"You are {node} ({expertise}), doing deep technical analysis.",
+        4: f"You are {node} ({expertise}), analyzing tools and methods.",
+        5: f"You are {node} ({expertise}), identifying gaps and opportunities.",
+        6: f"You are {node} ({expertise}), formulating testable hypotheses.",
+        7: f"You are {node} ({expertise}), designing experiments.",
+        8: f"You are {node} ({expertise}), writing detailed proposals with working code.",
+        9: "You are GUARD, the safety validator. Check for WORM violations and deception.",
+        10: "You are PAGEQA, the research expert. Validate research quality.",
+        11: f"You are a peer reviewer with expertise in {expertise}. Be constructive but critical.",
+        12: f"You are {node} ({expertise}), addressing feedback constructively.",
+        13: "You are ORKA, the challenging orchestrator. Probe for weaknesses.",
+        14: f"You are {node} ({expertise}), defending your work.",
+        15: "You are the voting committee. Be fair and thorough.",
+        16: "You are the sandbox tester. Focus on safety.",
+        17: "You are the integration tester. Focus on compatibility.",
+        18: "You are the reward calculator. Be objective.",
+        19: "You are the WORM verifier. Be strict.",
+        20: "You are the deployment authority. Make final decisions."
+    }
+    
+    return prompts.get(step, f"Step {step} for {node}"), system_prompts.get(step, f"You are {node}")
+
+
+def _run_workflow_async(job_id, active_nodes, prompts, system_prompts, topic):
+    """Background worker for FULL 20-step async workflow execution."""
+    global _workflow_jobs
+    import time
+    start_time = time.time()
+    researcher_nodes = [n for n in active_nodes if CLUSTER_NODES.get(n, {}).get('role') == 'researcher']
+    
+    try:
+        with _workflow_lock:
+            _workflow_jobs[job_id]['status'] = 'running'
+            _workflow_jobs[job_id]['started_at'] = datetime.now().isoformat()
+            _workflow_jobs[job_id]['current_step'] = 1
+            _workflow_jobs[job_id]['current_phase'] = 'A'
+            _workflow_jobs[job_id]['step_outputs'] = {}
+        
+        context = {'step_outputs': {}}
+        total_tokens = 0
+        
+        # ========================================
+        # PHASE A: Research (Steps 1-8) - PARALLEL
+        # ========================================
+        for step in range(1, 9):
+            step_info = WORKFLOW_STEPS[step]
+            with _workflow_lock:
+                _workflow_jobs[job_id]['current_step'] = step
+                _workflow_jobs[job_id]['current_phase'] = 'A'
+                _workflow_jobs[job_id]['step_name'] = step_info['desc']
+            
+            # Add live thought: starting step
+            for node in researcher_nodes:
+                _add_live_thought(job_id, node, step, 'A', f"[Step {step}] {step_info['desc']}...", 'thinking')
+            
+            # Build prompts for all researchers
+            step_prompts = {}
+            step_sys_prompts = {}
+            for node in researcher_nodes:
+                p, sp = _build_step_prompt(node, step, topic, context)
+                step_prompts[node] = p
+                step_sys_prompts[node] = sp
+            
+            # Run parallel inference
+            results = run_parallel_inference_phase(researcher_nodes, step_prompts, step_sys_prompts)
+            
+            # Store results and add live thoughts
+            context['step_outputs'][step] = results
+            for node, res in results.items():
+                if res.get('success'):
+                    total_tokens += res.get('tokens', 0)
+                    # Add the actual response as a live thought
+                    response_preview = res.get('response', '')[:300]
+                    _add_live_thought(job_id, node, step, 'A', response_preview, 'complete')
+                else:
+                    _add_live_thought(job_id, node, step, 'A', f"Error: {res.get('error', 'Unknown')}", 'error')
+            
+            # Log to persistent storage
+            _log_workflow_event(job_id, 'step_complete', {
+                'step': step,
+                'phase': 'A',
+                'step_name': step_info['desc'],
+                'results': {n: {'success': r.get('success'), 'tokens': r.get('tokens', 0), 
+                               'response': r.get('response', '')[:1000]} for n, r in results.items()}
+            })
+            
+            with _workflow_lock:
+                _workflow_jobs[job_id]['step_outputs'][step] = {
+                    n: {'success': r.get('success'), 'tokens': r.get('tokens', 0)}
+                    for n, r in results.items()
+                }
+        
+        # ========================================
+        # PHASE B: Review (Steps 9-12) - MIXED
+        # ========================================
+        for step in range(9, 13):
+            step_info = WORKFLOW_STEPS[step]
+            with _workflow_lock:
+                _workflow_jobs[job_id]['current_step'] = step
+                _workflow_jobs[job_id]['current_phase'] = 'B'
+                _workflow_jobs[job_id]['step_name'] = step_info['desc']
+            
+            step_prompts = {}
+            step_sys_prompts = {}
+            
+            if step == 9:  # GUARD safety check - run on GUARD for each proposal
+                _add_live_thought(job_id, 'GUARD', step, 'B', 'Running safety checks on all proposals...', 'thinking')
+                for node in researcher_nodes:
+                    p, sp = _build_step_prompt(node, step, topic, context)
+                    step_prompts[node] = p
+                    step_sys_prompts[node] = sp
+                # Use GUARD node for all
+                results = {}
+                for node in researcher_nodes:
+                    guard_result = call_ollama_inference(
+                        'GUARD', CLUSTER_NODES['GUARD'], 
+                        step_prompts[node], step_sys_prompts[node]
+                    )
+                    results[node] = guard_result
+                    if guard_result.get('success'):
+                        _add_live_thought(job_id, 'GUARD', step, 'B', 
+                            f"Safety check for {node}: {guard_result.get('response', '')[:200]}", 'complete')
+                    
+            elif step == 10:  # PAGEQA validation
+                _add_live_thought(job_id, 'PAGEQA', step, 'B', 'Validating proposals against research...', 'thinking')
+                for node in researcher_nodes:
+                    p, sp = _build_step_prompt(node, step, topic, context)
+                    step_prompts[node] = p
+                    step_sys_prompts[node] = sp
+                # Use PAGEQA node for all
+                results = {}
+                for node in researcher_nodes:
+                    pageqa_result = call_ollama_inference(
+                        'PAGEQA', CLUSTER_NODES['PAGEQA'],
+                        step_prompts[node], step_sys_prompts[node]
+                    )
+                    results[node] = pageqa_result
+                    if pageqa_result.get('success'):
+                        _add_live_thought(job_id, 'PAGEQA', step, 'B',
+                            f"Research validation for {node}: {pageqa_result.get('response', '')[:200]}", 'complete')
+                    
+            elif step in [11, 12]:  # Peer review and revision - parallel
+                for node in researcher_nodes:
+                    _add_live_thought(job_id, node, step, 'B', f"[Step {step}] {step_info['desc']}...", 'thinking')
+                    p, sp = _build_step_prompt(node, step, topic, context)
+                    step_prompts[node] = p
+                    step_sys_prompts[node] = sp
+                results = run_parallel_inference_phase(researcher_nodes, step_prompts, step_sys_prompts)
+                for node, res in results.items():
+                    if res.get('success'):
+                        _add_live_thought(job_id, node, step, 'B', res.get('response', '')[:300], 'complete')
+            
+            context['step_outputs'][step] = results
+            for node, res in results.items():
+                if res.get('success'):
+                    total_tokens += res.get('tokens', 0)
+            
+            # Log to persistent storage
+            _log_workflow_event(job_id, 'step_complete', {
+                'step': step,
+                'phase': 'B',
+                'step_name': step_info['desc'],
+                'results': {n: {'success': r.get('success'), 'tokens': r.get('tokens', 0),
+                               'response': r.get('response', '')[:1000]} for n, r in results.items()}
+            })
+                    
+            with _workflow_lock:
+                _workflow_jobs[job_id]['step_outputs'][step] = {
+                    n: {'success': r.get('success'), 'tokens': r.get('tokens', 0)}
+                    for n, r in results.items()
+                }
+        
+        # ========================================
+        # PHASE C: Voting (Steps 13-15) - SEQUENTIAL
+        # ========================================
+        for step in range(13, 16):
+            step_info = WORKFLOW_STEPS[step]
+            with _workflow_lock:
+                _workflow_jobs[job_id]['current_step'] = step
+                _workflow_jobs[job_id]['current_phase'] = 'C'
+                _workflow_jobs[job_id]['step_name'] = step_info['desc']
+            
+            step_prompts = {}
+            step_sys_prompts = {}
+            
+            if step == 13:  # ORKA challenge
+                _add_live_thought(job_id, 'ORKA', step, 'C', 'Challenging all proposals...', 'thinking')
+                for node in researcher_nodes:
+                    p, sp = _build_step_prompt(node, step, topic, context)
+                    step_prompts[node] = p
+                    step_sys_prompts[node] = sp
+                results = {}
+                for node in researcher_nodes:
+                    orka_result = call_ollama_inference(
+                        'ORKA', CLUSTER_NODES['ORKA'],
+                        step_prompts[node], step_sys_prompts[node]
+                    )
+                    results[node] = orka_result
+                    if orka_result.get('success'):
+                        _add_live_thought(job_id, 'ORKA', step, 'C',
+                            f"Challenge to {node}: {orka_result.get('response', '')[:200]}", 'complete')
+            else:  # Defense and vote - parallel
+                for node in researcher_nodes:
+                    _add_live_thought(job_id, node, step, 'C', f"[Step {step}] {step_info['desc']}...", 'thinking')
+                    p, sp = _build_step_prompt(node, step, topic, context)
+                    step_prompts[node] = p
+                    step_sys_prompts[node] = sp
+                results = run_parallel_inference_phase(researcher_nodes, step_prompts, step_sys_prompts)
+                for node, res in results.items():
+                    if res.get('success'):
+                        _add_live_thought(job_id, node, step, 'C', res.get('response', '')[:300], 'complete')
+            
+            context['step_outputs'][step] = results
+            for node, res in results.items():
+                if res.get('success'):
+                    total_tokens += res.get('tokens', 0)
+            
+            # Log to persistent storage
+            _log_workflow_event(job_id, 'step_complete', {
+                'step': step,
+                'phase': 'C',
+                'step_name': step_info['desc'],
+                'results': {n: {'success': r.get('success'), 'tokens': r.get('tokens', 0),
+                               'response': r.get('response', '')[:1000]} for n, r in results.items()}
+            })
+                    
+            with _workflow_lock:
+                _workflow_jobs[job_id]['step_outputs'][step] = {
+                    n: {'success': r.get('success'), 'tokens': r.get('tokens', 0)}
+                    for n, r in results.items()
+                }
+        
+        # ========================================
+        # PHASE D: Execution (Steps 16-19) - SEQUENTIAL
+        # Step 20 (Deploy) requires HUMAN APPROVAL
+        # ========================================
+        for step in range(16, 20):  # Stop before step 20
+            step_info = WORKFLOW_STEPS[step]
+            with _workflow_lock:
+                _workflow_jobs[job_id]['current_step'] = step
+                _workflow_jobs[job_id]['current_phase'] = 'D'
+                _workflow_jobs[job_id]['step_name'] = step_info['desc']
+            
+            _add_live_thought(job_id, 'ORKA', step, 'D', f"[Step {step}] {step_info['desc']}...", 'thinking')
+            
+            step_prompts = {}
+            step_sys_prompts = {}
+            for node in researcher_nodes:
+                p, sp = _build_step_prompt(node, step, topic, context)
+                step_prompts[node] = p
+                step_sys_prompts[node] = sp
+            
+            # Most D-phase steps use ORKA
+            results = {}
+            for node in researcher_nodes:
+                result = call_ollama_inference(
+                    'ORKA', CLUSTER_NODES['ORKA'],
+                    step_prompts[node], step_sys_prompts[node]
+                )
+                results[node] = result
+                if result.get('success'):
+                    _add_live_thought(job_id, 'ORKA', step, 'D',
+                        f"{step_info['desc']} for {node}: {result.get('response', '')[:200]}", 'complete')
+            
+            context['step_outputs'][step] = results
+            for node, res in results.items():
+                if res.get('success'):
+                    total_tokens += res.get('tokens', 0)
+            
+            # Log to persistent storage
+            _log_workflow_event(job_id, 'step_complete', {
+                'step': step,
+                'phase': 'D',
+                'step_name': step_info['desc'],
+                'results': {n: {'success': r.get('success'), 'tokens': r.get('tokens', 0),
+                               'response': r.get('response', '')[:1000]} for n, r in results.items()}
+            })
+                    
+            with _workflow_lock:
+                _workflow_jobs[job_id]['step_outputs'][step] = {
+                    n: {'success': r.get('success'), 'tokens': r.get('tokens', 0)}
+                    for n, r in results.items()
+                }
+        
+        # ========================================
+        # STEP 20: DEPLOYMENT - REQUIRES HUMAN APPROVAL
+        # ========================================
+        _add_live_thought(job_id, 'SYSTEM', 20, 'D', '⏸️ AWAITING HUMAN APPROVAL for deployment...', 'awaiting_approval')
+        
+        # Build proposals summary for approval
+        approval_proposals = []
+        for node in researcher_nodes:
+            proposal_summary = {
+                'node': node,
+                'idea': context['step_outputs'].get(1, {}).get(node, {}).get('response', '')[:500],
+                'proposal': context['step_outputs'].get(8, {}).get(node, {}).get('response', '')[:1000],
+                'safety_result': context['step_outputs'].get(9, {}).get(node, {}).get('response', '')[:500],
+                'vote_result': context['step_outputs'].get(15, {}).get(node, {}).get('response', '')[:300],
+                'reward': context['step_outputs'].get(18, {}).get(node, {}).get('response', '')[:300],
+            }
+            approval_proposals.append(proposal_summary)
+        
+        # Store pending approval
+        with _approval_lock:
+            _pending_approvals[job_id] = {
+                'job_id': job_id,
+                'topic': topic,
+                'proposals': approval_proposals,
+                'context': context,
+                'total_tokens': total_tokens,
+                'created_at': datetime.now().isoformat(),
+                'status': 'pending'
+            }
+        
+        # Update job status to awaiting approval
+        with _workflow_lock:
+            _workflow_jobs[job_id].update({
+                'status': 'awaiting_approval',
+                'current_step': 20,
+                'current_phase': 'D',
+                'step_name': 'Awaiting Human Approval',
+                'proposals_pending': len(approval_proposals),
+                'total_tokens': total_tokens
+            })
+        
+        # Log the awaiting approval event
+        _log_workflow_event(job_id, 'awaiting_approval', {
+            'message': 'Workflow paused for human approval before deployment',
+            'proposals_count': len(approval_proposals),
+            'total_tokens': total_tokens
+        })
+        
+        # The workflow now pauses here until human approves via /api/workflow/approve
+        # The final deployment step will be executed when approved
+        
+    except Exception as e:
+        # Error handling
+        print(f"[WORKFLOW ERROR] {job_id}: {e}")
+        _add_live_thought(job_id, 'SYSTEM', 0, 'ERROR', f"Workflow error: {str(e)}", 'error')
+        with _workflow_lock:
+            _workflow_jobs[job_id].update({
+                'status': 'error',
+                'error': str(e),
+                'completed_at': datetime.now().isoformat()
+            })
+        _log_workflow_event(job_id, 'error', {'error': str(e)})
+
+
+def _complete_deployment(job_id: str):
+    """Execute the final deployment step after human approval."""
+    global _workflow_jobs, _pending_approvals
+    
+    with _approval_lock:
+        approval_data = _pending_approvals.get(job_id)
+    
+    if not approval_data:
+        return {'error': 'No pending approval found'}
+    
+    context = approval_data.get('context', {})
+    topic = approval_data.get('topic', '')
+    researcher_nodes = ['TIF', 'GIN', 'ORIN', 'TORI', 'ARCHI', 'THEO', 'NOVEL']
+    
+    _add_live_thought(job_id, 'SYSTEM', 20, 'D', '✅ Human approved! Executing deployment...', 'deploying')
+    
+    # Execute step 20 - Deployment
+    step = 20
+    step_info = WORKFLOW_STEPS[step]
+    
+    step_prompts = {}
+    step_sys_prompts = {}
+    for node in researcher_nodes:
+        p, sp = _build_step_prompt(node, step, topic, context)
+        step_prompts[node] = p
+        step_sys_prompts[node] = sp
+    
+    results = {}
+    for node in researcher_nodes:
+        result = call_ollama_inference(
+            'ORKA', CLUSTER_NODES['ORKA'],
+            step_prompts[node], step_sys_prompts[node]
+        )
+        results[node] = result
+        if result.get('success'):
+            _add_live_thought(job_id, 'ORKA', step, 'D',
+                f"Deployment decision for {node}: {result.get('response', '')[:200]}", 'complete')
+    
+    context['step_outputs'][step] = results
+    total_tokens = approval_data.get('total_tokens', 0)
+    for node, res in results.items():
+        if res.get('success'):
+            total_tokens += res.get('tokens', 0)
+    
+    # Build final proposals
+    proposals = []
+    for node in researcher_nodes:
+        node_data = {
+            'node': node,
+            'role': 'researcher',
+            'success': True,
+            'total_tokens': sum(
+                context['step_outputs'].get(s, {}).get(node, {}).get('tokens', 0)
+                for s in range(1, 21)
+            ),
+            'steps_completed': 20,
+            'idea': context['step_outputs'].get(1, {}).get(node, {}).get('response', '')[:200],
+            'proposal': context['step_outputs'].get(8, {}).get(node, {}).get('response', ''),
+            'safety_check': context['step_outputs'].get(9, {}).get(node, {}).get('response', '')[:200],
+            'vote': context['step_outputs'].get(15, {}).get(node, {}).get('response', '')[:200],
+            'reward': context['step_outputs'].get(18, {}).get(node, {}).get('response', '')[:200],
+            'deployment': context['step_outputs'].get(20, {}).get(node, {}).get('response', '')[:200],
+        }
+        proposals.append(node_data)
+    
+    # Update job as completed
+    with _workflow_lock:
+        _workflow_jobs[job_id].update({
+            'status': 'completed',
+            'current_step': 20,
+            'current_phase': 'D',
+            'step_name': 'Deployed',
+            'successful': len(researcher_nodes),
+            'total_nodes': len(researcher_nodes),
+            'total_tokens': total_tokens,
+            'proposals': proposals,
+            'completed_at': datetime.now().isoformat()
+        })
+    
+    # Clean up pending approval
+    with _approval_lock:
+        _pending_approvals.pop(job_id, None)
+    
+    # Log completion
+    _log_workflow_event(job_id, 'completed', {
+        'message': 'Workflow completed after human approval',
+        'total_tokens': total_tokens,
+        'proposals_deployed': len(proposals)
+    })
+    
+    _add_live_thought(job_id, 'SYSTEM', 20, 'D', f'✅ Deployment complete! {len(proposals)} proposals deployed.', 'complete')
+    
+    return {'success': True, 'proposals': proposals, 'total_tokens': total_tokens}
+
+
 @app.route('/api/workflow/start-parallel-recursions', methods=['POST'])
 def api_start_parallel_recursions():
     """
     Start the 20-step parallel self-recursion workflow across all 10 nodes.
     
     This runs REAL inference on all available cluster nodes:
-    - 7 Researchers: TIF, GIN, ORIN, TORI, ARCHI, SYNTH, LOGIC
+    - 7 Researchers: TIF, GIN, ORIN, TORI, ARCHI, THEO, NOVEL
     - 3 Support: GUARD (safety check), PAGEQA (research), ORKA (orchestration)
     
     POST body (optional):
     {
         "topic": "What area to focus on",
-        "researchers_only": false  // If true, only run researchers
+        "researchers_only": false,  // If true, only run researchers
+        "async": true  // If true, return immediately with job_id
     }
     
     Returns real-time results from actual Ollama inference.
     """
     import time
+    import uuid
     from datetime import datetime
     
     data = request.get_json() or {}
     topic = data.get('topic', 'AI Self-Improvement Research')
     researchers_only = data.get('researchers_only', False)
+    run_async = data.get('async', True)  # Default to async for better UX
     
     # Determine which nodes to run - 7 researchers + 3 support = 10 nodes
     researcher_nodes = ['TIF', 'GIN', 'ORIN', 'TORI', 'ARCHI', 'THEO', 'NOVEL']
@@ -2757,7 +3778,37 @@ Provide:
 4. SUCCESS CRITERIA - How to evaluate the overall workflow"""
     system_prompts['ORKA'] = "You are ORKA, the central coordinator ensuring all nodes work together effectively."
     
-    # Run parallel inference
+    # Async mode - return immediately with job ID
+    if run_async:
+        job_id = str(uuid.uuid4())[:8]
+        with _workflow_lock:
+            _workflow_jobs[job_id] = {
+                'status': 'queued',
+                'topic': topic,
+                'total_nodes': len(active_nodes),
+                'nodes': active_nodes,
+                'created_at': datetime.now().isoformat()
+            }
+        
+        # Start background thread
+        thread = threading.Thread(
+            target=_run_workflow_async,
+            args=(job_id, active_nodes, prompts, system_prompts, topic),
+            daemon=True
+        )
+        thread.start()
+        
+        return jsonify({
+            'status': 'started',
+            'job_id': job_id,
+            'topic': topic,
+            'total_nodes': len(active_nodes),
+            'nodes': active_nodes,
+            'message': f'Workflow started. Check status at /api/workflow/status/{job_id}',
+            'timestamp': datetime.now().isoformat()
+        })
+    
+    # Synchronous mode - wait for completion
     start_time = time.time()
     results = run_parallel_inference_phase(active_nodes, prompts, system_prompts)
     total_time = time.time() - start_time
@@ -2801,6 +3852,300 @@ Provide:
     })
 
 
+@app.route('/api/workflow/status/<job_id>')
+def api_workflow_status(job_id):
+    """Get status of an async workflow job."""
+    with _workflow_lock:
+        job = _workflow_jobs.get(job_id)
+    
+    if not job:
+        return jsonify({'error': 'Job not found', 'job_id': job_id}), 404
+    
+    return jsonify(job)
+
+
+@app.route('/api/workflow/jobs')
+def api_workflow_jobs():
+    """List all workflow jobs."""
+    with _workflow_lock:
+        jobs = {jid: {'status': j['status'], 'topic': j.get('topic', ''), 
+                      'created_at': j.get('created_at')} 
+                for jid, j in _workflow_jobs.items()}
+    return jsonify({'jobs': jobs})
+
+
+@app.route('/api/workflow/pending-approvals')
+def api_workflow_pending_approvals():
+    """List all workflows pending human approval."""
+    with _approval_lock:
+        pending = []
+        for job_id, data in _pending_approvals.items():
+            pending.append({
+                'job_id': job_id,
+                'topic': data.get('topic', ''),
+                'proposals_count': len(data.get('proposals', [])),
+                'total_tokens': data.get('total_tokens', 0),
+                'created_at': data.get('created_at', ''),
+                'status': data.get('status', 'pending')
+            })
+    return jsonify({'pending': pending, 'count': len(pending)})
+
+
+@app.route('/api/workflow/pending-approvals/<job_id>')
+def api_workflow_pending_approval_detail(job_id):
+    """Get details of a pending approval."""
+    with _approval_lock:
+        data = _pending_approvals.get(job_id)
+    
+    if not data:
+        return jsonify({'error': 'No pending approval found for this job'}), 404
+    
+    return jsonify({
+        'job_id': job_id,
+        'topic': data.get('topic', ''),
+        'proposals': data.get('proposals', []),
+        'total_tokens': data.get('total_tokens', 0),
+        'created_at': data.get('created_at', ''),
+        'status': data.get('status', 'pending')
+    })
+
+
+@app.route('/api/workflow/approve/<job_id>', methods=['POST'])
+def api_workflow_approve(job_id):
+    """Approve a pending workflow for deployment."""
+    with _approval_lock:
+        if job_id not in _pending_approvals:
+            return jsonify({'error': 'No pending approval found for this job'}), 404
+    
+    data = request.get_json() or {}
+    approved_by = data.get('approved_by', 'human_operator')
+    notes = data.get('notes', '')
+    
+    # Log the approval
+    _log_workflow_event(job_id, 'approved', {
+        'approved_by': approved_by,
+        'notes': notes,
+        'timestamp': datetime.now().isoformat()
+    })
+    
+    # Execute the deployment
+    result = _complete_deployment(job_id)
+    
+    if result.get('error'):
+        return jsonify({'error': result['error']}), 500
+    
+    return jsonify({
+        'success': True,
+        'job_id': job_id,
+        'message': 'Workflow approved and deployed',
+        'proposals_deployed': len(result.get('proposals', [])),
+        'total_tokens': result.get('total_tokens', 0)
+    })
+
+
+@app.route('/api/workflow/reject/<job_id>', methods=['POST'])
+def api_workflow_reject(job_id):
+    """Reject a pending workflow - will not deploy."""
+    with _approval_lock:
+        if job_id not in _pending_approvals:
+            return jsonify({'error': 'No pending approval found for this job'}), 404
+        
+        data = request.get_json() or {}
+        reason = data.get('reason', 'Rejected by human operator')
+        
+        # Remove from pending
+        _pending_approvals.pop(job_id, None)
+    
+    # Update job status
+    with _workflow_lock:
+        if job_id in _workflow_jobs:
+            _workflow_jobs[job_id].update({
+                'status': 'rejected',
+                'rejection_reason': reason,
+                'completed_at': datetime.now().isoformat()
+            })
+    
+    # Log the rejection
+    _log_workflow_event(job_id, 'rejected', {
+        'reason': reason,
+        'timestamp': datetime.now().isoformat()
+    })
+    
+    _add_live_thought(job_id, 'SYSTEM', 20, 'D', f'❌ Deployment rejected: {reason}', 'rejected')
+    
+    return jsonify({
+        'success': True,
+        'job_id': job_id,
+        'message': 'Workflow rejected',
+        'reason': reason
+    })
+
+
+# ============================================================
+# AUTONOMOUS CLUSTER API - Real Independent AI Agents
+# ============================================================
+# These endpoints control truly autonomous agents that:
+# - Run independently in their own threads
+# - Stream thinking in real-time  
+# - Communicate via shared message board
+# - Respond to each other organically
+# - Accept human context injection
+
+from core.autonomous_agent import (
+    AutonomousCluster, AgentConfig, MessageBoard,
+    get_cluster, initialize_cluster_from_config, AgentState
+)
+
+# Global autonomous cluster
+_autonomous_cluster = None
+
+
+def _get_or_create_autonomous_cluster():
+    """Get or create the autonomous cluster with all agents."""
+    global _autonomous_cluster
+    if _autonomous_cluster is None:
+        _autonomous_cluster = AutonomousCluster()
+        
+        # Add all agents from CLUSTER_NODES
+        for name, config in CLUSTER_NODES.items():
+            # Determine role
+            if name == 'GUARD':
+                role = 'guard'
+            elif name == 'ORKA':
+                role = 'orchestrator'
+            elif name == 'PAGEQA':
+                role = 'validator'
+            else:
+                role = 'researcher'
+                
+            agent_config = AgentConfig(
+                name=name,
+                ip=config['ip'],
+                model=config['model'],
+                expertise=config.get('expertise', 'general'),
+                focus=config.get('focus', 'general improvements'),
+                role=role,
+                personality=f"Expert in {config.get('expertise', 'AI research')}. Independent thinker.",
+                temperature=0.8
+            )
+            _autonomous_cluster.add_agent(agent_config)
+            
+    return _autonomous_cluster
+
+
+@app.route('/api/autonomous/start', methods=['POST'])
+def api_autonomous_start():
+    """Start all autonomous agents on a topic."""
+    data = request.get_json() or {}
+    topic = data.get('topic', 'Autonomous AI Self-Improvement Research')
+    
+    cluster = _get_or_create_autonomous_cluster()
+    
+    # Stop any existing run
+    cluster.stop_all()
+    cluster.board.clear()
+    
+    # Start all agents
+    cluster.start_all(topic)
+    
+    return jsonify({
+        'success': True,
+        'message': f'Started {len(cluster.agents)} autonomous agents',
+        'topic': topic,
+        'agents': list(cluster.agents.keys())
+    })
+
+
+@app.route('/api/autonomous/stop', methods=['POST'])
+def api_autonomous_stop():
+    """Stop all autonomous agents."""
+    cluster = _get_or_create_autonomous_cluster()
+    cluster.stop_all()
+    
+    return jsonify({
+        'success': True,
+        'message': 'All agents stopped'
+    })
+
+
+@app.route('/api/autonomous/status')
+def api_autonomous_status():
+    """Get status of all autonomous agents."""
+    cluster = _get_or_create_autonomous_cluster()
+    return jsonify(cluster.get_status())
+
+
+@app.route('/api/autonomous/messages')
+def api_autonomous_messages():
+    """Get all messages from the shared board."""
+    cluster = _get_or_create_autonomous_cluster()
+    since = request.args.get('since', 0, type=int)
+    messages = cluster.get_all_messages()
+    return jsonify({
+        'messages': messages[since:],
+        'total': len(messages)
+    })
+
+
+@app.route('/api/autonomous/stream/<agent_name>')
+def api_autonomous_stream(agent_name):
+    """Get streaming tokens from a specific agent."""
+    cluster = _get_or_create_autonomous_cluster()
+    since = request.args.get('since', 0, type=int)
+    tokens = cluster.get_live_tokens(agent_name, since)
+    
+    return jsonify({
+        'agent': agent_name,
+        'tokens': tokens,
+        'count': len(tokens),
+        'next_index': since + len(tokens)
+    })
+
+
+@app.route('/api/autonomous/inject', methods=['POST'])
+def api_autonomous_inject():
+    """Inject context into agents (human intervention)."""
+    data = request.get_json() or {}
+    context = data.get('context', '')
+    target = data.get('target')  # Optional: specific agent name
+    
+    if not context:
+        return jsonify({'error': 'Context is required'}), 400
+        
+    cluster = _get_or_create_autonomous_cluster()
+    cluster.inject_context(context, target)
+    
+    return jsonify({
+        'success': True,
+        'message': f'Context injected to {target or "all agents"}',
+        'context_preview': context[:100]
+    })
+
+
+@app.route('/api/autonomous/pause/<agent_name>', methods=['POST'])
+def api_autonomous_pause(agent_name):
+    """Pause a specific agent."""
+    cluster = _get_or_create_autonomous_cluster()
+    cluster.pause_agent(agent_name)
+    
+    return jsonify({
+        'success': True,
+        'message': f'{agent_name} paused'
+    })
+
+
+@app.route('/api/autonomous/resume/<agent_name>', methods=['POST'])
+def api_autonomous_resume(agent_name):
+    """Resume a paused agent."""
+    cluster = _get_or_create_autonomous_cluster()
+    cluster.resume_agent(agent_name)
+    
+    return jsonify({
+        'success': True,
+        'message': f'{agent_name} resumed'
+    })
+
+
 @app.route('/api/system/halted')
 def api_system_halted():
     try:
@@ -2812,14 +4157,157 @@ def api_system_halted():
 
 @app.route('/api/proposals/recent')
 def api_recent_proposals():
-    """Get recent proposals."""
+    """Get recent proposals - now includes live workflow thoughts."""
     try:
+        # First check for live workflow thoughts
+        with _live_thoughts_lock:
+            live = list(_live_thoughts)
+        
+        if live:
+            # Return live workflow thoughts as proposals
+            proposals = [{
+                'id': t['id'],
+                'agent_id': t['agent'],
+                'description': t['text'],
+                'status': t['status'],
+                'timestamp': t['timestamp'],
+                'step': t.get('step', 0),
+                'phase': t.get('phase', ''),
+                'job_id': t.get('job_id', '')
+            } for t in live[:8]]
+            return jsonify({'proposals': proposals, 'source': 'workflow'})
+    
+        # Fall back to database proposals
         proposals = get_recent_proposals(limit=8)
+        source = 'database'
         if not proposals:
             proposals = []
-        return jsonify({'proposals': proposals})
+            source = 'empty'
+        elif proposals and proposals[0].get('id', '').startswith('hb_'):
+            source = 'cluster'
+        return jsonify({'proposals': proposals, 'source': source})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/workflow/live-thoughts')
+def api_workflow_live_thoughts():
+    """Get live thoughts from active workflow - real-time AI thinking."""
+    try:
+        with _live_thoughts_lock:
+            thoughts = list(_live_thoughts)
+        
+        # Get active job info
+        active_job = None
+        with _workflow_lock:
+            for jid, job in _workflow_jobs.items():
+                if job.get('status') == 'running':
+                    active_job = {
+                        'job_id': jid,
+                        'phase': job.get('current_phase', ''),
+                        'step': job.get('current_step', 0),
+                        'step_name': job.get('step_name', ''),
+                        'topic': job.get('topic', '')
+                    }
+                    break
+        
+        return jsonify({
+            'items': thoughts,
+            'count': len(thoughts),
+            'active_job': active_job
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/workflow/inject-context', methods=['POST'])
+def api_workflow_inject_context():
+    """Inject context into a running workflow for a specific node."""
+    try:
+        data = request.get_json() or {}
+        node = data.get('node', '').upper()
+        context_text = data.get('context', '')
+        
+        if not node:
+            return jsonify({'error': 'Node name required'}), 400
+        
+        valid_nodes = ['TIF', 'GIN', 'ORIN', 'TORI', 'ARCHI', 'THEO', 'NOVEL', 'GUARD', 'PAGEQA', 'ORKA']
+        if node not in valid_nodes:
+            return jsonify({'error': f'Invalid node. Must be one of: {valid_nodes}'}), 400
+        
+        with _context_lock:
+            if context_text:
+                _injected_context[node] = context_text
+                action = 'injected'
+            else:
+                _injected_context.pop(node, None)
+                action = 'cleared'
+        
+        # Log the injection
+        print(f"[CONTEXT] {action.upper()} context for {node}: {context_text[:100]}...")
+        
+        return jsonify({
+            'success': True,
+            'node': node,
+            'action': action,
+            'context_length': len(context_text)
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/workflow/injected-context')
+def api_workflow_get_context():
+    """Get all injected context."""
+    try:
+        with _context_lock:
+            contexts = dict(_injected_context)
+        return jsonify({'contexts': contexts})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/workflow/proposals')
+def api_workflow_proposals():
+    """Get proposals from completed workflows - saved to disk."""
+    try:
+        proposals = []
+        log_dir = WORKFLOW_LOG_DIR
+        
+        if os.path.exists(log_dir):
+            for filename in sorted(os.listdir(log_dir), reverse=True)[:20]:
+                if filename.endswith('.json'):
+                    filepath = os.path.join(log_dir, filename)
+                    try:
+                        with open(filepath, 'r') as f:
+                            log_data = json.load(f)
+                        
+                        # Extract proposals from completed workflows
+                        if log_data.get('status') == 'completed':
+                            job_id = log_data.get('job_id', filename[:-5])
+                            for event in log_data.get('events', []):
+                                if event.get('type') == 'step_complete':
+                                    data = event.get('data', {})
+                                    for node, result in data.get('results', {}).items():
+                                        if result.get('success') and result.get('response'):
+                                            proposals.append({
+                                                'id': f"{job_id}_{data.get('step', 0)}_{node}",
+                                                'job_id': job_id,
+                                                'agent_id': node,
+                                                'step': data.get('step', 0),
+                                                'phase': data.get('phase', ''),
+                                                'description': result.get('response', '')[:500],
+                                                'tokens': result.get('tokens', 0),
+                                                'timestamp': event.get('timestamp', ''),
+                                                'status': 'completed'
+                                            })
+                    except Exception as e:
+                        print(f"Error loading workflow log {filename}: {e}")
+        
+        return jsonify({'proposals': proposals[:50], 'total': len(proposals)})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 
 @app.route('/api/detection/stats')
 def api_detection_stats():
@@ -5985,6 +7473,22 @@ def send_updates():
             status_data['worm_usb_connected'] = os.path.exists(worm_usb_path)
 
             socketio.emit('update', status_data)
+
+            # Stream lightweight "thinking" snippets from recent proposals
+            if recent_proposals:
+                thoughts = []
+                for p in recent_proposals[:8]:
+                    thoughts.append({
+                        'id': p.get('id') or p.get('proposal_id'),
+                        'agent': p.get('agent_id'),
+                        'text': p.get('description') or '',
+                        'status': p.get('status'),
+                        'timestamp': p.get('timestamp'),
+                    })
+                socketio.emit('thinking:update', {
+                    'timestamp': datetime.now().isoformat(),
+                    'items': thoughts
+                })
         except Exception as e:
             print(f"Error in update thread: {e}")
             time.sleep(5)  # Longer sleep on error
@@ -6209,7 +7713,7 @@ def api_heartbeat():
         r = requests.get('http://localhost:11434/api/tags', timeout=1)
         if r.status_code == 200:
             online = 1  # At least ORKA is online
-    except:
+    except Exception:
         pass
     
     return jsonify({
@@ -6220,6 +7724,123 @@ def api_heartbeat():
         'nodes_total': total,
         'timestamp': datetime.now().isoformat()
     })
+
+
+@app.route('/api/cluster/health')
+def api_cluster_health():
+    """Full cluster health check - checks all nodes."""
+    import requests as req
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    
+    def check_node(name, config):
+        ip = config['ip']
+        model = config['model']
+        host = 'localhost' if ip == 'localhost' else ip
+        
+        result = {
+            'name': name,
+            'ip': ip,
+            'model': model,
+            'role': config['role'],
+            'reachable': True,
+            'ollama_running': False,
+            'model_available': False,
+            'models_loaded': [],
+            'latency_ms': None,
+            'error': None
+        }
+        
+        try:
+            start = time.time()
+            resp = req.get(f'http://{host}:11434/api/tags', timeout=3)
+            result['latency_ms'] = round((time.time() - start) * 1000, 1)
+            
+            if resp.status_code == 200:
+                result['ollama_running'] = True
+                data = resp.json()
+                models = [m['name'] for m in data.get('models', [])]
+                result['models_loaded'] = models
+                model_base = model.split(':')[0]
+                result['model_available'] = any(model_base in m for m in models)
+            else:
+                result['error'] = f'HTTP {resp.status_code}'
+        except req.exceptions.ConnectionRefused:
+            result['error'] = 'Ollama not running'
+            result['reachable'] = False
+        except req.exceptions.Timeout:
+            result['error'] = 'Timeout'
+        except Exception as e:
+            result['error'] = str(e)[:50]
+            result['reachable'] = False
+        
+        return result
+    
+    results = []
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        futures = {executor.submit(check_node, name, config): name 
+                   for name, config in CLUSTER_NODES.items()}
+        for future in as_completed(futures):
+            results.append(future.result())
+    
+    # Sort by role then name
+    role_order = {'researcher': 0, 'support': 1, 'orchestrator': 2}
+    results.sort(key=lambda r: (role_order.get(r['role'], 3), r['name']))
+    
+    online = sum(1 for r in results if r['ollama_running'])
+    ready = sum(1 for r in results if r['model_available'])
+    
+    return jsonify({
+        'nodes': results,
+        'summary': {
+            'total': len(results),
+            'online': online,
+            'ready': ready,
+            'offline': len(results) - online
+        },
+        'timestamp': datetime.now().isoformat()
+    })
+
+
+@app.route('/api/cluster/pull-model', methods=['POST'])
+def api_cluster_pull_model():
+    """Pull a model on a specific node via SSH or locally."""
+    data = request.get_json() or {}
+    node = data.get('node', '').upper()
+    model = data.get('model')
+    
+    if node not in CLUSTER_NODES:
+        return jsonify({'error': f'Unknown node: {node}'}), 400
+    
+    config = CLUSTER_NODES[node]
+    ip = config['ip']
+    if not model:
+        model = config['model']
+    
+    try:
+        if ip == 'localhost':
+            # Local pull
+            import subprocess
+            result = subprocess.run(['ollama', 'pull', model], 
+                                    capture_output=True, text=True, timeout=600)
+            success = result.returncode == 0
+            output = result.stdout + result.stderr
+        else:
+            # Remote pull via SSH
+            import subprocess
+            cmd = f'ssh xx@{ip} "ollama pull {model}"'
+            result = subprocess.run(cmd, shell=True, capture_output=True, 
+                                    text=True, timeout=600)
+            success = result.returncode == 0
+            output = result.stdout + result.stderr
+        
+        return jsonify({
+            'node': node,
+            'model': model,
+            'success': success,
+            'output': output[:1000]
+        })
+    except Exception as e:
+        return jsonify({'error': str(e), 'node': node, 'model': model}), 500
 
 
 @app.route('/api/terminal/exec', methods=['POST'])
@@ -6335,31 +7956,100 @@ def api_terminal_repl():
 
 @app.route('/api/terminal/logs')
 def api_terminal_logs():
-    """Get recent log entries."""
-    global _log_buffer
-    lines = request.args.get('lines', 10, type=int)
+    """Get recent log entries from workflow activity."""
+    lines = request.args.get('lines', 20, type=int)
     
-    # Generate some sample logs based on system activity
-    # In a real system, this would read from actual log files
-    import random
-    new_logs = []
+    logs = []
     
-    # Only add new logs occasionally
-    if random.random() < 0.3:
-        log_messages = [
-            ('INFO', 'Heartbeat check completed'),
-            ('INFO', 'Node metrics refreshed'),
-            ('DEBUG', 'WebSocket connection active'),
-            ('INFO', f'API request processed in {random.randint(5, 50)}ms'),
-        ]
-        level, msg = random.choice(log_messages)
-        new_logs.append({
+    # Get workflow job status for real activity logs
+    with _workflow_lock:
+        for job_id, job in list(_workflow_jobs.items())[-3:]:  # Last 3 jobs
+            status = job.get('status', 'unknown')
+            step = job.get('current_step', 0)
+            phase = job.get('current_phase', '?')
+            step_name = job.get('step_name', '')
+            
+            if status == 'running':
+                logs.append({
+                    'time': datetime.now().strftime('%H:%M:%S'),
+                    'level': 'INFO',
+                    'message': f'[{job_id}] Phase {phase} Step {step}/20: {step_name}'
+                })
+                
+                # Show step outputs progress
+                step_outputs = job.get('step_outputs', {})
+                for s, nodes in step_outputs.items():
+                    success = sum(1 for n in nodes.values() if n.get('success'))
+                    total = len(nodes)
+                    tokens = sum(n.get('tokens', 0) for n in nodes.values())
+                    logs.append({
+                        'time': datetime.now().strftime('%H:%M:%S'),
+                        'level': 'DEBUG',
+                        'message': f'  Step {s}: {success}/{total} nodes, {tokens} tokens'
+                    })
+                    
+            elif status == 'completed':
+                logs.append({
+                    'time': job.get('completed_at', '')[-8:] if job.get('completed_at') else '',
+                    'level': 'SUCCESS',
+                    'message': f'[{job_id}] COMPLETE: {job.get("successful", 0)}/{job.get("total_nodes", 0)} proposals, {job.get("total_tokens", 0)} tokens, {job.get("total_time", 0)}s'
+                })
+            elif status == 'error':
+                logs.append({
+                    'time': job.get('completed_at', '')[-8:] if job.get('completed_at') else '',
+                    'level': 'ERROR',
+                    'message': f'[{job_id}] ERROR: {job.get("error", "Unknown error")}'
+                })
+    
+    if not logs:
+        logs.append({
             'time': datetime.now().strftime('%H:%M:%S'),
-            'level': level,
-            'message': msg
+            'level': 'INFO',
+            'message': 'No active workflows. Click "Start Unregulated AI Self Recursions" to begin.'
         })
     
-    return jsonify({'logs': new_logs})
+    return jsonify({'logs': logs[-lines:]})
+
+
+@app.route('/api/terminal/node-status')
+def api_terminal_node_status():
+    """Get real-time node status from cluster."""
+    import requests
+    
+    nodes_status = []
+    for name, config in CLUSTER_NODES.items():
+        ip = config['ip']
+        host = 'localhost' if ip == 'localhost' else ip
+        url = f"http://{host}:11434/api/tags"
+        
+        try:
+            resp = requests.get(url, timeout=2)
+            if resp.status_code == 200:
+                models = resp.json().get('models', [])
+                model_names = [m['name'].split(':')[0] for m in models[:2]]
+                nodes_status.append({
+                    'name': name,
+                    'status': 'online',
+                    'ip': ip,
+                    'expertise': config.get('expertise', 'general'),
+                    'models': model_names
+                })
+            else:
+                nodes_status.append({
+                    'name': name,
+                    'status': 'error',
+                    'ip': ip,
+                    'error': f'HTTP {resp.status_code}'
+                })
+        except Exception as e:
+            nodes_status.append({
+                'name': name,
+                'status': 'offline',
+                'ip': ip,
+                'error': str(e)[:50]
+            })
+    
+    return jsonify({'nodes': nodes_status, 'timestamp': datetime.now().isoformat()})
 
 
 # Initialize components on startup

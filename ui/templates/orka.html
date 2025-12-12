@@ -158,6 +158,12 @@
                         <i class="fas fa-spinner fa-spin"></i>
                         <span id="workflowStatusText">Initializing parallel recursions...</span>
                     </div>
+                    <div class="workflow-progress" style="margin-top: 10px; display: none;" id="workflowProgressContainer">
+                        <div style="background: #1a1a2e; border-radius: 4px; height: 8px; overflow: hidden; width: 100%;">
+                            <div id="workflowProgressBar" style="background: linear-gradient(90deg, #00ff88, #00aaff); height: 100%; width: 0%; transition: width 0.5s ease;"></div>
+                        </div>
+                        <div id="workflowStepDetails" style="color: #888; font-size: 11px; margin-top: 5px;"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -757,5 +763,5 @@
 </div>
 
 {% block extra_scripts %}
-<script src="{{ url_for('static', filename='js/orka.js') }}"></script>
+<script src="{{ url_for('static', filename='js/orka.js') }}?v={{ range(100000) | random }}"></script>
 {% endblock %}

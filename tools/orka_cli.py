@@ -13,6 +13,7 @@ Usage:
 import argparse
 import json
 import sys
+import time
 from pathlib import Path
 
 # Ensure project root on path
@@ -27,6 +28,9 @@ try:
         get_jetson_power_status,
         get_local_system_metrics,
         get_ollama_model_info,
+        check_node_status,
+        NANO_NODES,
+        ORKA_NODE,
     )
 except Exception as exc:  # pragma: no cover - guard for missing deps
     sys.stderr.write(f"Failed to import live data provider: {exc}\n")
@@ -94,6 +98,89 @@ def cmd_status(node):
     }
     _print_json(data)
 
+def cmd_benchmark(target_nodes, prompt, max_tokens):
+    try:
+        import requests
+    except Exception as exc:  # pragma: no cover - guard for missing deps
+        sys.stderr.write(f"requests not available: {exc}\n")
+        sys.exit(1)
+
+    # Build node list
+    all_nodes = {**NANO_NODES, "ORKA": ORKA_NODE}
+    if target_nodes:
+        missing = [n for n in target_nodes if n not in all_nodes]
+        if missing:
+            sys.stderr.write(f"Unknown nodes: {', '.join(missing)}\n")
+            sys.exit(1)
+        nodes = {n: all_nodes[n] for n in target_nodes}
+    else:
+        nodes = all_nodes
+
+    results = []
+    for name, cfg in nodes.items():
+        ip = cfg["ip"]
+        model = cfg["model"]
+        status = check_node_status(name, ip, expected_model=model)
+        if not status.get("online"):
+            results.append({
+                "name": name,
+                "ip": ip,
+                "model": model,
+                "online": False,
+                "error": status.get("error") or "offline or model missing",
+            })
+            continue
+
+        url = f"http://{ip}:11434/api/generate"
+        payload = {
+            "model": model,
+            "prompt": prompt,
+            "stream": False,
+            "options": {"num_predict": max_tokens},
+        }
+
+        start = time.time()
+        try:
+            resp = requests.post(url, json=payload, timeout=60)
+            elapsed_ms = (time.time() - start) * 1000
+            if resp.status_code != 200:
+                results.append({
+                    "name": name,
+                    "ip": ip,
+                    "model": model,
+                    "online": True,
+                    "error": f"Ollama returned {resp.status_code}",
+                })
+                continue
+            data = resp.json()
+            total_ns = data.get("total_duration", 0)
+            eval_count = data.get("eval_count", 0)
+            prompt_eval = data.get("prompt_eval_count", 0)
+            token_count = eval_count
+            duration_ms = total_ns / 1e6 if total_ns else elapsed_ms
+            tps = (token_count / (duration_ms / 1000)) if duration_ms else None
+
+            results.append({
+                "name": name,
+                "ip": ip,
+                "model": model,
+                "online": True,
+                "latency_ms": round(duration_ms, 2),
+                "tokens": token_count,
+                "prompt_tokens": prompt_eval,
+                "tokens_per_sec": round(tps, 2) if tps else None,
+            })
+        except Exception as exc:
+            results.append({
+                "name": name,
+                "ip": ip,
+                "model": model,
+                "online": True,
+                "error": str(exc),
+            })
+
+    _print_json({"benchmarks": results, "prompt": prompt})
+
 
 def main():
     parser = argparse.ArgumentParser(description="ORKA cluster/system CLI")
@@ -102,10 +189,17 @@ def main():
     st = sub.add_parser("status", help="Show cluster/system status")
     st.add_argument("--node", help="Show status for a specific node code (e.g., THEO)")
 
+    bm = sub.add_parser("benchmark", help="Measure inference latency on nodes")
+    bm.add_argument("--nodes", nargs="*", help="Subset of node codes (e.g., THEO GUARD)")
+    bm.add_argument("--prompt", default="Latency check. Respond briefly.", help="Prompt to send")
+    bm.add_argument("--max-tokens", type=int, default=64, help="Max tokens to generate")
+
     args = parser.parse_args()
 
     if args.command == "status":
         cmd_status(args.node)
+    elif args.command == "benchmark":
+        cmd_benchmark(args.nodes, args.prompt, args.max_tokens)
     else:  # pragma: no cover - defensive
         parser.error(f"Unknown command {args.command}")
 

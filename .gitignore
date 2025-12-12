@@ -121,3 +121,13 @@ Archive Files/Research Artifacts/worm_usb_dir/
 data/improvements/
 data/agents/
 .worm/
+
+# Runtime / UI artifacts
+*.pid
+ui.pid
+server.pid
+
+# Generated workflow/proposal outputs (can be large)
+data/workflow_logs/
+ui/data/proposals/
+ui/data/workflow_logs/
